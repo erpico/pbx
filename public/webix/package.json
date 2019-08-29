@@ -1,0 +1,49 @@
+{
+  "_from": "@xbs/webix-pro",
+  "_id": "@xbs/webix-pro@6.4.4",
+  "_inBundle": false,
+  "_integrity": "sha512-SChLLhF8tve/3r4AR/RWjBjOf55ak8P5qhILjMK3Oy393IwAs54AbWj29fxNqQ2/8E5ecHf/b3ypGLsocMILBw==",
+  "_location": "/@xbs/webix-pro",
+  "_phantomChildren": {},
+  "_requested": {
+    "type": "tag",
+    "registry": true,
+    "raw": "@xbs/webix-pro",
+    "name": "@xbs/webix-pro",
+    "escapedName": "@xbs%2fwebix-pro",
+    "scope": "@xbs",
+    "rawSpec": "",
+    "saveSpec": null,
+    "fetchSpec": "latest"
+  },
+  "_requiredBy": [
+    "#USER",
+    "/"
+  ],
+  "_resolved": "https://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-6.4.4.tgz",
+  "_shasum": "522e2d5808e89e231027ac12ce74022b2199236a",
+  "_spec": "@xbs/webix-pro",
+  "_where": "C:\\Projects\\Test\\webix",
+  "author": {
+    "name": "XB Software"
+  },
+  "bundleDependencies": false,
+  "deprecated": false,
+  "description": "Webix UI",
+  "keywords": [
+    "webix",
+    "ui",
+    "widgets"
+  ],
+  "license": "SEE LICENSE IN license.text",
+  "main": "webix.js",
+  "name": "@xbs/webix-pro",
+  "publishConfig": {
+    "registry": "https://npm.webix.com"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "types": "types/webix.d.ts",
+  "version": "6.4.4"
+}

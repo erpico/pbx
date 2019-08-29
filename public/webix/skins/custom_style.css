@@ -1,0 +1,71 @@
+.webix_tree_branch_1 > .webix_tree_item{
+    font-weight: bold;
+}
+
+.webix_sidebar .webix_tree_branch_1 {
+    border-bottom: medium none;
+}
+
+.webix_sidebar .webix_tree_branch_1 .webix_tree_item{
+    height: 42px;
+    line-height: 42px;
+    padding-left: 0;
+}
+
+.webix_sidebar .webix_tree_branch_2 .webix_tree_item{
+    height: 34px;
+    line-height: 34px;
+    padding-left: 0;
+}
+
+.webix_tree_branch_2 .webix_tree_item{
+    font-size: 0.9em;
+}
+
+.webix_sidebar .webix_tree_branch_2 .webix_tree_item.webix_selected span:last-child{
+    font-weight: normal;
+}
+
+.webix_tree_branch_2 .webix_icon{
+    font-size: 0.95em;
+    vertical-align: middle;
+}
+
+.webix_tree_item .wxi-angle-down,
+.webix_tree_item .wxi-angle-left{
+    display: none;
+}
+
+.top-menu .pbx-title, .top-menu.webix_layout_line {
+    background: #3498db;
+    color: #fff;
+}
+
+.pbx-title {
+    border: 0;
+}
+
+.pbx-title .webix_template{
+    padding: 15px 10px;
+    font-size: 18px;
+    line-height: 1.2;
+}
+
+.webix_icon_btn {
+    font-size: 15px;
+    vertical-align: baseline;
+}
+
+/**/
+
+.webix_win_head {
+    border-bottom: medium none;
+}
+
+.webix_toolbar .webix_el_label .webix_el_box {
+    color: #fff;
+    padding-left: 8px;
+}
+.webix_layout_toolbar.webix_toolbar .webix_el_icon .webix_icon {
+    line-height: 38px !important;
+}

@@ -1,0 +1,6 @@
+[
+  { "id": "yealinkt", "value": "Yealink T-series"},
+  { "id": "yealinkw", "value": "Yealink W-series"},
+  { "id": "ciscospa", "value": "Cisco SPA series"},
+  { "id": "erpico", "value": "Erpico Integrated"}
+]

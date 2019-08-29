@@ -1,0 +1,74 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+	<META HTTP-EQUIV="Access-Control-Allow-Origin" CONTENT="*"/>
+
+	<title>SMS Send</title>
+	
+	<script type="text/javascript" src="/webix/webix.js"></script>
+	<script type="text/javascript" src="/webix/i18n/ru.js"></script>	
+    <script type="text/javascript" src="/queues/qb.js"></script>	
+	<link type="text/css" rel="stylesheet" href="/webix/webix.css">	  
+    <link rel="stylesheet" type="text/css" href="/webix/sidebar/sidebar.css">	
+	<link type="text/css" rel="stylesheet" href="/style.css">
+  <style>  
+.webix_el_toggle button{
+    background-color:grey !important;
+    border-color: gray !important;
+}
+.webix_el_box.webix_pressed button{
+    background-color:green !important;
+    border-color: green !important; 
+}
+
+.toggleOn{
+    background-color: green;
+}
+  
+.toggleOn:focus, .toggleOn:active, .toggleOn:hover {
+  background-color: green;
+} 
+
+</style>
+</head>
+<body>
+<script>
+	webix.ui({
+        view: "scrollview",
+        scroll: "y",
+        id: "mainView",
+        body: {
+          "view": "form",
+          "epbx_type": "sms",
+          "elements": [
+            { "view": "text",              
+                  "name": "dst",
+                  "label": "Номер телефона получателя",                  
+                  "value": "<?=$_GET['phone']?>"
+                },
+            { "view": "textarea",
+              "height": 200,
+              "name": "text",
+              "label": "Текст сообщения",
+              "value": ""
+            },
+            { "cols": [                
+                {
+                  "view": "button",
+                  "label": "Отправить сообщение",           
+                  "click": sendSmsOrEmail
+                }
+              ]
+            }            
+          ],
+          "elementsConfig": {
+            "labelWidth": 250,
+            "labelPosition": "top"
+          }
+        }
+      }
+  );
+</script>
+</body>
+</html>
