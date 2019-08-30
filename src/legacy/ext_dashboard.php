@@ -32,7 +32,9 @@ class Ext_dashboard {
     $demand.= $queues_log;
 
     $demand.= "	AND event in ('PAUSE','UNPAUSE','ADDMEMBER','REMOVEMEMBER','PAUSEALL') 
-    ORDER BY time ASC ";//var_dump($demand);
+    ORDER BY time ASC ";
+    
+    //var_dump($demand);
     $result = $this->db->query($demand);
 
     $qagents = [];
@@ -702,11 +704,11 @@ class Ext_dashboard {
       $row = $result->fetch(\PDO::FETCH_NUM);
       return intval($row[0]);
     }
-    $gages = [];
+    $gages = [];    
 
     if($row = $result->fetch(\PDO::FETCH_ASSOC)) {
-      $served = $row['hold_sum'] + $row['COMPLETEAGENT_sum'] + $row['COMPLETECALLER_sum'];
-      $unserved = $row['transfer'] + $row['exitempty'] + $row['abandon'] + $row['exittimeout'] + $row['EXITWITHKEY_sum'] + $row['ringnoanswer'];
+      $served = $row['COMPLETEAGENT_sum'] + $row['COMPLETECALLER_sum'] + $row['transfer'];
+      $unserved = $row['exitempty'] + $row['abandon'] + $row['exittimeout'] + $row['EXITWITHKEY_sum'] + $row['ringnoanswer'];
 
       $total = $served + $unserved;
       $lcr = $row['abandon'] + $row['exitempty'] + $row['exittimeout'];
@@ -1249,6 +1251,8 @@ class Ext_dashboard {
           $agents[] = $row['name'];
       }
     }
+
+    //var_dump($worktime);
 
     foreach ($worktime as $k => $v) {
 
