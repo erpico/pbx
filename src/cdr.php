@@ -39,30 +39,30 @@ class PBXCdr {
         $dates = json_decode($filter['time'], 1);
         if ($dates['start']) {
           $d = strtotime($dates['start']);            
-          $qwsql .= "AND calldate >= '".date("Y-m-d 00:00:00", $d)."' ";
+          $qwsql .= "AND a.calldate >= '".date("Y-m-d 00:00:00", $d)."' ";
           $cwsql .= "AND calldate >= '".date("Y-m-d 00:00:00", $d)."' ";
         }
         if ($dates['end']) {
           $d = strtotime($dates['end']);            
-          $qwsql .= "AND calldate <= '".date("Y-m-d 23:59:59", $d)."' ";
+          $qwsql .= "AND a.calldate <= '".date("Y-m-d 23:59:59", $d)."' ";
           $cwsql .= "AND calldate <= '".date("Y-m-d 23:59:59", $d)."' ";
         }
       }  
       if(isset($filter['src']) && strlen($filter['src'])) {
-        $qwsql .= "	AND src LIKE '%".addslashes($filter['src'])."%' ";
+        $qwsql .= "	AND a.src LIKE '%".addslashes($filter['src'])."%' ";
         $cwsql .= "	AND src LIKE '%".addslashes($filter['src'])."%' ";
       }
       if(isset($filter['dst']) && strlen($filter['dst'])) {
         $cwsql .= "	AND dst LIKE '%".addslashes($filter['dst'])."%' ";
-        $qwsql .= "	AND agentdev LIKE '%".addslashes($filter['dst'])."%' ";
+        $qwsql .= "	AND a.agentdev LIKE '%".addslashes($filter['dst'])."%' ";
       }
       if(isset($filter['agent']) && strlen($filter['agent'])) {
         $cwsql .= "	AND 1 = 0 "; //Ignore CDR
-        $qwsql .= "	AND agentname = '".addslashes($filter['agent'])."' ";
+        $qwsql .= "	AND a.agentname = '".addslashes($filter['agent'])."' ";
       }
       if(isset($filter['queue']) && strlen($filter['queue'])) {
         $cwsql .= "	AND 1 = 0 "; //Ignore CDR
-        $qwsql .="	AND queue = '".addslashes($filter['queue'])."' ";
+        $qwsql .="	AND a.queue = '".addslashes($filter['queue'])."' ";
       }
       if(isset($filter['reason']) && strlen($filter['reason'])) {
         // RP: it's more complex query ....
@@ -71,22 +71,22 @@ class PBXCdr {
       if (isset($filter['talk']) && strlen($filter['talk'])) {
         $talk = json_decode($filter['talk'], 1);
         if ($talk['from']) {
-          $qwsql .= "AND talktime >= '".intval($talk['from'])."' ";
+          $qwsql .= "AND a.talktime >= '".intval($talk['from'])."' ";
           $cwsql .= "AND billsec >= '".intval($talk['from'])."' ";
         }
         if ($talk['to']) {
-          $qwsql .= "AND talktime <= '".intval($talk['to'])."' ";
+          $qwsql .= "AND a.talktime <= '".intval($talk['to'])."' ";
           $cwsql .= "AND billsec <= '".intval($talk['to'])."' ";
         }
       }
       if (isset($filter['hold']) && strlen($filter['hold'])) {
         $hold = json_decode($filter['hold'], 1);
         if ($hold['from']) {
-          $qwsql .= "AND holdtime >= '".intval($hold['from'])."' ";
+          $qwsql .= "AND a.holdtime >= '".intval($hold['from'])."' ";
           $cwsql .= "AND duration - billsec >= '".intval($hold['from'])."' ";
         }
         if ($hold['to']) {
-          $qwsql .= "AND holdtime <= '".intval($hold['to'])."' ";
+          $qwsql .= "AND a.holdtime <= '".intval($hold['to'])."' ";
           $cwsql .= "AND duration - billsec <= '".intval($hold['to'])."' ";
         }
       }      
@@ -103,7 +103,7 @@ class PBXCdr {
     }*/
 
     if (intval($onlyCount)) {
-      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(uniqid) AS n FROM queue_cdr WHERE 1=1 $queues $qwsql GROUP BY uniqid) as u UNION SELECT COUNT(uniqueid) AS n FROM cdr WHERE 1=1 $extens $cwsql) as a";            
+      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(uniqid) AS n FROM queue_cdr a WHERE 1=1 $queues $qwsql GROUP BY uniqid) as u UNION SELECT COUNT(uniqueid) AS n FROM cdr WHERE 1=1 $extens $cwsql) as c";            
       $res = $this->db->query($sql);      
       $row = $res->fetch(PDO::FETCH_NUM);
       //die($sql);
@@ -124,7 +124,7 @@ class PBXCdr {
               SUM(IF(reason = 'ANSWERED',talktime,0)) AS sum_duration,
               COUNT(IF(reason = 'ANSWERED',1,NULL)) AS count_answered,
               SUM(IF(reason = 'ANSWERED', (talktime),0)) AS sum_answered
-              FROM queue_cdr WHERE 1=1 $queues $qwsql GROUP BY uniqid
+              FROM queue_cdr a WHERE 1=1 $queues $qwsql GROUP BY uniqid
           UNION 
           SELECT               
               SUM(duration - billsec) AS sum_billsec,
@@ -132,7 +132,7 @@ class PBXCdr {
               COUNT(IF(disposition = 'ANSWERED',1,NULL)) AS count_answered,
               SUM(IF(disposition = 'ANSWERED', billsec,0)) AS sum_answered
               FROM cdr WHERE 1=1 $extens $cwsql
-          ) as a      
+          ) as c      
       ";            
       $result_cdr = $this->db->query($sql);      
       $cdr = $result_cdr->fetch(\PDO::FETCH_ASSOC);      
@@ -152,22 +152,22 @@ class PBXCdr {
 
       $sql = "SELECT * FROM (
               SELECT 
-                  ANY_VALUE(calldate) AS calldate, 
-                  ANY_VALUE(src) AS src, 
-                  ANY_VALUE(agentdev) AS dst, 
-                  ANY_VALUE(queue) AS queue, 
-                  ANY_VALUE(reason) AS reason, 
-                  MAX(holdtime) AS holdtime, 
-                  MAX(talktime) AS talktime, 
-                  uniqid, 
-                  ANY_VALUE(agentname) AS agentname
-        FROM queue_cdr WHERE 1=1 $queues $qwsql AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' GROUP BY uniqid HAVING MAX(id)
+                  a.calldate, 
+                  a.src, 
+                  a.agentdev, 
+                  a.queue, 
+                  a.reason, 
+                  a.holdtime, 
+                  a.talktime, 
+                  a.uniqid, 
+                  a.agentname
+        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql AND a.calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND a.calldate <= '".date('Y-m-d H:i:s', $lcd)."'
         UNION
         SELECT calldate, src, dst, name, disposition, duration - billsec, billsec, uniqueid AS uniqid, '' 
         FROM cdr WHERE 1=1 $extens $cwsql AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' 
-        ) AS a ORDER BY calldate DESC ";
+        ) AS c ORDER BY calldate DESC ";
 
-        die ($sql);
+        //die ($sql);
       
       /*if (isset($start) && isset($limit)){
         $sql .= " LIMIT ".intval($start).", ".intval($limit);

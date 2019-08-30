@@ -84,7 +84,7 @@ class Utils {
         };
       };
       $queues_d = substr($queues_d, 0, -1);
-      $queues = " AND queue IN (" . $queues_d . ") ";
+      $queues = " AND a.queue IN (" . $queues_d . ") ";
     }
     else $queues = "";
     return $queues;
