@@ -1,6 +1,6 @@
 <?php
 namespace App\Middleware;
-
+use Erpico\Rules;
 class AuthUser
 {    
     private $container;
@@ -55,6 +55,22 @@ class User
       $container = $app->getContainer();
       $this->db = $container['db'];
     }
+  }
+
+  public function getPhone($id) {
+    if (!intval($id)) return "";
+    $sql = "SELECT 
+      C.val as phone
+      FROM acl_user as U
+      LEFT JOIN cfg_user_setting AS C ON (C.acl_user_id = U.id AND C.handle = 'cti.ext')
+      WHERE U.id = {$id}";
+    $res = $this->db->query($sql, \PDO::FETCH_NUM);
+    $row = $res->fetch();
+    if (is_array($row) && strlen($row[0])) {
+      return $row[0];
+    }
+    return "";
+    
   }
 
   public function auth($token) {
@@ -424,6 +440,8 @@ class User
     }
     $res = $this->db->query($sql, $onlycount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
     $result = [];
+    $rules = new PBXRules();
+
     while ($row = $res->fetch()) {
       if ($onlycount) {
         return intval($row[0]);
@@ -434,9 +452,10 @@ class User
         $row['user_groups_ids'] = $groups['ids'];
       }
       if (intval($shortlist)) {
-        $result[] = ["id"=>$row["id"], "value"=>$row["name"]];
+        $result[] = ["id"=>$row["id"], "value"=>$row["name"], "phone"=>$row["phone"]];
       } else {
-        $result[] = $row;
+      $row['rules'] = $rules->getUserRules($row['id']);
+      $result[] = $row;
       }
     }
 
@@ -545,6 +564,8 @@ class User
           $id = $this->db->lastInsertId();
           $sql = "INSERT INTO cfg_user_setting SET ";
         }
+        $rules = new PBXRules();
+        $rules->saveUser($params['rules'], $id);
         $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
         if(isset($end_sql)) {
           $sql .= $end_sql;
@@ -630,6 +651,7 @@ class User
     }
     $res = $this->db->query($sql,intval($onlycount) ? \PDO::FETCH_NUM : \PDO::FETCH_ASSOC);
     $result = [];
+    $rules = new PBXRules();
     while ($row = $res->fetch()) {
       if (intval($onlycount)) {
         return $row[0];
@@ -637,6 +659,7 @@ class User
       $users = $this->getUsersGroup(intval($row['id']));
       $row['list_users_str'] = $users['names'];
       $row['list_users_ids'] = $users['ids'];
+      $row['rules'] = $rules->getGroupRules($row['id']);
       array_push($result, $row);
     } 
     return $result;
@@ -669,6 +692,8 @@ class User
         } else {
           $id = $this->db->lastInsertId();
         }
+        $rules = new PBXRules();
+        $rules->saveGroup($params['rules'], $id);
         if (isset($params['list_users_ids']) && trim(strlen($params['list_users_ids']))){
           $users = explode(",",trim($params['list_users_ids']));
           $ids = [];

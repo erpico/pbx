@@ -123,6 +123,7 @@ class PBXOutgoingCampaign  {
     }
     return $result;
   }
+
   public function getContactsResults($id) {
     $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
     state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} AND `state` IN (4,6,7)";
@@ -289,7 +290,31 @@ class PBXOutgoingCampaign  {
     return "Неизвестный код завершения";
   }
 
-  public function addUpdate($values) {
+  private function savePhone($id, $campaning_id, $phone, $name, $description, $state) {
+    try {
+      if (strlen($id) >= 8) {
+        $sql = " INSERT INTO outgouing_company_contacts SET ";
+      } else {
+        $sql = " UPDATE outgouing_company_contacts SET ";
+        $sql_end = " WHERE id = '".intval($id)."'";
+      }
+      $sql .= "`phone` = '".trim(addslashes($phone))."',
+      `name` = '".trim(addslashes($name))."',
+      `description` = '".trim(addslashes($description))."',
+      `updated` = NOW(),
+      `outgouing_company_id` = '".intval($campaning_id)."',
+      `state` = '".intval($state)."'
+      ";
+      if (isset($sql_end)) $sql .= $sql_end;
+      
+      $res = $this->db->query($sql);
+      // echo $sql."\n";
+    } catch (\Throwable $th) {
+      // echo $sql."\n\n";
+    }    
+   }
+
+  public function addUpdate($values) {    
     if (isset($values['id']) && intval($values['id'])) {
       $sql = "UPDATE outgouing_company SET ";
     } else {
@@ -318,6 +343,16 @@ class PBXOutgoingCampaign  {
       } else {
         $id = $this->db->lastInsertId();
       }
+      if (isset($values['phones'])) {
+        $phones = json_decode($values['phones']);
+        foreach ($phones as $phone) {
+          if (intval($phone->phone)) {
+            $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
+          } else {
+          }
+        }
+      }
+      
       if (isset($values['days'])) {
         $this->updateWeekDays($id, $values['days']);
       }

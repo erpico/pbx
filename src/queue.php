@@ -28,6 +28,16 @@ class PBXQueue {
     return "queue";
   }
 
+  public function getName($id) {
+    if (!intval($id)) return "";
+    $sql = "SELECT name FROM queue WHERE id = {$id} ";
+    $res = $this->db->query($sql, \PDO::FETCH_NUM );
+    $row = $res->fetch();
+    if (is_array($row) && strlen($row[0])) {
+      return $row[0];
+    }
+    return "";
+  }
   public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0) {
     $sql = "SELECT ";
     if (intval($onlyCount)) {

@@ -1190,3 +1190,27 @@ $app->get('/controllers/groups.php', function (Request $request, Response $respo
   }
   return $response->withHeader('Content-Type', 'application/json')->withStatus(200)->withJson($result, null, JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK);
 });
+
+$app->get('/legacy/scripts/getstageid', function (Request $request, Response $response, array $args) use ($app) {
+  $id = $request->getParam("id", 0);
+  // getFirstStageId
+  $script = new \Erpico\Script($app->getContainer());
+  return $response->withJson(["result"=>$script->getFirstStageId(intval($id))]);
+
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/legacy/scripts', function (Request $request, Response $response, array $args) use ($app) {
+  $id = $request->getParam("id", 0);
+  $sid = $request->getParam("sid", 0);
+  $nps_id = $request->getParam("nps_id", 0);
+  $script = new \Erpico\Script($app->getContainer());
+  return $response->withJson($script->getScriptInfo($id, $sid, $nps_id));
+
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/legacy/scripts/set_answer', function (Request $request, Response $response, array $args) use ($app) {
+  $data = $request->getParam("data", "");
+  $script = new \Erpico\Script($app->getContainer());
+  return $response->withJson($script->setAnswer($data));
+
+})->add('\App\Middleware\OnlyAuthUser');

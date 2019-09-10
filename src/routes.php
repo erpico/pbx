@@ -3,6 +3,7 @@
 use Slim\Http\Request;
 use Slim\Http\Response;
 use Erpico\User;
+use Erpico\PBXRules;
 // Routes
 
 $app->post('/auth/login', function (Request $request, Response $response, array $args) {
@@ -156,6 +157,28 @@ $app->get('/users/user_groups', function (Request $request, Response $response, 
     return $response->withJson($user->fetchGroups());
 })->add('\App\Middleware\OnlyAuthUser');
 
+$app->post('/settings/{key}/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+  $id = intval($args['id']);
+  $settings = new PBXSettings();
+  $params = $request->getParam("settings", "");
+  if (trim($args['key']) == 'user') {
+    return $response->withJson(["result"=>$settings->setUserSettings($id, $params)]);
+  } else if (trim($args['key']) == 'group') {
+    return $response->withJson(["result"=>$settings->setGroupSettings($id, $params)]);
+  }
+  return $response->withJson(["result"=> FALSE]);
+});
+
+$app->get('/settings/{key}/{id}', function (Request $request, Response $response, array $args) use($app) {
+  $id = intval($args['id']);
+  $settings = new PBXSettings();
+  if (trim($args['key']) == 'user') {
+    return $response->withJson(["data"=>$settings->getUserSettings($id)]);
+  } else if (trim($args['key']) == 'group') {
+    return $response->withJson(["data"=>$settings->getGroupSettings($id)]);
+  }
+  return $response->withJson(["data"=>[]]);
+});
 
 $app->get('/groups/list', function (Request $request, Response $response, array $args) use($app) {
     $user = new User();
@@ -186,6 +209,38 @@ $app->get('/groups/users/short', function (Request $request, Response $response,
     );
 })->add('\App\Middleware\OnlyAuthUser');
 
+$app->get('/contact_groups/list', function (Request $request, Response $response, array $args) use($app) {
+  $contact_groups = new PBXContactGroups();
+
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+
+  return $response->withJson([
+      "data" => $contact_groups->fetchList($filter, $start, $count, 0),
+      "total_count" => $contact_groups->fetchList($filter, $start, $count, 1),
+      "pos" => $start
+  ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/contact_groups/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+  $id = intval($args["id"]);  
+  $contact_groups = new PBXContactGroups($id);
+
+  $name = $request->getParam("name", "");
+  $acl_phones = $request->getParam("acl_phones", "");
+  $queues = $request->getParam("queues", "");
+  $group_queues = $request->getParam("group_queues", "");
+
+  return $response->withJson($contact_groups->save($name, $acl_phones, $queues, $group_queues));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/contact_groups/{id}', function (Request $request, Response $response, array $args) use($app) {
+  $id = intval($args["id"]);  
+  $contact_groups = new PBXContactGroups($id);
+
+  return $response->withJson($contact_groups->getFullInfo());
+})->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/auth/info', function (Request $request, Response $response, array $args) use($app) {    
     return $response->withJson($app->getContainer()['auth']->getInfo());
@@ -237,6 +292,13 @@ $app->get('/queues/list', function (Request $request, Response $response, array 
         "total_count" => $queue->fetchList($filter, $start, $count, 1),
         "pos" => $start
     ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/queues/list/short', function (Request $request, Response $response, array $args) use($app) {
+  $queue = new PBXQueue();
+  $count = $queue->fetchList("", 0, 0, 1);
+
+  return $response->withJson($queue->fetchList("", 0, $count, 0));
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->post('/queues/{queues_id}/save', function (Request $request, Response $response, array $args) use($app) {
@@ -344,3 +406,26 @@ $app->get('/acd/sms', function (Request $request, Response $response, array $arg
     return $this->renderer->render($response, 'sms.phtml', $args);
 });
   
+// RULES 
+
+$app->get('/rules/list', function (Request $request, Response $response, array $args) use($app) {
+  $rule = new PBXRules();
+
+  return $response->withJson($rule->fetchList());
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/rules/groups/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+  $rule = new PBXRules();
+  $rules = $request->getParam("rules", "");
+
+  $res = $rule->saveGroup($rules, intval($args['id']));
+  return $response->withJson(["result" => $res]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/rules/users/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+  $rule = new PBXRules();
+  $rules = $request->getParam("rules", "");
+
+  $res = $rule->saveUser($rules, intval($args['id']));
+  return $response->withJson(["result" => $res]);
+})->add('\App\Middleware\OnlyAuthUser');
