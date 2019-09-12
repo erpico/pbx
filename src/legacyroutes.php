@@ -387,8 +387,8 @@ $app->get('/legacy/lost_calls_total', function (Request $request, Response $resp
 
     $lost_calls = new \Erpico\Lost_calls($app->getContainer());
     return $response->withJson([
-        "data" => $lost_calls->getLost_calls_total($filter, $pos, $count, 0),
-        "total_count" => $lost_calls->getLost_calls_total($filter, $pos, $count, 1)
+    "data" => $lost_calls->getLost_calls_total($filter/*, $pos, $count, 0*/),
+        // "total_count" => $lost_calls->getLost_calls_total($filter, $pos, $count, 1)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
