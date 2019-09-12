@@ -291,7 +291,7 @@ class PBXOutgoingCampaign  {
   }
 
   private function savePhone($id, $campaning_id, $phone, $name, $description, $state) {
-    try {
+    //try {
       if (strlen($id) >= 8) {
         $sql = " INSERT INTO outgouing_company_contacts SET ";
       } else {
@@ -309,12 +309,13 @@ class PBXOutgoingCampaign  {
       
       $res = $this->db->query($sql);
       // echo $sql."\n";
-    } catch (\Throwable $th) {
+    //} catch (\Throwable $th) {
       // echo $sql."\n\n";
-    }    
+    //}    
    }
 
-  public function addUpdate($values) {    
+  public function addUpdate($values) {
+    $errors = [];    
     if (isset($values['id']) && intval($values['id'])) {
       $sql = "UPDATE outgouing_company SET ";
     } else {
@@ -347,8 +348,10 @@ class PBXOutgoingCampaign  {
         $phones = json_decode($values['phones']);
         foreach ($phones as $phone) {
           if (intval($phone->phone)) {
-            $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
-          } else {
+            $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
+            if (isset($resPhone)) {
+              $errors[] = $resPhone;
+            }
           }
         }
       }
@@ -361,9 +364,9 @@ class PBXOutgoingCampaign  {
       } else {
         $this->bindDefaultSettings($id);
       }
-      return [ "result" => true, "message" => "Операция прошла успешно"];
+      return [ "result" => true, "message" => "Операция прошла успешно", "errors"=>$errors];
     }
-    return [ "result" => false, "message" => "Ошибка выполнения операции"];    
+    return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
   public function updateSettings($id, $settings) {

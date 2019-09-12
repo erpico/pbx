@@ -40,6 +40,11 @@ $app->get('/cdr/list', function (Request $request, Response $response, array $ar
     ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
+$app->get('/controllers/findrecord.php', function (Request $request, Response $response, array $args) use($app) {
+  $id = $request->getParam('id', 0);
+  return $response->withRedirect("/recording/$id"); 
+});
+
 $app->get('/recording/{id}', function (Request $request, Response $response, array $args) use($app) {
     $uid = $args['id'];
     $uid = str_replace(".mp3", "", $uid);
@@ -108,7 +113,7 @@ $app->get('/recording/{id}', function (Request $request, Response $response, arr
             ->withHeader('Content-Length', filesize($filename))
             ->withHeader('Content-Transfer-Encoding', 'binary')
             ->withHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"');
-})->setOutputBuffering(false)->add('\App\Middleware\OnlyAuthUser');
+})->setOutputBuffering(false);//->add('\App\Middleware\OnlyAuthUser');
 
 
 $app->post('/action/call', function (Request $request, Response $response, array $args) use($app) {

@@ -945,9 +945,9 @@ class Ext_dashboard {
     $sql .= $this->add_where_operands($filter);
 
     if (!isset($filter['parent'])) {
-    // By month
+      // By month
       if (!$onlycount) {
-        $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m'), queue_cdr.calldate";
+        // $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m'), queue_cdr.calldate";
       }
     } else {
       $parent = $filter['parent'];
@@ -961,25 +961,23 @@ class Ext_dashboard {
         $last_day = date('Y-m-d 23:59:59', ($week_number + 1) * 7 * 86400 + strtotime('1/1/' . $year) - date('w', strtotime('1/1/' . $year)) * 86400);
         $sql .= "AND calldate >= '$first_day' AND calldate <= '$last_day' ";
         if (!$onlycount) {
-          $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m-%d'), queue_cdr.calldate";
-        }
+          $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m-%d')";
+        }        
       } else if ($day != 0) {
         // Day
         $type = "day";
         $sql .= "AND calldate >= '$year-$month-$day 00:00:00' AND calldate <= '$year-$month-$day 23:59:59' ";
         if (!$onlycount) {
-          $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m-%d:%H'), queue_cdr.calldate";
+          $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m-%d:%H')";
         }
       } else {
         // Month
         $type = "month";
         $sql .= "AND calldate >= '$year-$month-1 00:00:00' AND calldate <= '$year-$month-31 23:59:59' ";
         if (!$onlycount) {
-          $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m.%u'), queue_cdr.calldate";
+          $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m.%u')";
         }
       }
-    }
-    if ($onlycount) {
     }
     $result = $this->db->query($sql);
     $table = [];
