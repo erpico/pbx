@@ -45,15 +45,25 @@ class User
 {
   private $db;
   private $token;
+  private $token_id = 0;
   private $id = 0;
 
-  public function __construct($db = 0, $_id = 0) {
-    if ($db) {
+  public function __construct($db = null, $_id = 0) {
+    if (isset($db)) {
       $this->db = $db;
     } else {
       global $app;    
       $container = $app->getContainer();
       $this->db = $container['db'];
+    }
+    if (!intval($_id)) {
+      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ? self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken($_COOKIE['pbx_token']) : 0)));
+      if (is_array($token_data)) {
+        $this->id = $token_data['acl_user_id'];
+        $this->token_id = $token_data['id'];
+        $this->updateToken();
+        $this->token = $token_data['token'];
+      }
     }
   }
 
@@ -115,6 +125,20 @@ class User
         'message' => 'Bad login or password'
       ];
     }
+  }
+
+  private function updateToken() {
+    $sql = "UPDATE acl_auth_token SET updated = Now(), expire = Now() + INTERVAL 5 DAY WHERE id = '".$this->token_id."' LIMIT 1";
+    $this->db->query($sql);
+  }
+
+  private function checkToken($token) {
+    $sql = "SELECT id, acl_user_id, token FROM acl_auth_token WHERE token = '".$token."'";
+    $res = $this->db->query($sql);
+  	if ($row = $res->fetch()) {
+  		return $row;
+  	}
+  	return 0;    
   }
 
   public function logout() {

@@ -34,12 +34,12 @@ $container['db'] = function ($c) {
 			$value = trim($value, " \"\t\n\r\0\x0B");
 			$config[$key] = $value;
 		};
-		fclose($fcfg);
-        $db['host'] = $config['db_host'];
-        $db['user'] = $config['db_user'];
-        $db['password'] = $config['db_password'];
-        $db['schema'] = $config['db_schema'];
-    }
+  fclose($fcfg);
+      $db['host'] = $config['db_host'];
+      $db['user'] = $config['db_user'];
+      $db['password'] = $config['db_password'];
+      $db['schema'] = $config['db_schema'];
+  }
     $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['schema'].";charset=UTF8",
         $db['user'], $db['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
@@ -85,3 +85,7 @@ require_once( __DIR__ . "/outgoingcampaign.php");
 require_once( __DIR__ . "/contact_groups.php");
 require_once( __DIR__ . "/rules.php");
 require_once( __DIR__ . "/pbx_settings.php");
+
+if (!isset($PBXUser)){
+  $PBXUser = new \Erpico\User();
+}
