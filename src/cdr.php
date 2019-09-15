@@ -49,8 +49,8 @@ class PBXCdr {
         }
       }  
       if(isset($filter['src']) && strlen($filter['src'])) {
-        $qwsql .= "	AND a.src LIKE '%".addslashes($filter['src'])."%' ";
-        $cwsql .= "	AND src LIKE '%".addslashes($filter['src'])."%' ";
+        $qwsql .= "	AND (a.src LIKE '%".addslashes($filter['src'])."%' OR a.agentdev LIKE '%".addslashes($filter['src'])."%')";
+        $cwsql .= "	AND (src LIKE '%".addslashes($filter['src'])."%' OR dst LIKE '%".addslashes($filter['src'])."%' )";
       }
       if(isset($filter['dst']) && strlen($filter['dst'])) {
         $cwsql .= "	AND dst LIKE '%".addslashes($filter['dst'])."%' ";
@@ -154,7 +154,7 @@ class PBXCdr {
               SELECT 
                   a.calldate, 
                   a.src, 
-                  a.agentdev, 
+                  a.agentdev AS dst, 
                   a.queue, 
                   a.reason, 
                   a.holdtime, 
@@ -165,9 +165,7 @@ class PBXCdr {
         UNION
         SELECT calldate, src, dst, name, disposition, duration - billsec, billsec, uniqueid AS uniqid, '' 
         FROM cdr WHERE 1=1 $extens $cwsql AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' 
-        ) AS c ORDER BY calldate DESC ";
-
-        //die ($sql);
+        ) AS c ORDER BY calldate DESC ";        
       
       /*if (isset($start) && isset($limit)){
         $sql .= " LIMIT ".intval($start).", ".intval($limit);

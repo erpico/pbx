@@ -232,12 +232,12 @@ $app->post('/contact_groups/{id}/save', function (Request $request, Response $re
   $id = intval($args["id"]);  
   $contact_groups = new PBXContactGroups($id);
 
-  $name = $request->getParam("name", "");
-  $acl_phones = $request->getParam("acl_phones", "");
+  $name = $request->getParam("name", "");    
   $queues = $request->getParam("queues", "");
-  $group_queues = $request->getParam("group_queues", "");
+  $items_users = $request->getParam("items_users", "");
+  $items_queues = $request->getParam("items_queues", "");
 
-  return $response->withJson($contact_groups->save($name, $acl_phones, $queues, $group_queues));
+  return $response->withJson($contact_groups->save($name, $queues, $items_users, $items_queues));
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->post('/contact_groups/{id}', function (Request $request, Response $response, array $args) use($app) {

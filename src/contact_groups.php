@@ -6,7 +6,8 @@ class PBXContactGroups {
   private $id;
   private $name;
   const FIELDS = [
-    "name" => 0
+    "name" => 0,
+    "queue" => 0
   ];
 
   public function __construct($id = 0) {
@@ -82,10 +83,14 @@ class PBXContactGroups {
 
     while ($row = $res->fetch()) {
       if ($onlyCount) {
-        return intval($row[0]);
+        return intval($row[0]); 
       }
+      $row["queue"] =  $row['queue'];
       $row["queues"] =  $this->getQueues($row['id']);
-      $row["users"]  =  $this->getUsers($row['id']);
+      $row["items"]  =  [
+        "users" => $this->getUserItems($row['id']),
+        "queues" => $this->getQueueItems($row['id'])
+      ];
       $result[]      = $row;
     }
 
@@ -103,18 +108,42 @@ class PBXContactGroups {
   }
 
   public function getQueues($id) {
-    $sql = "SELECT q.id, q.name
+    $sql = "SELECT q.id, q.fullname
     FROM contact_groups_queues
     LEFT JOIN queue AS q ON (q.id = contact_groups_queues.queue_id)
-    WHERE contact_groups_queues.contact_groups_id = '{$id}' AND contact_groups_queues.queue_id IS NOT NULL";
-    $res = $this->db->query($sql, \PDO::FETCH_NUM);
-    $ids = [];
-    $names = [];
+    WHERE contact_groups_queues.contact_groups_id = '{$id}'";
+    $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
+    $result = [];
     while ($row = $res->fetch()) {
-      $ids[] = $row[0];
-      $names[] = $row[1];
+      $result[] = [ "id" => intval($row['id']), "fullname" => $row['fullname']];
     }
-    return ["ids" => $ids, "names" => $names]; 
+    return $result; 
+  }
+
+  public function getQueueItems($id) {
+    $sql = "SELECT q.id, q.fullname
+    FROM contact_groups_items
+    LEFT JOIN queue AS q ON (q.id = contact_groups_items.queue_id)
+    WHERE contact_groups_items.contact_groups_id = '{$id}' AND contact_groups_items.queue_id IS NOT NULL";
+    $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
+    $result = [];
+    while ($row = $res->fetch()) {
+      $result[] = [ "id" => intval($row['id']), "fullname" => $row['fullname']];
+    }
+    return $result; 
+  }
+
+  public function getUserItems($id) {
+    $sql = "SELECT u.id, u.fullname
+    FROM contact_groups_items
+    LEFT JOIN acl_user AS u ON (u.id = contact_groups_items.acl_user_id)
+    WHERE contact_groups_items.contact_groups_id = '{$id}' AND contact_groups_items.acl_user_id IS NOT NULL";
+    $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
+    $result = [];
+    while ($row = $res->fetch()) {
+      $result[] = [ "id" => intval($row['id']), "fullname" => $row['fullname']];
+    }
+    return $result; 
   }
 
   public function getUsers($id) {
@@ -133,7 +162,7 @@ class PBXContactGroups {
     return ["ids" => $ids, "names" => $names, "phones" => $phones]; 
   }  
 
-  public function save($name, $acl_phones, $queues, $group_queues) {
+  public function save($name, $queues, $items_users, $items_queues) {
     if (intval($this->getId())) {
       $sql = " UPDATE contact_groups SET";
     } else {
@@ -151,56 +180,34 @@ class PBXContactGroups {
     }
     $res = $this->db->query($sql);
     if ($res) {
-      if (intval($this->getId())) {
-      } else {
+      if (!intval($this->getId())) {     
         $this->setId($this->db->lastInsertId());
       }
-      $this->deletePhones();
       $this->deleteQueues();
-      $this->deleteGroupsQueues();
-      if (isset($acl_phones) && strlen($acl_phones)) {        
-        $this->insertPhones($this->stringToArr($acl_phones));
-      }
-      if (isset($queues) && strlen($queues)) {        
-        $this->insertQueues($this->stringToArr($queues));
-      }
-      if (isset($group_queues) && strlen($group_queues)) {        
-        $this->insertGroupsQueues($this->stringToArr($group_queues));
-      }
+      $this->deleteItems();
+
+      $this->insertQueues($this->stringToArr($queues));
+      $this->insertItemsUsers($this->stringToArr($items_users));
+      $this->insertItemsQueues($this->stringToArr($items_queues));
+      
       return ["result" => TRUE, "message" => "Контактная группа сохранена"];
     }
     return ["result" => FALSE, "message" => "Произошла ошибка сохранения контактной группы"];
   }
 
-  private function stringToArr($acl_phones) {
-    $result = [];
-    if (strlen(trim($acl_phones))) {
-      $acl_phones_arr = explode(",", $acl_phones);
-      if (COUNT($acl_phones_arr)) {
-        foreach ($acl_phones_arr as $phone) {
-          if (intval($phone)) {
-            $result[] = $phone;
+  private function stringToArr($str) {
+    $result = [];    
+    if (strlen(trim($str))) {
+      $arr = explode(",", $str);
+      if (COUNT($arr)) {
+        foreach ($arr as $e) {
+          if (intval($e)) {
+            $result[] = intval($e);
           }
         }
       }
-    }
+    }    
     return $result;
-  }
-
-  private function insertPhones($acl_users) {
-    $user = new User();
-    foreach ($acl_users as $user_id) {
-      $phone = $user->getPhone($user_id);
-      if (strlen($phone)) {
-        $sql = "INSERT INTO contact_groups_items SET 
-          `contact_groups_id` = '".$this->getId()."',
-          `acl_user_id` = '".$user_id."',
-          `phone` = '".$phone."',
-          `queue` = ''
-          ";
-        $res = $this->db->query($sql);
-      }
-    }
   }
 
   private function insertQueues($group_queues) {
@@ -212,24 +219,28 @@ class PBXContactGroups {
     }    
   }
 
-  private function insertGroupsQueues($arr) {
-    $queue = new PBXQueue();
-    foreach ($arr as $value) {
-      $queueName = $queue->getName($value);
-      if (strlen($queueName)) {        
+  private function insertItemsQueues($arr) {    
+    foreach ($arr as $value) {                   
         $sql = "INSERT INTO contact_groups_items SET 
         `contact_groups_id` = '".$this->getId()."',
-        `queue_id` = '".$value."',
-        `queue` = '".$queueName."'";
-      $res = $this->db->query($sql);
-      }
+        `queue_id` = '".$value."'";
+        $res = $this->db->query($sql);      
     }
   }
 
-  private function deletePhones() {
+  private function insertItemsUsers($arr) {    
+    foreach ($arr as $value) {            
+        $sql = "INSERT INTO contact_groups_items SET 
+        `contact_groups_id` = '".$this->getId()."',
+        `acl_user_id` = '".$value."'";
+        $res = $this->db->query($sql);      
+    }
+  }
+
+  private function deleteItems() {
     if (intval($this->getId())) {
       $sql = "DELETE FROM contact_groups_items WHERE 
-        `contact_groups_id` = '".$this->getId()."' AND `phone` IS NOT NULL AND `phone` != '' ";
+        `contact_groups_id` = '".$this->getId()."'";
       $this->db->query($sql);
       return true;
     }
@@ -239,37 +250,12 @@ class PBXContactGroups {
   private function deleteQueues() {
     if (intval($this->getId())) {
       $sql = "DELETE FROM contact_groups_queues WHERE 
-        `contact_groups_id` = '".$this->getId()."' AND `queue_id` IS NOT NULL";
+        `contact_groups_id` = '".$this->getId()."'";
       $this->db->query($sql);
       return true;
     }
     return false;
   } 
-
-  private function deleteGroupsQueues() {
-    if (intval($this->getId())) {
-      $sql = "DELETE FROM contact_groups_items WHERE 
-        `contact_groups_id` = '".$this->getId()."' AND `queue_id` IS NOT NULL AND `queue` != '' ";
-      $this->db->query($sql);
-      return true;
-    }
-    return false;
-  }
-
-  private function getGroupsQueuesInfo() {
-    $result = [];
-    if (intval($this->getId())) {
-      $sql = "SELECT queue_id FROM contact_groups_items WHERE 
-        `contact_groups_id` = '".$this->getId()."' AND `queue_id` IS NOT NULL AND `queue` != '' ";
-      $res = $this->db->query($sql);
-      while ($row = $res->fetch()) {
-        if (intval($row['queue_id'])) {
-          $result[] = $row['queue_id'];
-        }
-      }      
-    }
-    return $result;
-  }
 
   private function getQueuesInfo() {
     $result = [];
