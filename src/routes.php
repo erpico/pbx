@@ -40,80 +40,83 @@ $app->get('/cdr/list', function (Request $request, Response $response, array $ar
     ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/controllers/findrecord.php', function (Request $request, Response $response, array $args) use($app) {
+/*$app->get('/controllers/findrecord.php', function (Request $request, Response $response, array $args) use($app) {
   $id = $request->getParam('id', 0);
   return $response->withRedirect("/recording/$id"); 
-});
+});*/
 
-$app->get('/recording/{id}', function (Request $request, Response $response, array $args) use($app) {
-    $uid = $args['id'];
-    $uid = str_replace(".mp3", "", $uid);
-    $uid = str_replace(".", "", $uid);
+$findrecord = function (Request $request, Response $response, array $args) use($app) {
+  $uid = isset($args['id']) ? $args['id'] : $request->getParam('id', 0);
+  $uid = str_replace(".mp3", "", $uid);
+  $uid = str_replace(".", "", $uid);
 
-    $cdr = new PBXCdr();
-    $row = $cdr->findById($uid);
-    if (!is_array($row)) {
-        return $response->withStatus(404)
-            ->withHeader('Content-Type', 'text/html')
-            ->write('Record not found in database');
-    }
-    
-    if (isset($row['agentname'])) {
-        // Queue
-        $date = str_replace(" ", "-", $row['calldate']);
-    
-        $agent = $row['agentname'];
-        
-        $uniqid = $row['uniqid'];
-        $cid = $row['src'];
-    
-        $fname = "$date-$cid-$agent-q-$uniqid.wav";
-        $path_parts = pathinfo($fname);    
-    
-        $filename = "/var/spool/asterisk/monitor/queues/".substr($fname,0,10)."/".substr($fname,11,2)."/".$path_parts['dirname'].'/'.$path_parts['filename'];
-    } else {
-        // Regular
-        $date = str_replace(" ", "-", $row['calldate']);
-        $time = strtotime($row['calldate']);    
-        $uniqid = substr($row['uniqueid'], 0, -2);
-        $src = $row['src'];
-        $dst = $row['dst'];
-    
-        $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*$src*-".$uniqid."*");    
-        if (!is_array($files) || !count($files)) {        
-            return $response->withStatus(404)
-                ->withHeader('Content-Type', 'text/html')
-                ->write('Record not found in filesystem');
-        }
-        $filename = $files[0];    
-    }
-    
-    if(file_exists($filename.".WAV")) {
-        $filename = $filename.".WAV";
-    }
-    else if(file_exists($filename.".wav")) {
-        $filename = $filename.".wav";
-    }
-    else if(file_exists($filename.".mp3")) {
-        $filename = $filename.".mp3";
-        $filenameB = "$date-$cid-$agent-q-$uniqid.mp3";
-    } else if (file_exists($filename)) {
-    } else {
-        return $response->withStatus(404)
-            ->withHeader('Content-Type', 'text/html')
-            ->write('Record not found in filesystem');
+  $cdr = new PBXCdr();
+  $row = $cdr->findById($uid);
+  if (!is_array($row)) {
+      return $response->withStatus(404)
+          ->withHeader('Content-Type', 'text/html')
+          ->write('Record not found in database');
+  }
+  
+  if (isset($row['agentname'])) {
+      // Queue
+      $date = str_replace(" ", "-", $row['calldate']);
+  
+      $agent = $row['agentname'];
       
-    }  
-    $fh = fopen($filename, 'rb');
-    $stream = new Slim\Http\Stream($fh);
-    return $response            
-            ->withBody($stream)
-            ->withHeader('Content-Type', 'audio/mpeg')
-            ->withHeader('Accept-Ranges', 'bytes')
-            ->withHeader('Content-Length', filesize($filename))
-            ->withHeader('Content-Transfer-Encoding', 'binary')
-            ->withHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"');
-})->setOutputBuffering(false);//->add('\App\Middleware\OnlyAuthUser');
+      $uniqid = $row['uniqid'];
+      $cid = $row['src'];
+  
+      $fname = "$date-$cid-$agent-q-$uniqid.wav";
+      $path_parts = pathinfo($fname);    
+  
+      $filename = "/var/spool/asterisk/monitor/queues/".substr($fname,0,10)."/".substr($fname,11,2)."/".$path_parts['dirname'].'/'.$path_parts['filename'];
+  } else {
+      // Regular
+      $date = str_replace(" ", "-", $row['calldate']);
+      $time = strtotime($row['calldate']);    
+      $uniqid = substr($row['uniqueid'], 0, -2);
+      $src = $row['src'];
+      $dst = $row['dst'];
+  
+      $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*$src*-".$uniqid."*");    
+      if (!is_array($files) || !count($files)) {        
+          return $response->withStatus(404)
+              ->withHeader('Content-Type', 'text/html')
+              ->write('Record not found in filesystem');
+      }
+      $filename = $files[0];    
+  }
+  
+  if(file_exists($filename.".WAV")) {
+      $filename = $filename.".WAV";
+  }
+  else if(file_exists($filename.".wav")) {
+      $filename = $filename.".wav";
+  }
+  else if(file_exists($filename.".mp3")) {
+      $filename = $filename.".mp3";
+      $filenameB = "$date-$cid-$agent-q-$uniqid.mp3";
+  } else if (file_exists($filename)) {
+  } else {
+      return $response->withStatus(404)
+          ->withHeader('Content-Type', 'text/html')
+          ->write('Record not found in filesystem');
+    
+  }  
+  $fh = fopen($filename, 'rb');
+  $stream = new Slim\Http\Stream($fh);
+  return $response            
+          ->withBody($stream)
+          ->withHeader('Content-Type', 'audio/mpeg')
+          ->withHeader('Accept-Ranges', 'bytes')
+          ->withHeader('Content-Length', filesize($filename))
+          ->withHeader('Content-Transfer-Encoding', 'binary')
+          ->withHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"');
+};
+
+$app->get('/recording/{id}', $findrecord)->setOutputBuffering(false);//->add('\App\Middleware\OnlyAuthUser');
+$app->get('/controllers/findrecord.php', $findrecord)->setOutputBuffering(false);//->add('\App\Middleware\OnlyAuthUser');
 
 
 $app->post('/action/call', function (Request $request, Response $response, array $args) use($app) {
