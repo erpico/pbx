@@ -18,11 +18,26 @@ class Daily_report {
     // Here need to add permission checkers and filters
 
     $utils = new Utils();
-    $t1 = date("2018-10-25 15:27:50");
-    $t2 = date("2018-10-27 15:27:50");
+    
+    $wsql = " WHERE 1=1";
+    if (is_array($filter) && isset($filter['t1']) && strlen($filter['t1']) && isset($filter['t2']) && strlen($filter['t2'])) {
+      $wsql .=" AND calldate>'".trim(addslashes($filter['t1']))."' AND calldate<'".trim(addslashes($filter['t2']))."' ";
+    } else {
+      $wsql .= " AND calldate > '".date('Y-m-d H:i:s',strtotime('-1 month', mktime(date("H"),date("i"),date("s"),date("m"),date("d"),date("Y"))))."'";
+    }
+    if (is_array($filter) && isset($filter['src']) && strlen($filter['src'])) {
+      $wsql .= " AND src LIKE '%".trim(addslashes($filter['src']))."%' ";
+    }
+    if (is_array($filter) && isset($filter['dst']) && strlen($filter['dst'])) {
+      $wsql .= " AND dst LIKE '%".trim(addslashes($filter['dst']))."%' ";
+    }
 
     if ($onlycount) {
-      $res = $this->db->query("SELECT COUNT(*) FROM cdr");
+      $res = $this->db->query("
+      SELECT COUNT(*) FROM (SELECT 
+        substring(calldate,1,10) FROM cdr 
+         ".$wsql." GROUP BY substring(calldate,1,10)
+        ) a");
       $row = $res->fetch(\PDO::FETCH_NUM);
       return intval($row[0]);
     }
@@ -34,29 +49,13 @@ class Daily_report {
 
     $demand_dailyreport = $demand_dailyreport.
       "	FROM cdr ";
-
-//  Time settings
-/*
-    if(isset($filter[t1]) && isset($filter[t2])&&($filter[t1]!="") && ($filter[t2]!="")) $demand_dailyreport = $demand_dailyreport.
-      "	WHERE calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
-    else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE calldate > '".date('Y-m-d H:i:s',strtotime('-1 month', mktime(date("H"),date("i"),date("s"),date("m"),date("d"),date("Y"))))."'";
-*/
-
-    $demand_dailyreport = $demand_dailyreport."	WHERE calldate>'".$t1."' AND calldate<'".$t2."' ";
-
-/*
-    if(isset($filter['src'])) $demand_dailyreport = $demand_dailyreport.
-      "	AND src LIKE '%".$filter['src']."%' ";
-    if(isset($filter['dst'])) $demand_dailyreport = $demand_dailyreport.
-      "	AND dst LIKE '%".$filter['dst']."%' ";
-*/
+    $demand_dailyreport = $demand_dailyreport." ".$wsql;
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $demand_dailyreport.= $extens;
 
-    $demand_dailyreport = $demand_dailyreport." GROUP BY substring(calldate,1,10) ORDER BY id DESC";
+    $demand_dailyreport = $demand_dailyreport." GROUP BY substring(calldate,1,10) ORDER BY substring(calldate,1,10) DESC";
     $result_dailyreport = $this->db->query($demand_dailyreport);
     $dailyreport_arr = [];
     $i = -1;

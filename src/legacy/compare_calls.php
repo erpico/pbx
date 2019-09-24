@@ -108,7 +108,7 @@ class Compare_calls {
     $extens = $utils->sql_allow_extens($ext);
     $demand_dailyreport.= $extens;
 
-    $demand_dailyreport = $demand_dailyreport."GROUP BY substring(calldate,9,5) ORDER BY calldate ";
+    $demand_dailyreport = $demand_dailyreport."GROUP BY substring(calldate,9,5),calldate ORDER BY calldate ";
 
     $result_dailyreport = $this->db->query($demand_dailyreport);
     $dailyreport_arr = [];
@@ -183,17 +183,8 @@ class Compare_calls {
 
   public function getCompare_calls($filter, $pos, $count = 20, $onlycount = 0) {
 
-    // Here need to add permission checkers and filters
-
     $utils = new Utils();
     $t1 = date("2018-10-25-15:27:50");
-//  $t2 = date("2018-10-27-15:27:50");
-
-    if ($onlycount) {
-        $res = $this->db->query("SELECT COUNT(*) FROM cdr");
-        $row = $res->fetch(\PDO::FETCH_NUM);
-        return intval($row[0]);
-    }
 
     $demand_dailyreport = "		
                     SELECT substring(calldate,1,10), SUM(IF(disposition = 'ANSWERED',duration,0)) AS sum_duration, 
@@ -202,42 +193,8 @@ class Compare_calls {
     $demand_dailyreport = $demand_dailyreport.
       "	FROM cdr ";
 
-//  Time settings
-/*
     if(isset($filter['t1']) && $filter['t1']!="") {
       if(isset($filter['t2']) && $filter['t2']!="") $period = $filter['t2'];
-      else $period = 1;
-      $b = explode("-", $filter['t1']);
-
-      if($b[2]<$period) {
-          $str1 = strtotime($filter['t1'])+86400;
-          $date1 = date("Y-m-d",$str1);
-          $str2 = strtotime($filter['t1'])-86400*($period-1);
-          $date2 = date("Y-m-d",$str2);
-      }
-      else {
-          $year1 = $b[0];
-          $year2 = $b[0];
-          $day1 = $b[2]+1;
-          $day1 = $day1>9 ? $day1 : "0".$day1;
-          $day2 = $b[2]-$period+1;
-          $day2 = $day2>9 ? $day2 : "0".$day2;
-          $month1 = $b[1];
-          $month1 = $month1>9 ? $month1 : "0".$month1;
-          $month2 = $b[1];
-          $month2 = $month2>9 ? $month2 : "0".$month2;
-          $date1 = $year1."-".$month1."-".$day1;
-          $date2 = $year2."-".$month2."-".$day2;
-      };
-      $demand_dailyreport = $demand_dailyreport.
-          "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$date2."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$date1."')  ";
-    }
-    else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".date("Y-m-d")."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".date("Y-m-d", time() + 86400)."')  ";
-*/
-
-    if(isset($t1) && $t1!="") {
-      if(isset($t2) && $t2!="") $period = $t2;
       else $period = 1;
       $b = explode("-", $t1);
 
@@ -261,24 +218,21 @@ class Compare_calls {
           $date1 = $year1."-".$month1."-".$day1;
           $date2 = $year2."-".$month2."-".$day2;
       };
-      $demand_dailyreport = $demand_dailyreport.
-          "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$date2."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$date1."')  ";
+      $wsql = "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$date2."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$date1."')  ";
     }
-    else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".date("Y-m-d")."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".date("Y-m-d", time() + 86400)."')  ";
-
-/*
-    if(isset($filter['src'])) $demand_dailyreport = $demand_dailyreport.
-      "	AND src LIKE '%".$filter['src']."%' ";
-    if(isset($filter['dst'])) $demand_dailyreport = $demand_dailyreport.
-      "	AND dst LIKE '%".$filter['dst']."%' ";
-*/
+    else $wsql = "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".date("Y-m-d")."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".date("Y-m-d", time() + 86400)."')  ";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $demand_dailyreport.= $extens;
 
-    $demand_dailyreport = $demand_dailyreport."GROUP BY substring(calldate,1,10) ORDER BY calldate  ";
+    if ($onlycount) {
+      $res = $this->db->query("SELECT COUNT(*) FROM ( SELECT calldate FROM cdr ".$wsql." GROUP BY substring(calldate,1,10),calldate ) a");
+      $row = $res->fetch(\PDO::FETCH_NUM);
+      return intval($row[0]);
+    }
+
+    $demand_dailyreport = $demand_dailyreport.$wsql." GROUP BY substring(calldate,1,10),calldate ORDER BY calldate";
     $result_dailyreport = $this->db->query($demand_dailyreport);
     $dailyreport_arr = [];
     $i = -1;

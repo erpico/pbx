@@ -19,7 +19,7 @@ class Lost_calls {
         $query = "
         SELECT COUNT(*) AS count_calls
         FROM queue_cdr
-        WHERE !outgoing AND src LIKE '%".$src."' AND reason != 'ABANDON' AND reason != 'EXITWITHTIMEOUT' AND
+        WHERE !outgoing AND src LIKE '%".substr($src,2)."' AND reason != 'ABANDON' AND reason != 'EXITWITHTIMEOUT' AND
         reason != 'EXITEMPTY' AND reason != 'EXITWITHTKEY' AND reason != 'RINGNOANSWER' ".$sql;
 
         $que = $this->auth->allowed_queues();
@@ -35,7 +35,7 @@ class Lost_calls {
         $query = "
         SELECT COUNT(*) AS count_calls
         FROM cdr
-        WHERE src LIKE '%".$src."' AND disposition = 'ANSWERED' ".$sql;
+        WHERE dst LIKE '%".substr($src,2)."' AND disposition = 'ANSWERED' ".$sql;
 
         $lost_calls = $this->db->query($query);
         $result = $lost_calls->fetch(\PDO::FETCH_ASSOC);
@@ -48,7 +48,7 @@ class Lost_calls {
         $query = "
         SELECT MAX(calldate), UNIX_TIMESTAMP(MAX(calldate)) 
         FROM queue_cdr 
-        WHERE src LIKE '%".$src."' ".$sql;
+        WHERE src LIKE '%".substr($src,2)."' ".$sql;
 
         $que = $this->auth->allowed_queues();
         $queues = $utils->sql_allowed_queues($que);
@@ -65,7 +65,7 @@ class Lost_calls {
         $query = "
         SELECT UNIX_TIMESTAMP(MAX(calldate)) 
         FROM queue_cdr 
-        WHERE src LIKE '%".$src."' ".$sql;
+        WHERE src LIKE '%".substr($src,2)."' ".$sql;
 
         $que = $this->auth->allowed_queues();
         $queues = $utils->sql_allowed_queues($que);
@@ -81,7 +81,7 @@ class Lost_calls {
         $query = "
         SELECT UNIX_TIMESTAMP(MAX(calldate)) 
         FROM cdr
-        WHERE src LIKE '%".$src."' AND disposition = 'ANSWERED' ".$sql;
+        WHERE dst LIKE '%".substr($src,2)."' AND disposition = 'ANSWERED' ".$sql;
 
         $lost_calls = $this->db->query($query);
         $result = $lost_calls->fetch(\PDO::FETCH_NUM);

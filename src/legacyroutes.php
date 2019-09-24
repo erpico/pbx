@@ -597,11 +597,10 @@ $app->get('/legacy/month_traffic_period', function (Request $request, Response $
     $count = $request->getParam('count', 20);
 
     $month_traffic = new \Erpico\Month_traffic($app->getContainer());
-    return $response->withJson([
-        "data" => $month_traffic->getMonth_traffic_period($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $month_traffic->getMonth_traffic_period($filter, $pos, $count, 1)
-    ]);
+    return $response->withJson($month_traffic->getMonth_traffic_period($filter, $pos, $count, 0)
+        // "pos" => $pos,
+        // "total_count" => $month_traffic->getMonth_traffic_period($filter, $pos, $count, 1)
+    );
 
 })->add('\App\Middleware\OnlyAuthUser');
 

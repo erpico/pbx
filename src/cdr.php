@@ -39,13 +39,13 @@ class PBXCdr {
         $dates = json_decode($filter['time'], 1);
         if ($dates['start']) {
           $d = strtotime($dates['start']);            
-          $qwsql .= "AND a.calldate >= '".date("Y-m-d 00:00:00", $d)."' ";
-          $cwsql .= "AND calldate >= '".date("Y-m-d 00:00:00", $d)."' ";
+          $qwsql .= "AND a.calldate >= '".date("Y-m-d H:i:00", $d)."' ";
+          $cwsql .= "AND calldate >= '".date("Y-m-d H:i:00", $d)."' ";
         }
         if ($dates['end']) {
           $d = strtotime($dates['end']);            
-          $qwsql .= "AND a.calldate <= '".date("Y-m-d 23:59:59", $d)."' ";
-          $cwsql .= "AND calldate <= '".date("Y-m-d 23:59:59", $d)."' ";
+          $qwsql .= "AND a.calldate <= '".date("Y-m-d H:i:59", $d)."' ";
+          $cwsql .= "AND calldate <= '".date("Y-m-d H:i:59", $d)."' ";
         }
       }  
       if(isset($filter['src']) && strlen($filter['src'])) {
