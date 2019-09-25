@@ -43,7 +43,8 @@ class PBXCdr {
           $cwsql .= "AND calldate >= '".date("Y-m-d H:i:00", $d)."' ";
         }
         if ($dates['end']) {
-          $d = strtotime($dates['end']);            
+          $d = strtotime($dates['end']);
+          if (date("H", $d) == 0 && date("i",$d) == 0) $d += 86399;
           $qwsql .= "AND a.calldate <= '".date("Y-m-d H:i:59", $d)."' ";
           $cwsql .= "AND calldate <= '".date("Y-m-d H:i:59", $d)."' ";
         }
