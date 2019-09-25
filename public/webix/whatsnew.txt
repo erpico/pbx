@@ -1,64 +1,16 @@
-Version 6.4.4 (August 2019)
-==================
+Version 7.0.0 (September 2019)
+==============================
 
-### Fixes
+### Major features
 
-- webix.message API in IE8+
-- incorrect chart.config after setting seriew through chart.define
-- server-side filtering fails on non-json data
-- broken hover effect for datatable in IE/Edge
-- Excel/Pdf/etc file import fails in latest Chrome
-- datatable sets incorrect x-scroll position on touch devices
+- [Visual designer tool](https://designer.webix.com)
+- Timeline widget
+- Mention suggest widget
+- Ability to hide/disable options and items across widgets
 
+[Full list of changes and fixes](https://docs.webix.com/desktop__whats_new_7_0.html)
 
-Version 6.4.3 (August 2019)
-==================
-
-### Updated
-
-- readonly mode for comments widget
-
-### Fixes
-
-- combo editor incorrectly sets value for an empty option in some cases
-- small values are not rendered in bar chart without y-scale
-- Y axis in chart does not rendering for a single data item with value 0
-- Y axis in chart disappears from chart, if start and end are 0
-- minDate in calendar prevents selection a valid date in some cases
-- submenu doesn't hide on hover out in some cases
-- export to png/pdf doesn't work for content with iframes
-- hover over datatable's rows in IE/Edge
-- styling of dbl-list in the Contrast skin
-- layot's resizer behaves incorrectly in some cases
-
-Version 6.4.2 (July 2019)
-==================
-
-### Fixes
-
-- regression in setValue API for tabbar and segmented button
-- incorrect overflow styling for righ-label in form controls
-- non-perfect styling of checkbox editor in the datatable
-
-
-Version 6.4.1 (July 2019)
-==================
-
-### Fixes
-
-- block selection doesn't rendered in top-split area of datatable
-- multi-level menu doesn't work on touch devices
-- empty suggest box may throw js error on keyboard navigation
-- toggle view doesn't render html content correctly
-- badge is not rendered for zero value
-- performance problem for keyboard navigation in datatable
-- incorrect header element in calendar for week sub scale
-- non-optimal behavior of colorpicker in editable mode
-- regression in handling minDate in the calendar
-- incorrect scale in chart when for very small values
-
-
-Version 6.4.0 (June 2019)
+Version 6.4 (June 2019)
 ==================
 
 ### Major features

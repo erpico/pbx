@@ -1,8 +1,8 @@
 {
   "_from": "@xbs/webix-pro",
-  "_id": "@xbs/webix-pro@6.4.4",
+  "_id": "@xbs/webix-pro@7.0.0",
   "_inBundle": false,
-  "_integrity": "sha512-SChLLhF8tve/3r4AR/RWjBjOf55ak8P5qhILjMK3Oy393IwAs54AbWj29fxNqQ2/8E5ecHf/b3ypGLsocMILBw==",
+  "_integrity": "sha512-TNqSrIgdn7gs09EjIk8ByBEIox2EEe99hmxUcyZFhJVRxQOFzQAUNdNbHnVBjQd+DxIqo3WzPIx8lR6zATBRQQ==",
   "_location": "/@xbs/webix-pro",
   "_phantomChildren": {},
   "_requested": {
@@ -20,8 +20,8 @@
     "#USER",
     "/"
   ],
-  "_resolved": "https://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-6.4.4.tgz",
-  "_shasum": "522e2d5808e89e231027ac12ce74022b2199236a",
+  "_resolved": "https://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-7.0.0.tgz",
+  "_shasum": "7d1d515fd6d887f7a8a88fbdb86d461aa4678023",
   "_spec": "@xbs/webix-pro",
   "_where": "C:\\Projects\\Test\\webix",
   "author": {
@@ -45,5 +45,5 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "types": "types/webix.d.ts",
-  "version": "6.4.4"
+  "version": "7.0.0"
 }
