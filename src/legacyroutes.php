@@ -140,9 +140,7 @@ $app->get('/legacy/grouped_agents_reports', function (Request $request, Response
 
     $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
     return $response->withJson([
-        "data" => $grouped_reports->getAgent_reports($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $grouped_reports->getAgent_reports($filter, $pos, $count, 1)
+        "data" => $grouped_reports->getAgent_reports($filter)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
@@ -154,9 +152,7 @@ $app->get('/legacy/grouped_queues_table_chart1', function (Request $request, Res
 
     $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
     return $response->withJson([
-        "data" => $grouped_reports->getQueues_table_chart1($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $grouped_reports->getQueues_table_chart1($filter, $pos, $count, 1)
+        "data" => $grouped_reports->getQueues_table_chart1($filter)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
@@ -168,9 +164,7 @@ $app->get('/legacy/grouped_queues_table_chart2', function (Request $request, Res
 
     $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
     return $response->withJson([
-        "data" => $grouped_reports->getQueues_table_chart2($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $grouped_reports->getQueues_table_chart2($filter, $pos, $count, 1)
+        "data" => $grouped_reports->getQueues_table_chart2($filter)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
@@ -182,9 +176,7 @@ $app->get('/legacy/grouped_queues_table_chart3', function (Request $request, Res
 
     $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
     return $response->withJson([
-        "data" => $grouped_reports->getQueues_table_chart3($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $grouped_reports->getQueues_table_chart3($filter, $pos, $count, 1)
+        "data" => $grouped_reports->getQueues_table_chart3($filter)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
@@ -196,9 +188,7 @@ $app->get('/legacy/grouped_queues_table_chart4', function (Request $request, Res
 
     $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
     return $response->withJson([
-        "data" => $grouped_reports->getQueues_table_chart4($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $grouped_reports->getQueues_table_chart4($filter, $pos, $count, 1)
+        "data" => $grouped_reports->getQueues_table_chart4($filter)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
@@ -210,9 +200,7 @@ $app->get('/legacy/grouped_queues_table_chart5', function (Request $request, Res
 
     $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
     return $response->withJson([
-        "data" => $grouped_reports->getQueues_table_chart5($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $grouped_reports->getQueues_table_chart5($filter, $pos, $count, 1)
+        "data" => $grouped_reports->getQueues_table_chart5($filter)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
@@ -224,9 +212,7 @@ $app->get('/legacy/grouped_queues_table_total', function (Request $request, Resp
 
     $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
     return $response->withJson([
-        "data" => $grouped_reports->getQueues_table_total($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $grouped_reports->getQueues_table_total($filter, $pos, $count, 1)
+        "data" => $grouped_reports->getQueues_table_total($filter)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');

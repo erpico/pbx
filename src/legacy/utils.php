@@ -161,4 +161,11 @@ class Utils {
     return false;
   }
 
+  public function delSpaces($delSpace)
+  {
+    $delSpace = str_replace(', ', ',',$delSpace);
+    $value = explode(",",$delSpace);
+    return $value;
+  }
+
 }

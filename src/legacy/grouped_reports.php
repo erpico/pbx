@@ -13,20 +13,10 @@ class Grouped_reports {
     $this->auth = $contaiter['auth'];
   }
 
-  public function getAgent_reports($filter, $pos, $count = 20, $onlycount = 0) {
+  public function getAgent_reports($filter) {
     
-    // Here need to add permission checkers and filters
-
     $utils = new Utils();
-    $t1 = date("2018-10-25 15:27:50");
-    $t2 = date("2018-10-27 15:27:50");
-
-    if ($onlycount) {      
-      $res = $this->db->query("SELECT COUNT(*) FROM queue_cdr");
-      $row = $res->fetch(\PDO::FETCH_NUM);
-      return intval($row[0]);
-    }
-
+    
     $sql = "	SELECT 
                 SUM(talktime),
                 MAX(holdtime),
@@ -42,38 +32,27 @@ class Grouped_reports {
                 count(IF(reason = 'RINGNOANSWER',1,NULL)), 
                 GROUP_CONCAT(DISTINCT agentname)
             FROM queue_cdr 
-            WHERE !outgoing ";
+             ";
+    $wsql = " WHERE !outgoing ";
 
-//  Time settings
-/*
-    if(isset($filter['t1']) && isset($filter['t2'])) $sql = $sql."
+    if(isset($filter['t1']) && isset($filter['t2']))  $wsql .="
         AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
-    else $sql = $sql."
+    else $wsql .="
         AND UNIX_TIMESTAMP(Now())-UNIX_TIMESTAMP(calldate) < 86400 ";
-*/
-    $sql = $sql." AND calldate>'".$t1."' AND calldate<'".$t2."' ";
 
-//  Filters
-/*
-      if($filter['filter'] == 2) $sql.= "
+      if($filter['filter'] == 2) $wsql .= "
 				AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') ";
-      else if($filter['filter'] == 3) $sql.= "
+      else if($filter['filter'] == 3) $wsql .= "
 				AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY' OR reason = 'RINGNOANSWER')";
-      if(isset($filter['queue']) && $filter['queue']!=0) $sql.= " AND queue=(SELECT name FROM queue WHERE id=".$filter['queue'].") ";
-*/
+      if(isset($filter['queue']) && $filter['queue']!=0) $wsql.= " AND queue=(SELECT name FROM queue WHERE id=".$filter['queue'].") ";
 
     $que = $this->auth->allowed_queues();
     $queues = $utils->sql_allowed_queues($que);
-    $sql.= $queues;
-    $sql.= " GROUP BY uniqid ";
+    $wsql.= $queues;
 
-//  Limits
-/*
-      if ($count) {
-        $sql .= " LIMIT $pos, $count";
-      }
-*/
-    $result = $this->db->query($sql);
+    $wsql.= " GROUP BY uniqid ";
+
+    $result = $this->db->query($sql.$wsql);
     $num = 0;
     $cdr_report = [];
 
@@ -315,7 +294,7 @@ class Grouped_reports {
         $data_list_result[$k]['chart_count_call2'] = $data_list_result[$k]['served_call_per']."% - ".$data_list_result[$k]['unserved_call_per']."%";
 
         $data_list_result[$k]['investment_served'] = round($served_call*100/$total_served, 1);
-        $data_list_result[$k]['investment_unserved'] = round($unserved_call*100/$total_unserved, 1);
+        $data_list_result[$k]['investment_unserved'] = intval($total_unserved) ? round($unserved_call*100/$total_unserved, 1): 0;
 
         $data_list_result[$k]['time_sum_talk'] = $utils->time_format($data_list_arr[$k]['1']);
         //$data_list_result[$k]['time_sum_talk'] = sprintf("%02d:%02d", intval($data_list_arr[$k]['1']/60), intval($data_list_arr[$k]['1']%60));
@@ -347,20 +326,8 @@ class Grouped_reports {
   }
 
 
-  public function getQueues_table($filter, $pos, $count = 20, $onlycount = 0) {
-
-        // Here need to add permission checkers and filters
-
+  public function getQueues_table($filter) {
     $utils = new Utils();
-    $t1 = date("2018-10-25 15:27:50");
-    $t2 = date("2018-10-27 15:27:50");
-
-    if ($onlycount) {
-        $res = $this->db->query("SELECT COUNT(*) FROM queue_cdr");
-        $row = $res->fetch(\PDO::FETCH_NUM);
-        return intval($row[0]);
-    }
-
     $sql = "	SELECT
 					count(*),
 					SUM(talktime),
@@ -381,38 +348,27 @@ class Grouped_reports {
 				FROM queue_cdr
 				WHERE reason != 'RINGNOANSWER' AND !outgoing ".$sql.$sql_agent;
 
-//  Time settings
-/*
     if(isset($filter['t1']) && isset($filter['t2'])) $sql = $sql."
 				AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
     else $sql = $sql."
 				AND UNIX_TIMESTAMP(Now())-UNIX_TIMESTAMP(calldate) < 86400 ";
-*/
-    $sql = $sql." AND calldate>'".$t1."' AND calldate<'".$t2."' ";
 
-//  Filters
-/*
     if($filter['filter'] == 2) $sql.= "
 				AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') ";
     else if($filter['filter'] == 3) $sql.= "
 				AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') ";
     if(isset($filter['queue']) && $filter['queue']!=0) $sql.= " AND queue=(SELECT name FROM queue WHERE id=".$filter['queue'].") ";
-*/
     $que = $this->auth->allowed_queues();
     $queues = $utils->sql_allowed_queues($que);
     $sql.= $queues;
     $sql.= "	GROUP BY queue ORDER BY queue ";
 
-    if ($count) {
-        $sql .= " LIMIT $pos, $count";
-    }
-
     $result = $this->db->query($sql);
     return $result;
   }
 
-  public function getQueues_table_chart1($filter, $pos, $count = 20, $onlycount = 0) {
-    $result = $this->getQueues_table($filter, $pos, $count = 20, $onlycount = 0);
+  public function getQueues_table_chart1($filter) {
+    $result = $this->getQueues_table($filter);
 
     $cdr_report = [];
     $num = 0;
@@ -437,8 +393,8 @@ class Grouped_reports {
     return $cdr_report;
   }
 
-  public function getQueues_table_chart2($filter, $pos, $count = 20, $onlycount = 0) {
-    $result = $this->getQueues_table($filter, $pos, $count = 20, $onlycount = 0);
+  public function getQueues_table_chart2($filter) {
+    $result = $this->getQueues_table($filter);
 
     $cdr_report = [];
     $num = 0;
@@ -464,8 +420,8 @@ class Grouped_reports {
     return $cdr_report;
   }
 
-  public function getQueues_table_chart3($filter, $pos, $count = 20, $onlycount = 0) {
-    $result = $this->getQueues_table($filter, $pos, $count = 20, $onlycount = 0);
+  public function getQueues_table_chart3($filter) {
+    $result = $this->getQueues_table($filter);
 
     $cdr_report = [];
     $num = 0;
@@ -493,8 +449,8 @@ class Grouped_reports {
     return $cdr_report;
   }
 
-  public function getQueues_table_chart4($filter, $pos, $count = 20, $onlycount = 0) {
-    $result = $this->getQueues_table($filter, $pos, $count = 20, $onlycount = 0);
+  public function getQueues_table_chart4($filter) {
+    $result = $this->getQueues_table($filter);
 
     $cdr_report = [];
     $num = 0;
@@ -524,9 +480,8 @@ class Grouped_reports {
     return $cdr_report;
   }
 
-  public function getQueues_table_chart5($filter, $pos, $count = 20, $onlycount = 0) {
-    $result = $this->getQueues_table($filter, $pos, $count = 20, $onlycount = 0);
-
+  public function getQueues_table_chart5($filter) {
+    $result = $this->getQueues_table($filter);
     $cdr_report = [];
     $num = 0;
     $cdr_report_arr = [];
@@ -556,8 +511,8 @@ class Grouped_reports {
     return $cdr_report;
   }
 
-  public function getQueues_table_total($filter, $pos, $count = 20, $onlycount = 0) {
-    $result = $this->getQueues_table($filter, $pos, $count = 20, $onlycount = 0);
+  public function getQueues_table_total($filter) {
+    $result = $this->getQueues_table($filter);
 
     $utils = new Utils();
     $cdr_report = [];

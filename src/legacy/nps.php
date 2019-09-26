@@ -25,6 +25,7 @@ class Nps {
     $this->container = $contaiter;
     $this->db = $contaiter['db'];
     $this->auth = $contaiter['auth'];
+    $this->utils = new Utils();
   }
 
   function getFilter($column, $filter = ''){
@@ -81,14 +82,14 @@ class Nps {
             if (strpos($filter->city, ",") === FALSE){ 
                 $filterSql .=  " nps.city = '".$filter->city."' ";
             }else{                        
-                $value = delSpaces($filter->city);
+                $value = $this->utils->delSpaces($filter->city);
                 $filterSql .=  "  nps.city IN ('".implode("','",$value)."') ";
             }
         }
         if ($filter->filial && $filter->filial != ""){
             if (intval(byCities)){
                 $sqlFilial = "SELECT `city` FROM nps WHERE ";
-                $value = delSpaces($filter->filial);
+                $value = $this->utils->delSpaces($filter->filial);
                 $sqlFilial .=  "  `filial` IN ('".implode("','",$value)."') ";                        
                 $sqlFilial .= ' GROUP BY city';
                 $cityByFilialSqlRes = $this->db->query($sqlFilial);                        
@@ -106,7 +107,7 @@ class Nps {
                 }                        
             }else{
                 if (strlen($filterSql)) $filterSql .= " AND ";                        
-                $value = delSpaces($filter->filial);
+                $value = $this->utils->delSpaces($filter->filial);
                 $filterSql .=  "  `filial` IN ('".implode("','",$value)."') ";
             }        
         }
@@ -116,7 +117,7 @@ class Nps {
         }
         if ($filter->channel){
             if (strlen($filterSql)) $filterSql .= " AND ";                    
-            $value = delSpaces($filter->channel);
+            $value = $this->utils->delSpaces($filter->channel);
             $filterSql .=  "nps.channel IN ('".implode("','",$value)."') ";                    
         }
         if (strlen($filterSql)) $filialSql .= " WHERE ".$filterSql;
@@ -219,7 +220,7 @@ class Nps {
       }
       if ($filter->filial && $filter->filial != ""){
         if (strlen($filialFilterSql)) $filialFilterSql .= " AND ";                    
-        $value = delSpaces($filter->filial);
+        $value = $this->utils->delSpaces($filter->filial);
         $filialFilterSql .=  "nps.filial IN ('".implode("','",$value)."') ";                    
       }
       if ($filter->start && $filter->end){
@@ -231,7 +232,7 @@ class Nps {
       }
       if ($filter->channel){
         if (strlen($filialFilterSql)) $filialFilterSql .= " AND ";                    
-        $value = delSpaces($filter->channel);
+        $value = $this->utils->delSpaces($filter->channel);
         $filialFilterSql .=  "nps.channel IN ('".implode("','",$value)."') ";
       }
       if (strlen($filialFilterSql)) $sqlpromotersListId .= " AND ".$filialFilterSql;
@@ -307,12 +308,12 @@ class Nps {
         $filialFilterSql = "";
         if ($filter->city && $filter->city != ""){
             if (strlen($filialFilterSql)) $filialFilterSql .= " AND ";                    
-            $value = delSpaces($filter->city);
+            $value = $this->utils->delSpaces($filter->city);
             $filialFilterSql .=  "nps.city IN ('".implode("','",$value)."') ";
         }
         if ($filter->filial && $filter->filial != ""){
             if (strlen($filialFilterSql)) $filialFilterSql .= " AND ";                    
-            $value = delSpaces($filter->filial);
+            $value = $this->utils->delSpaces($filter->filial);
             $filialFilterSql .=  "nps.filial IN ('".implode("','",$value)."') ";                    
         }
         if ($filter->start && $filter->end){
@@ -321,7 +322,7 @@ class Nps {
         }
         if ($filter->channel){
             if (strlen($filialFilterSql)) $filialFilterSql .= " AND ";
-            $value = delSpaces($filter->channel);
+            $value = $this->utils->delSpaces($filter->channel);
             $filialFilterSql .=  "nps.channel IN ('".implode("','",$value)."') ";                    
         }
         if (strlen($filialFilterSql)) $sqldetractorsListId .= " AND ".$filialFilterSql;
