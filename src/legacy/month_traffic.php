@@ -54,14 +54,8 @@ class Month_traffic {
   }
 
 
-  public function getMonth_traffic_data($filter, $pos, $count = 20, $onlycount = 0) {
+  public function getMonth_traffic_data($filter) {
     $utils = new Utils();
-
-    if ($onlycount) {
-      $res = $this->db->query("SELECT COUNT(*) FROM cdr");
-      $row = $res->fetch(\PDO::FETCH_NUM);
-      return intval($row[0]);
-    }
 
     $year = date("Y")-1;
     $demand_dailyreport = "
@@ -110,7 +104,7 @@ class Month_traffic {
     $extens = $utils->sql_allow_extens($ext);
     $demand_dailyreport.= $extens;
 
-    $demand_dailyreport = $demand_dailyreport."GROUP BY substring(calldate,1,7),calldate ORDER BY calldate DESC";
+    $demand_dailyreport = $demand_dailyreport."GROUP BY substring(calldate,1,7) ORDER BY calldate DESC";
 
     $result_dailyreport = $this->db->query($demand_dailyreport);
     $dailyreport_arr = [];
@@ -162,13 +156,13 @@ class Month_traffic {
   }
 
   public function getMonth_traffic($filter, $pos, $count = 20, $onlycount = 0) {
-    $dailyreport_arr = $this->getMonth_traffic_data($filter, $pos, $count = 20, $onlycount = 0)[0];
+    $dailyreport_arr = $this->getMonth_traffic_data($filter)[0];
     return $dailyreport_arr;
   }
 
   public function getMonth_traffic_chart($filter, $pos, $count = 20, $onlycount = 0) {
-    $chart_arr = $this->getMonth_traffic_data($filter, $pos, $count = 20, $onlycount = 0)[1];
-    $i = $this->getMonth_traffic_data($filter, $pos, $count = 20, $onlycount = 0)[2];
+    $chart_arr = $this->getMonth_traffic_data($filter)[1];
+    $i = $this->getMonth_traffic_data($filter)[2];
     $month_dataset = [];
     for($j=0; $j<=$i; $j++) $month_dataset[] = $chart_arr[$j];
     return $month_dataset;

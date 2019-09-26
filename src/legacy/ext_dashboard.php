@@ -1173,7 +1173,7 @@ class Ext_dashboard {
     if ($max_sl) $mult = $max_calls / $max_sl;
     else $mult = 1;
     foreach ($table as $k => $e) {
-      $table[$k]['slg'] = $e['sl']*$mult;
+      $table[$k]['slg'] = round($e['sl']*$mult);
     }
     return $table;
   }

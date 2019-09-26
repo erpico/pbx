@@ -14,11 +14,7 @@ class Hourly_load {
   }
 
   public function getHourly_load_chart1($filter, $pos, $count = 20, $onlycount = 0) {
-    
-    // Here need to add permission checkers and filters
-
     $utils = new Utils();
-    $t1 = date("2018-10-25-15:27:50");
 
     if ($onlycount) {
       $res = $this->db->query("SELECT COUNT(*) FROM cdr");
@@ -29,8 +25,6 @@ class Hourly_load {
     $demand_dailyreport = " SELECT substring(calldate,12,2), count(*), HOUR(calldate) ";
     $demand_dailyreport = $demand_dailyreport." FROM cdr ";
 
-//  Time settings
-/*
     if(isset($filter['t1']) && $filter['t1']!="") {
       $b = explode("-",$filter['t1']);
       $demand_dailyreport = $demand_dailyreport.
@@ -38,41 +32,19 @@ class Hourly_load {
     }
     else $demand_dailyreport = $demand_dailyreport.
       "	WHERE DAY(calldate)=".date("d")." AND MONTH(calldate)=".date("m")." AND YEAR(calldate)=".date("Y")." ";
-*/
-
-    if(isset($t1) && $t1!="") {
-      $b = explode("-",$t1);
-      $demand_dailyreport = $demand_dailyreport.
-          "	WHERE DAY(calldate)=".$b[2]." AND MONTH(calldate)=".$b[1]." AND YEAR(calldate)=".$b[0]." ";
-    }
-    else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE DAY(calldate)=".date("d")." AND MONTH(calldate)=".date("m")." AND YEAR(calldate)=".date("Y")." ";
-
-
-/*
       if(isset($filter['src'])) $demand_dailyreport = $demand_dailyreport.
           "	AND src LIKE '%".$filter['src']."%' ";
       if(isset($filter['dst'])) $demand_dailyreport = $demand_dailyreport.
           "	AND dst LIKE '%".$filter['dst']."%' ";
-*/
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $demand_dailyreport.= $extens;
 
-//  Time settings
-/*
     if(isset($filter['t2']) && $filter['t2']!="") $demand_dailyreport = $demand_dailyreport."
                         GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
     else $demand_dailyreport = $demand_dailyreport."
                         GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
-*/
-
-    if(isset($t2) && $t2!="") $demand_dailyreport = $demand_dailyreport."
-                        GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
-    else $demand_dailyreport = $demand_dailyreport."
-                        GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
-
 
     $result_dailyreport = $this->db->query($demand_dailyreport);
     $dailyreport_arr = [];
@@ -134,9 +106,6 @@ class Hourly_load {
 
 
   public function getHourly_load_chart2($filter, $pos, $count = 20, $onlycount = 0) {
-
-    // Here need to add permission checkers and filters
-
     $utils = new Utils();
     $t1 = date("2018-10-25-15:27:50");
 
@@ -149,8 +118,6 @@ class Hourly_load {
     $demand_dailyreport = " SELECT substring(calldate,12,2), count(*), HOUR(calldate), count(IF(disposition = 'ANSWERED',1,NULL)) ";
     $demand_dailyreport = $demand_dailyreport."	FROM cdr ";
 
-//  Time settings
-/*
     if(isset($filter['t1']) && $filter['t1']!="") {
       $b = explode("-",$filter['t1']);
       $demand_dailyreport = $demand_dailyreport.
@@ -158,41 +125,20 @@ class Hourly_load {
     }
     else $demand_dailyreport = $demand_dailyreport.
       "	WHERE DAY(calldate)=".date("d")." AND MONTH(calldate)=".date("m")." AND YEAR(calldate)=".date("Y")." ";
-*/
 
-    if(isset($t1) && $t1!="") {
-      $b = explode("-",$t1);
-      $demand_dailyreport = $demand_dailyreport.
-          "	WHERE DAY(calldate)=".$b[2]." AND MONTH(calldate)=".$b[1]." AND YEAR(calldate)=".$b[0]." ";
-    }
-    else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE DAY(calldate)=".date("d")." AND MONTH(calldate)=".date("m")." AND YEAR(calldate)=".date("Y")." ";
-
-
-/*
     if(isset($filter['src'])) $demand_dailyreport = $demand_dailyreport.
       "	AND src LIKE '%".$filter['src']."%' ";
     if(isset($filter['dst'])) $demand_dailyreport = $demand_dailyreport.
       "	AND dst LIKE '%".$filter['dst']."%' ";
-*/
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $demand_dailyreport.= $extens;
 
-//  Time settings
-/*
     if(isset($filter['t2']) && $filter['t2']!="") $demand_dailyreport = $demand_dailyreport."
                     GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
     else $demand_dailyreport = $demand_dailyreport."
                     GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
-*/
-
-    if(isset($t2) && $t2!="") $demand_dailyreport = $demand_dailyreport."
-                GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
-    else $demand_dailyreport = $demand_dailyreport."
-                GROUP BY substring(calldate,12,2) ORDER BY HOUR(calldate) ";
-
 
     $result_dailyreport = $this->db->query($demand_dailyreport);
     $dailyreport_arr = [];
@@ -231,10 +177,7 @@ class Hourly_load {
 
   public function getHourly_load($filter, $pos, $count = 20, $onlycount = 0) {
 
-    // Here need to add permission checkers and filters
-
     $utils = new Utils();
-    $t1 = date("2018-10-25-15:27:50");
 
     if ($onlycount) {
       $res = $this->db->query("SELECT COUNT(*) FROM cdr");
@@ -250,19 +193,8 @@ class Hourly_load {
     $demand_dailyreport = $demand_dailyreport.
       "	FROM cdr ";
 
-//  Time settings
-/*
     if(isset($filter['t1']) && $filter['t1']!="") {
       $b = explode("-",$filter['t1']);
-      $demand_dailyreport = $demand_dailyreport.
-          "	WHERE DAY(calldate)=".$b[2]." AND MONTH(calldate)=".$b[1]." AND YEAR(calldate)=".$b[0]." ";
-    }
-    else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE DAY(calldate)=".date("d")." AND MONTH(calldate)=".date("m")." AND YEAR(calldate)=".date("Y")." ";
-*/
-
-    if(isset($t1) && $t1!="") {
-      $b = explode("-",$t1);
       $demand_dailyreport = $demand_dailyreport.
         "	WHERE DAY(calldate)=".$b[2]." AND MONTH(calldate)=".$b[1]." AND YEAR(calldate)=".$b[0]." ";
     }
@@ -270,12 +202,12 @@ class Hourly_load {
       "	WHERE DAY(calldate)=".date("d")." AND MONTH(calldate)=".date("m")." AND YEAR(calldate)=".date("Y")." ";
 
 
-/*
+
     if(isset($filter['src'])) $demand_dailyreport = $demand_dailyreport.
       "	AND src LIKE '%".$filter['src']."%' ";
     if(isset($filter['dst'])) $demand_dailyreport = $demand_dailyreport.
       "	AND dst LIKE '%".$filter['dst']."%' ";
-*/
+
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);

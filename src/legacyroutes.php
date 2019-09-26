@@ -611,9 +611,9 @@ $app->get('/legacy/month_traffic', function (Request $request, Response $respons
 
     $month_traffic = new \Erpico\Month_traffic($app->getContainer());
     return $response->withJson([
-        "data" => $month_traffic->getMonth_traffic($filter, $pos, $count, 0),
-        "pos" => $pos,
-        "total_count" => $month_traffic->getMonth_traffic($filter, $pos, $count, 1)
+        "data" => $month_traffic->getMonth_traffic($filter, $pos, $count, 0)
+        // "pos" => $pos,
+        // "total_count" => $month_traffic->getMonth_traffic($filter, $pos, $count, 1)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
@@ -662,8 +662,8 @@ $app->get('/legacy/hourly_load', function (Request $request, Response $response,
     $hourly_load = new \Erpico\Hourly_load($app->getContainer());
     return $response->withJson([
         "data" => $hourly_load->getHourly_load($filter, $pos, $count, 0),
-//      "pos" => $pos,
-        "total_count" => $hourly_load->getHourly_load($filter, $pos, $count, 1)
+        // "pos" => $pos,
+        // "total_count" => $hourly_load->getHourly_load($filter, $pos, $count, 1)
     ]);
 
 })->add('\App\Middleware\OnlyAuthUser');
