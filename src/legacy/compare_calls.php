@@ -53,10 +53,10 @@ class Compare_calls {
           $date2 = $year2."-".$month2."-".$day2;
       };
       $demand_dailyreport = $demand_dailyreport.
-          "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$date2."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$date1."')  ";
+          "	WHERE calldate>'".$date2."' AND calldate<'".$date1."'  ";
     }
     else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".date("Y-m-d")."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".date("Y-m-d", time() + 86400)."')  ";
+      "	WHERE calldate>'".date("Y-m-d")."' AND calldate<'".date("Y-m-d", time() + 86400)."'  ";
 
     if(isset($filter['src'])) $demand_dailyreport = $demand_dailyreport.
       "	AND src LIKE '%".$filter['src']."%' ";
@@ -154,15 +154,14 @@ class Compare_calls {
     if(isset($filter['t1']) && $filter['t1']!="") {
       if(isset($filter['t2']) && $filter['t2']!="") $period = $filter['t2'];
       else $period = 1;
-      $b = explode("-", $t1);
+      $b = explode("-", $filter['t1']);
 
       if($b[2]<$period) {
-          $str1 = strtotime($t1)+86400;
+          $str1 = strtotime($filter['t1'])+86400;
           $date1 = date("Y-m-d",$str1);
           $str2 = strtotime($filter['t1'])-86400*($period-1);
           $date2 = date("Y-m-d",$str2);
-      }
-      else {
+      } else {
           $year1 = $b[0];
           $year2 = $b[0];
           $day1 = $b[2]+1;
@@ -176,9 +175,9 @@ class Compare_calls {
           $date1 = $year1."-".$month1."-".$day1;
           $date2 = $year2."-".$month2."-".$day2;
       };
-      $wsql = "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$date2."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$date1."')  ";
+      $wsql = "	WHERE calldate>'".$date2."' AND calldate<'".$date1."'  ";
     }
-    else $wsql = "	WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".date("Y-m-d")."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".date("Y-m-d", time() + 86400)."')  ";
+    else $wsql = "	WHERE calldate>'".date("Y-m-d")."' AND calldate<'".date("Y-m-d", time() + 86400)."'  ";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
@@ -189,8 +188,7 @@ class Compare_calls {
       $row = $res->fetch(\PDO::FETCH_NUM);
       return intval($row[0]);
     }
-
-    $demand_dailyreport = $demand_dailyreport.$wsql." GROUP BY substring(calldate,1,10) ORDER BY calldate";
+    $demand_dailyreport .= $wsql." GROUP BY substring(calldate,1,10) ORDER BY calldate";
     $result_dailyreport = $this->db->query($demand_dailyreport);
     $dailyreport_arr = [];
     $i = -1;
