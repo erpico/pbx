@@ -18,8 +18,6 @@ class Interval_reports {
     // Here need to add permission checkers and filters
 
     $utils = new Utils();
-    $t1 = date("2018-10-25 15:27:50");
-    $t2 = date("2018-10-27 15:27:50");
 
     if ($onlycount) {
       $res = $this->db->query("SELECT COUNT(*) FROM queue_cdr");
@@ -61,16 +59,16 @@ class Interval_reports {
             FROM queue_cdr ";
 
 //  Time settings
-/*
+
     if(isset($filter['t1']) && isset($filter['t2'])) $demand = $demand."
-        WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$filter['t1']."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$filter['t2']."') ";
+        WHERE calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
     else $demand = $demand."
-        WHERE UNIX_TIMESTAMP(Now())-UNIX_TIMESTAMP(calldate) < 86400 ";
-*/
-    $demand = $demand." WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$t1."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$t2."') ";
+        WHERE Now()-calldate < 86400 ";
+
+    // $demand = $demand." WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$t1."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$t2."') ";
 
 //  Filters
-/*
+
     if(isset($filter['filter'])) {
       if($filter['filter']==2) $demand = $demand."
         AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND !outgoing ";
@@ -83,7 +81,7 @@ class Interval_reports {
     }
     else $demand = $demand."
         AND !outgoing AND reason != 'RINGNOANSWER' ";
-*/
+
     if(isset($filter['src'])) $demand = $demand.
       "	AND src LIKE '%".$filter['src']."%' ";
 
@@ -91,19 +89,18 @@ class Interval_reports {
     $queues = $utils->sql_allowed_queues($que);
     $demand.= $queues;
 
-    $demand.= " GROUP BY SUBSTRING(calldate,1,10) ";
 
 // Interval reports hour=3 / day=else(in use) / week=2 / month=4
-/*
+
     if($filter['type']==2) $demand.= "
 			GROUP BY DAYOFWEEK(calldate) ";
     else if($filter['type']==3) $demand.= "
         GROUP BY SUBSTRING(calldate,12,2) ";
     else if($filter['type']==4) $demand.= "
         GROUP BY SUBSTRING(calldate,1,7) ";
-->  else $demand.= "
+    else $demand.= "
         GROUP BY SUBSTRING(calldate,1,10) ";
-*/
+
 
     $result = $this->db->query($demand);
     $cdr_report = [];

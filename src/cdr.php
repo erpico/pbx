@@ -175,7 +175,6 @@ class PBXCdr {
       $cdr = [];                
 
       $res = $this->db->query($sql);
-      //die($sql);
       $lcd -= 3600*24;
 
     } while ($lcd > $mintime && $res->rowCount() == 0);

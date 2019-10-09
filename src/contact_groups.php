@@ -6,8 +6,7 @@ class PBXContactGroups {
   private $id;
   private $name;
   const FIELDS = [
-    "name" => 0,
-    "queue" => 0
+    "name" => 0
   ];
 
   public function __construct($id = 0) {
