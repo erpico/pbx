@@ -33,6 +33,8 @@ class PBXCdr {
 
     $qwsql = "";
     $cwsql = "";
+
+    $timeisset = 0;
         
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
@@ -41,12 +43,14 @@ class PBXCdr {
           $d = strtotime($dates['start']);            
           $qwsql .= "AND a.calldate >= '".date("Y-m-d H:i:00", $d)."' ";
           $cwsql .= "AND calldate >= '".date("Y-m-d H:i:00", $d)."' ";
+          $timeisset++;
         }
         if ($dates['end']) {
           $d = strtotime($dates['end']);
           if (date("H", $d) == 0 && date("i",$d) == 0) $d += 86399;
           $qwsql .= "AND a.calldate <= '".date("Y-m-d H:i:59", $d)."' ";
           $cwsql .= "AND calldate <= '".date("Y-m-d H:i:59", $d)."' ";
+          $timeisset++;
         }
       }  
       if(isset($filter['src']) && strlen($filter['src'])) {
@@ -104,15 +108,16 @@ class PBXCdr {
     }*/
 
     if (intval($onlyCount)) {
-      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(uniqid) AS n FROM queue_cdr a WHERE 1=1 $queues $qwsql GROUP BY uniqid) as u UNION SELECT COUNT(uniqueid) AS n FROM cdr WHERE 1=1 $extens $cwsql) as c";            
+      if ($timeisset != 2) return 4000000; // Return infinite for scrolling
+      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(*) AS n FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  $queues $qwsql) as u UNION SELECT COUNT(uniqueid) AS n FROM cdr WHERE 1=1 $extens $cwsql) as c";                              
       $res = $this->db->query($sql);      
-      $row = $res->fetch(PDO::FETCH_NUM);
-      //die($sql);
+      $row = $res->fetch(PDO::FETCH_NUM);      
       return $row[0]; 
     }
 
     
     if (intval($serverFooter)) {
+      if ($timeisset != 2) return []; // only with selected date
       $sql = "SELECT        
         SUM(sum_billsec) AS sum_billsec,
         SUM(sum_duration) AS sum_duration,
