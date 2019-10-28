@@ -79,7 +79,7 @@ $findrecord = function (Request $request, Response $response, array $args) use($
       $src = $row['src'];
       $dst = $row['dst'];
   
-      $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*$src*-".$uniqid."*");    
+      $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*-".$uniqid."*");    
       if (!is_array($files) || !count($files)) {        
           return $response->withStatus(404)
               ->withHeader('Content-Type', 'text/html')
