@@ -21,7 +21,7 @@ class PBXQueue {
     $this->db = $container['db'];
 
     $this->user = $container['auth'];//new Erpico\User($this->db);
-    $this->utils = new Erpico\Utils();
+    $this->utils = new Erpico\Utils();    
   }
 
   private function getTableName() {
@@ -100,9 +100,20 @@ class PBXQueue {
     $data = $this->fetchList(["name" => $name]);
     if (is_array($data)) {
       if (COUNT($data) > 1) {
+        if (!intval($id)) {
+          return COUNT($data);
+        }
         return false;
       } else {
-        return $data[0]["id"] == intval($id);
+        if (intval($id)) {
+          return $data[0]["id"] == intval($id);
+        } else {
+          if (COUNT($data)) {
+            return COUNT($data);
+          } else {
+            return true;
+          }
+        }
       }
     }
     return true;
@@ -201,5 +212,19 @@ class PBXQueue {
       $result .= "[{$p['name']}](${p['pattern']})\n\n";                 
     }
     return $result;    
+  }
+
+  public function getCode($name) {
+    $translator = new Erpico\Translator($name);
+    $value = $translator->translate();
+    $test_result = $this->isUniqueName($value, 0);
+    
+    while (!is_bool($test_result)  || !$test_result) {
+      if (is_numeric($test_result)) {
+        $value .= $test_result;
+      }
+      $test_result = $this->isUniqueName($value, 0);      
+    }    
+    return $value;
   }
 }

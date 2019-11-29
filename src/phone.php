@@ -12,6 +12,13 @@ class PBXPhone {
     "password" => 0,
     "rules" => 0,
     "default_phone" => 1
+  ],
+  GROUPS_FIELDS = [
+    "name" => 0,
+    "code" => 0,
+    "pattern" => 0,
+    "rules" => 0,
+    "outgoing_phone" => 0
   ];
 
   public function __construct() {
@@ -26,6 +33,10 @@ class PBXPhone {
 
   private function getTableName() {
     return "acl_user_phone";
+  }
+  
+  private function getGroupsTableName() {
+    return "acl_group_phone";
   }
 
   private function setCfgSettings($server, $login, $password) {
@@ -68,9 +79,11 @@ class PBXPhone {
         }        
       }
     }
+
     if (strlen($wsql)) {
       $sql .= " WHERE ".$wsql;
     }
+
     $res = $this->db->query($sql);
     $res = $this->db->query($sql, $onlyCount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
     $result = [];
@@ -79,6 +92,7 @@ class PBXPhone {
       if ($onlyCount) {
         return intval($row[0]);
       }
+      $row["group_id"] = $this->getPhoneGroup($row["id"]);
       $result[] = $row;
     }
 
@@ -113,6 +127,7 @@ class PBXPhone {
     if (is_array($values)) {
       $ssql = "";
       if (isset($values['id']) && intval($values['id'])) {
+        $id = intval($values['id']);
         $sql = "UPDATE ".$this->getTableName()." SET ";
       } else {
         $sql = "INSERT INTO ".$this->getTableName()." SET ";
@@ -165,6 +180,15 @@ class PBXPhone {
         } else {
           $new_user_id = $this->db->lastInsertId();
         }
+        if (!isset($id)) {
+          $id = $this->db->lastInsertId();
+        }
+        if (isset($values["group_id"]) && intval($values["group_id"])) {
+          $this->deletePhoneFromGroup($id);
+          $this->setPhoneToGroup(intval($values["group_id"]), $id);
+        } else {
+          $this->deletePhoneFromGroup($id);
+        }
         $this->setCfgSettings($this->server_host, $values["login"], $values["password"]);
         $this->setUserConfig($new_user_id, $old_user_id);
         return [ "result" => true, "message" => "Операция прошла успешно"];
@@ -194,6 +218,199 @@ class PBXPhone {
     }
   }
 
+  public function fetchGroupsList($filter = "", $start = 0, $end = 20, $onlyCount = 0) {
+    $sql = "SELECT ";
+    if (intval($onlyCount)) {
+      $ssql = " COUNT(*) ";  
+    } else {
+      $ssql = "`id`";
+      foreach (self::GROUPS_FIELDS as $field => $isInt) {        
+        if (strlen($ssql)) $ssql .= ",";
+        $ssql .= "`".$field."`";        
+      }
+    }
+
+    $sql .= $ssql." FROM ".self::getGroupsTableName();
+    $wsql = "";
+    if (is_array($filter)) {
+      $fields = self::GROUPS_FIELDS;
+      $fields["id"] = 1;
+      $wsql = "";
+      foreach ($filter as $key => $value) {
+        if (isset($fields[$key])) {
+          if (array_key_exists($key,$fields) && (intval($fields[$key]) ? intval($value) : strlen($value) )) {
+            if (strlen($wsql)) $wsql .= " AND ";
+            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
+          }
+        }        
+      }
+    }
+    if (strlen($wsql)) {
+      $sql .= " WHERE ".$wsql;
+    }
+    $res = $this->db->query($sql);
+    $res = $this->db->query($sql, $onlyCount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
+    $result = [];
+
+    while ($row = $res->fetch()) {
+      if ($onlyCount) {
+        return intval($row[0]);
+      }
+      $row["phones"] = $this->getGroupPhones($row["id"])["id"];
+      $row["phones_names"] = $this->getGroupPhones($row["id"])["phone"];
+      
+      $result[] = $row;
+    }
+
+    return $result;
+  }
+
+  public function addUpdatePhoneGroup($values) {
+    if (is_array($values)) {
+      $ssql = "";
+      if (isset($values['id']) && intval($values['id'])) {
+        $id = intval($values["id"]);
+        $sql = "UPDATE ".$this->getGroupsTableName()." SET ";
+      } else {
+        $sql = "INSERT INTO ".$this->getGroupsTableName()." SET ";
+      }
+      if (isset($values["name"]) && strlen($values["name"])) {
+        if (!$this->isUniqueGroupName($values['name'], $values['id'])) {
+          return [ "result" => false, "message" => "Название занято другой группой"];
+        }
+      } else {
+        return [ "result" => false, "message" => "Название не может быть пустым"];
+      }
+      
+      foreach (self::GROUPS_FIELDS as $field => $isInt) {
+        if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
+          if (strlen($ssql)) $ssql .= ",";          
+            $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
+        }  
+      }
+
+      if (strlen($ssql)) {
+        $sql .= $ssql;
+        if (isset($id) && intval($id)) {
+          $sql .= " WHERE id = ".intval($id);
+        }
+        if ($this->db->query($sql)) {
+          if (!isset($id)) {
+            $id = $this->db->lastInsertId();
+          }
+          if (isset($values["phones"]) && strlen($values["phones"])) {
+            $groupPhones = $this->getGroupPhones($id)["id"];
+            $newPhones = explode(",",$values["phones"]);
+            $checkedPhones = [];
+            if (count($newPhones)) {
+              foreach ($newPhones as $phone) {
+                if (intval($phone)) {
+                  if (!in_array(intval($phone), $groupPhones)) {
+                    $this->setPhoneToGroup($id, intval($phone));                    
+                  }
+                  $checkedPhones[] = intval($phone);
+                }
+              }
+              if (count($checkedPhones)) {
+                $this->deleteOtherPhonesFromGroup($id, $checkedPhones);
+              }
+            } else {
+              $this->deleteOtherPhonesFromGroup($id);
+            }
+          } else {
+            $this->deleteOtherPhonesFromGroup($id);
+          }  
+          return [ "result" => true, "message" => "Операция прошла успешно"];
+        }
+      }
+    }
+    return [ "result" => false, "message" => "Произошла ошибка выполнения операции"];
+  }
+
+  private function isUniqueGroupName($name, $id) {
+    $data = $this->fetchGroupsList(["name" => $name]);
+    if (is_array($data)) {
+      if (COUNT($data) > 1) {
+        if (!intval($id)) {
+          return COUNT($data);
+        }
+        return false;
+      } else {
+        if (intval($id)) {
+          return $data[0]["id"] == intval($id);
+        } else {
+          if (COUNT($data)) {
+            return COUNT($data);
+          } else {
+            return true;
+          }
+        }
+      }
+    }
+    return true;
+  }
+
+  private function deletePhoneFromGroup($phone_id) {
+    $sql = "DELETE FROM acl_group_has_phone WHERE phone_id = ".intval($phone_id);
+    $res = $this->db->query($sql);
+    if ($res) {
+      return true;
+    }
+    return false;      
+  }
+
+  private function deleteOtherPhonesFromGroup($group_id, $phones = []) {
+    if (is_array($phones)) {
+      $sql = "DELETE FROM acl_group_has_phone WHERE group_id = ".intval($group_id);
+      if (COUNT($phones)) {
+        $sql .= " AND phone_id NOT IN (".implode(",", $phones).")";
+      }
+       
+      $res = $this->db->query($sql);
+      if ($res) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private function getGroupPhones($group_id) {
+    if (!intval($group_id)) return [];
+    $sql = "SELECT acl_group_has_phone.phone_id, acl_user_phone.phone FROM  acl_group_has_phone
+    LEFT JOIN acl_user_phone ON (acl_user_phone.id = acl_group_has_phone.phone_id)
+    WHERE group_id = ".intval($group_id);
+    $res = $this->db->query($sql, \PDO::FETCH_NUM);
+    $ids = [];
+    $phones = [];
+    while ($row = $res->fetch()) {
+      $ids[] = $row[0];
+      $phones[] = $row[1];
+    }
+    return ["id" => $ids, "phone" => $phones];
+  }
+
+  private function getPhoneGroup($phone_id) {
+    if (!intval($phone_id)) return [];
+    $sql = "SELECT group_id FROM  acl_group_has_phone WHERE phone_id = ".intval($phone_id)." LIMIT 1";
+    $res = $this->db->query($sql, \PDO::FETCH_NUM);
+    $row = $res->fetch();
+    if (is_array($row) && isset($row[0]) && intval($row[0])) {
+      return intval($row[0]);
+    }
+
+    return 0;
+  }
+
+  private function setPhoneToGroup($group_id, $phone_id) {
+    $sql = "INSERT INTO acl_group_has_phone SET group_id = ".intval($group_id).",
+    phone_id = ".intval($phone_id);
+    $res = $this->db->query($sql);
+    if ($res) {
+      return true;
+    }
+    return false;
+  }
+
   public function getConfig() {
     $phones = $this->fetchList(0, 0, 1000000, 0);
 
@@ -210,5 +427,42 @@ class PBXPhone {
                  "  callerid = {$p['phone']} <{$p['phone']}>\n\n";
     }
     return $result;    
+  }
+
+  public function getPjsipConfig() {
+    $phones = $this->fetchList(0, 0, 1000000, 0);
+
+    $result = "; ErpicoPBX Phones Configuration \n; WARNING! This lines is autogenerated. Don't modify it.\n\n";    
+
+    foreach ($phones as $p) {
+      $result .= "[{$p['login']}]\n".
+                 "  type=aor\n".
+                 "  max_contacts=5\n".
+                 "  remove_existing=yes\n".
+                 "[{$p['login']}]\n".
+                 "  type=auth\n".
+                 "  auth_type=userpass\n".
+                 "  username={$p['login']}\n".
+                 "  password={$p['password']}\n".
+                 "[{$p['login']}](webrtc_endpoint)\n".
+                 "  aors={$p['login']}\n".
+                 "  auth={$p['login']}\n".
+                 "  context={$p['rules']}\n\n";
+    }
+    return $result;    
+  }
+
+  public function getGroupCode($name) {
+    $translator = new Erpico\Translator($name);
+    $value = $translator->translate();
+    $test_result = $this->isUniqueGroupName($value, 0);
+    
+    while (!is_bool($test_result)  || !$test_result) {
+      if (is_numeric($test_result)) {
+        $value .= $test_result;
+      }
+      $test_result = $this->isUniqueGroupName($value, 0);      
+    }    
+    return $value;
   }
 }

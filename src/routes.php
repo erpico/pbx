@@ -280,6 +280,14 @@ $app->get('/phones/list', function (Request $request, Response $response, array 
     ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
+$app->get('/phones/list/short', function (Request $request, Response $response, array $args) use($app) {
+  $phone = new PBXPhone();
+
+  $filter = $request->getParam('filter', "");
+
+  return $response->withJson($phone->fetchList($filter));
+})->add('\App\Middleware\OnlyAuthUser');
+
 $app->post('/phones/{phone_id}/save', function (Request $request, Response $response, array $args) use($app) {
     $phone = new PBXPhone();
 
@@ -290,7 +298,6 @@ $app->post('/phones/{phone_id}/save', function (Request $request, Response $resp
 
 $app->get('/queues/list', function (Request $request, Response $response, array $args) use($app) {
     $queue = new PBXQueue();
-
     $filter = $request->getParam('filter', "");
     $start = $request->getParam('start', 0);
     $count = $request->getParam('count', 20);
@@ -315,6 +322,28 @@ $app->post('/queues/{queues_id}/save', function (Request $request, Response $res
     $values = $request->getParams();
     $res = $queue->addUpdate($values);
     return $response->withJson($res);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/queues/code', function (Request $request, Response $response, array $args) use($app) {
+  $queue = new PBXQueue();
+
+  $name = $request->getParam("name");
+  $res = $queue->getCode($name);
+  return $response->withJson([
+    "result"=> true,
+    "message"=>$res
+    ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/channels/code', function (Request $request, Response $response, array $args) use($app) {
+  $channels = new PBXChannel();
+
+  $name = $request->getParam("name");
+  $res = $channels->getCode($name);
+  return $response->withJson([
+    "result"=> true,
+    "message"=>$res
+    ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/channels/list', function (Request $request, Response $response, array $args) use($app) {
@@ -436,4 +465,46 @@ $app->post('/rules/users/{id}/save', function (Request $request, Response $respo
 
   $res = $rule->saveUser($rules, intval($args['id']));
   return $response->withJson(["result" => $res]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+
+$app->get('/phones/groups/list', function (Request $request, Response $response, array $args) use($app) {
+  $phone = new PBXPhone();
+
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+
+  return $response->withJson([
+      "data" => $phone->fetchGroupsList($filter, $start, $count, 0),
+      "total_count" => $phone->fetchGroupsList($filter, $start, $count, 1),
+      "pos" => $start
+  ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/phones/groups/code', function (Request $request, Response $response, array $args) use($app) {
+  $phone = new PBXPhone();
+
+  $name = $request->getParam("name");
+  $res = $phone->getGroupCode($name);
+  return $response->withJson([
+    "result"=> true,
+    "message"=>$res
+    ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/phones/groups/list/short', function (Request $request, Response $response, array $args) use($app) {
+  $phone = new PBXPhone();
+
+  $filter = $request->getParam('filter', "");
+
+  return $response->withJson($phone->fetchGroupsList($filter));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/phones/groups/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+  $id = intval($args["id"]);  
+  $phone = new PBXPhone();
+  $params = $request->getParams();
+
+  return $response->withJson($phone->addUpdatePhoneGroup($params));
 })->add('\App\Middleware\OnlyAuthUser');
