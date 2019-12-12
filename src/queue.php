@@ -38,7 +38,7 @@ class PBXQueue {
     }
     return "";
   }
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0) {
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $fullnameAsValue = 0) {
     $sql = "SELECT ";
     if (intval($onlyCount)) {
       $ssql = " COUNT(*) ";  
@@ -76,8 +76,12 @@ class PBXQueue {
       if ($onlyCount) {
         return intval($row[0]);
       }
-      $row["agents"] = $this->getQueueAgent($row['id']);
-      $result[] = $row;
+      if ($fullnameAsValue) {
+        $result[] = ["id"=>$row["name"], "value"=>$row["fullname"]];
+      } else {
+        $row["agents"] = $this->getQueueAgent($row['id']);
+        $result[] = $row;
+      }
     }
 
     return $result;

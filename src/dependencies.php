@@ -87,6 +87,8 @@ require_once( __DIR__ . "/contact_groups.php");
 require_once( __DIR__ . "/rules.php");
   require_once( __DIR__ . "/Translator.php");
 require_once( __DIR__ . "/pbx_settings.php");
+require_once( __DIR__ . "/old_cdr.php");
+require_once( __DIR__ . "/old_contact_cdr.php");
 
 if (!isset($PBXUser)){
   $PBXUser = new \Erpico\User();

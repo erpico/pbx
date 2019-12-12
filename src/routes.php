@@ -58,6 +58,8 @@ $findrecord = function (Request $request, Response $response, array $args) use($
           ->write('Record not found in database');
   }
   
+  $filename = "";
+  
   if (isset($row['agentname'])) {
       // Queue
       $date = str_replace(" ", "-", $row['calldate']);
@@ -69,41 +71,49 @@ $findrecord = function (Request $request, Response $response, array $args) use($
   
       $fname = "$date-$cid-$agent-q-$uniqid.wav";
       $path_parts = pathinfo($fname);    
-  
+
       $filename = "/var/spool/asterisk/monitor/queues/".substr($fname,0,10)."/".substr($fname,11,2)."/".$path_parts['dirname'].'/'.$path_parts['filename'];
-  } else {
+      
+      if(file_exists($filename.".WAV")) {
+        $filename = $filename.".WAV";
+      }
+      else if(file_exists($filename.".wav")) {
+        $filename = $filename.".wav";
+      }
+      else if(file_exists($filename.".mp3")) {
+        $filename = $filename.".mp3";
+      } else if (file_exists($filename)) {
+      } else {
+        $filename = "";
+      }
+  }
+  
+  if ($filename == "") {
       // Regular
       $date = str_replace(" ", "-", $row['calldate']);
       $time = strtotime($row['calldate']);    
       $uniqid = substr($row['uniqueid'], 0, -2);
+      if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
       $src = $row['src'];
       $dst = $row['dst'];
   
       $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*-".$uniqid."*");    
+
       if (!is_array($files) || !count($files)) {        
           return $response->withStatus(404)
               ->withHeader('Content-Type', 'text/html')
               ->write('Record not found in filesystem');
       }
       $filename = $files[0];    
-  }
-  
-  if(file_exists($filename.".WAV")) {
-      $filename = $filename.".WAV";
-  }
-  else if(file_exists($filename.".wav")) {
-      $filename = $filename.".wav";
-  }
-  else if(file_exists($filename.".mp3")) {
-      $filename = $filename.".mp3";
-      $filenameB = "$date-$cid-$agent-q-$uniqid.mp3";
-  } else if (file_exists($filename)) {
-  } else {
-      return $response->withStatus(404)
+      
+      if (!file_exists($filename)) {
+        return $response->withStatus(404)
           ->withHeader('Content-Type', 'text/html')
           ->write('Record not found in filesystem');
-    
-  }  
+      
+      }
+  }
+ // die($filename);
   $fh = fopen($filename, 'rb');
   $stream = new Slim\Http\Stream($fh);
   return $response            
@@ -212,8 +222,11 @@ $app->post('/groups/{id}/save', function (Request $request, Response $response, 
 
 $app->get('/groups/users/short', function (Request $request, Response $response, array $args) use($app) {
     $user = new User();    
-    $count = $user->fetchList("", 0, 0, 1);
-    return $response->withJson( $user->fetchList("", 0, $count, 0, 1)
+    $filter = $request->getParam('filter', "");
+    $nameAsValue = intval($request->getParam('nameasvalue', 0));
+    
+    $count = $user->fetchList($filter, 0, 0, 1);
+    return $response->withJson( $user->fetchList($filter, 0, $count, 0, 1, $nameAsValue)
     );
 })->add('\App\Middleware\OnlyAuthUser');
 
@@ -312,8 +325,9 @@ $app->get('/queues/list', function (Request $request, Response $response, array 
 $app->get('/queues/list/short', function (Request $request, Response $response, array $args) use($app) {
   $queue = new PBXQueue();
   $count = $queue->fetchList("", 0, 0, 1);
+  $nameAsValue = intval($request->getParam('nameasvalue', 0));
 
-  return $response->withJson($queue->fetchList("", 0, $count, 0));
+  return $response->withJson($queue->fetchList("", 0, $count, 0,$nameAsValue));
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->post('/queues/{queues_id}/save', function (Request $request, Response $response, array $args) use($app) {
@@ -507,4 +521,25 @@ $app->post('/phones/groups/{id}/save', function (Request $request, Response $res
   $params = $request->getParams();
 
   return $response->withJson($phone->addUpdatePhoneGroup($params));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/extended_calls/list', function (Request $request, Response $response, array $args) use($app) {
+  $oldCdr = new PBXOldCdr();
+  $filter = $request->getParam("filter", []);
+
+  return $response->withJson($oldCdr->fetchList($filter));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/extended_calls/list/trafic', function (Request $request, Response $response, array $args) use($app) {
+  $oldCdr = new PBXOldCdr();
+  $filter = $request->getParam("filter", []);
+
+  return $response->withJson($oldCdr->getTrafic($filter));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/extended_contact_calls/list', function (Request $request, Response $response, array $args) use($app) {
+  $oldContactCdr = new PBXOldContactCdr();
+  $filter = $request->getParam("filter", []);
+
+  return $response->withJson($oldContactCdr->fetchList($filter));
 })->add('\App\Middleware\OnlyAuthUser');

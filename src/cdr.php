@@ -14,7 +14,8 @@ class PBXCdr {
   
   private function normalizePhone(&$_phone) {
     $_phone = preg_replace("/[^\d]/", "", trim($_phone));
-    if ($_phone[0] == '7') $_phone = "8".substr($_phone, 1);
+    if ($_phone[0] == '7' && strlen($phone) > 8) $_phone = "8".substr($_phone, 1);
+    if (strlen($_phone) == 10) $_phone = "8".$_phone;
     return $_phone;
   }
 
@@ -71,7 +72,8 @@ class PBXCdr {
       }
       if(isset($filter['reason']) && strlen($filter['reason'])) {
         // RP: it's more complex query ....
-        $wsql = $wsql."	AND reason LIKE '%".addslashes($filter['reason'])."%' ";
+        $qwsql = $qwsql."	AND a.reason LIKE '%".addslashes($filter['reason'])."%' ";
+        $cwsql = $cwsql."	AND disposition LIKE '%".addslashes($filter['reason'])."%' ";
       }
       if (isset($filter['talk']) && strlen($filter['talk'])) {
         $talk = json_decode($filter['talk'], 1);
@@ -166,10 +168,11 @@ class PBXCdr {
                   a.holdtime, 
                   a.talktime, 
                   a.uniqid, 
-                  a.agentname
+                  a.agentname,
+                  a.userfield
         FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql AND a.calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND a.calldate <= '".date('Y-m-d H:i:s', $lcd)."'
         UNION
-        SELECT calldate, src, dst, name, disposition, duration - billsec, billsec, uniqueid AS uniqid, '' 
+        SELECT calldate, src, dst, name, disposition, duration - billsec, billsec, uniqueid AS uniqid, '', userfield
         FROM cdr WHERE 1=1 $extens $cwsql AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' 
         ) AS c ORDER BY calldate DESC ";        
       
@@ -193,6 +196,9 @@ class PBXCdr {
         if (preg_match("/SIP\/(\d+)/", $dst, $matches) == 1) {
           $dst = $matches[1];            
         }    
+        if (strlen($dst) == 0 && strlen($row['userfield']) > 0) {
+          $dst = $row['userfield'];
+        }
         $queue = $row['queue'];
         if ($queue == 'Unknown') $queue = '';
         
@@ -229,18 +235,19 @@ class PBXCdr {
         $src = $this->normalizePhone($src);
         $dst = $this->normalizePhone($dst);
     
-        $cv = [
+        $cv = [          
           'uid' => $uid,
           'time' => $calldate,
           'src' => $src,
           'dst' => $dst,
-          'queue' => $queue,
+          'queue' => $this->getQueueName($queue),
           'reason' => $reason,
           'answered' => $answered,
           'direction' => $direction,
-          'agent' => $agent,
+          'agent' => $this->getAgentName($agent),
           'hold' => intval($hold),
-          'talk' => intval($talk)
+          'talk' => intval($talk),
+          'userfield' => $row['userfield']
         ];
     
         // Before insert compare with last line in array
@@ -288,5 +295,39 @@ class PBXCdr {
         }
     }
     return $row;
+  }
+
+  public function getQueueName($name) {
+    if (!strlen($name)) return $name;
+    if (!isset($this->mapQueues)) {
+      $pq = new PBXQueue();
+      $l = $pq->fetchList("", 0, 1000);
+      $this->mapQueues = [];
+      foreach ($l as $e) {  
+        $this->mapQueues[$e['name']] = $e['fullname'];
+      }
+    }
+    if (isset($this->mapQueues[$name])) {
+      return $this->mapQueues[$name];
+    } else {
+      return $name;
+    }
+  }
+
+  public function getAgentName($name) {
+    if (!strlen($name)) return $name;
+    if (!isset($this->mapUsers)) {
+      $pq = new Erpico\User();
+      $l = $pq->fetchList("", 0, 1000);
+      $this->mapUsers = [];
+      foreach ($l as $e) {  
+        $this->mapUsers[$e['name']] = $e['fullname'];
+      }
+    }
+    if (isset($this->mapUsers[$name])) {
+      return $this->mapUsers[$name];
+    } else {
+      return $name;
+    }
   }
 }

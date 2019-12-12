@@ -390,6 +390,7 @@ class User
 
 
   public function fullname_queue($x){
+    if (!is_string($x)) return $x;
     $result_queue = $this->db->query("SELECT fullname FROM queue WHERE name='".$x."' LIMIT 1 ");
     $myrow_queue = $result_queue->fetch(\PDO::FETCH_ASSOC);
     return $myrow_queue['fullname']!="" ? $myrow_queue['fullname'] : $x;
@@ -418,7 +419,7 @@ class User
     return $myrow_queue['val']!="" ? $myrow_queue['val'] : $x;
   }
 
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlycount = 0, $shortlist = 0)
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlycount = 0, $shortlist = 0, $fullnameAsValue = 0)
   {
     if ($onlycount) {
       $sql = "SELECT 
@@ -455,6 +456,14 @@ class User
         if (strlen($wsql)) $wsql .= " AND ";
         $wsql .= " U.state = '".intval($filter['state'])."%'";
       }
+      if (isset($filter['id']) && intval($filter['id'])) {
+        if (strlen($wsql)) $wsql .= " AND ";
+        $wsql .= " U.id = '".intval($filter['id'])."%'";
+      }
+      if (isset($filter['value']) && strlen($filter['value'])) {
+        if (strlen($wsql)) $wsql .= " AND ";
+        $wsql .= " (U.name LIKE '%".trim(addslashes($filter['value']))."%' OR U.fullname LIKE '%".trim(addslashes($filter['value']))."%')";
+      }
     }
     if (strlen($wsql)) {
       $sql .= "WHERE ".$wsql;
@@ -476,7 +485,11 @@ class User
         $row['user_groups_ids'] = $groups['ids'];
       }
       if (intval($shortlist)) {
-        $result[] = ["id"=>$row["id"], "value"=>$row["name"], "phone"=>$row["phone"]];
+        if ($fullnameAsValue) {
+          $result[] = ["id"=>$row["name"], "value"=>$row["fullname"]];
+        } else {
+          $result[] = ["id"=>$row["id"], "value"=>$row["name"], "phone"=>$row["phone"], "fullname" => $row["fullname"]];
+        }
       } else {
       $row['rules'] = $rules->getUserRules($row['id']);
       $result[] = $row;
@@ -664,6 +677,10 @@ class User
       if (isset($filter['name']) && strlen(trim(addslashes($filter['name'])))) {
         if (strlen($wsql)) $wsql .= " AND ";
         $wsql .= "`name` LIKE '%".trim(addslashes($filter['name']))."%'";
+      }
+      if (isset($filter['id']) && intval(addslashes($filter['id']))) {
+        if (strlen($wsql)) $wsql .= " AND ";
+        $wsql .= "`id` = '".intval($filter['id'])."'";
       }
       if (isset($filter['description']) && strlen(trim(addslashes($filter['description'])))) {
         if (strlen($wsql)) $wsql .= " AND ";

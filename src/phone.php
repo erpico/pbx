@@ -39,12 +39,13 @@ class PBXPhone {
     return "acl_group_phone";
   }
 
-  private function setCfgSettings($server, $login, $password) {
+  private function setCfgSettings($server, $login, $password, $number, $enabled = 0) {
     $this->cfgSettings = [
-    "sipphone.integrated" => 1,
+    "sipphone.integrated" => $enabled,
     "sipphone.server" => $server,
     "sipphone.user" => $login,
-    "sipphone.password" => $password
+    "sipphone.password" => $password,
+    "cti.ext"           => $number
     ];
   }
 
@@ -188,8 +189,9 @@ class PBXPhone {
           $this->setPhoneToGroup(intval($values["group_id"]), $id);
         } else {
           $this->deletePhoneFromGroup($id);
-        }
-        $this->setCfgSettings($this->server_host, $values["login"], $values["password"]);
+        } 
+
+        $this->setCfgSettings($this->server_host, $values["login"], $values["password"], $values["phone"], $values["model"] == "erpico" ? 1 : 0);        
         $this->setUserConfig($new_user_id, $old_user_id);
         return [ "result" => true, "message" => "Операция прошла успешно"];
       }
@@ -205,15 +207,14 @@ class PBXPhone {
         $this->db->query($sql);
       } 
       if (intval($new_user_id)) {
-        $sql = "SELECT COUNT(*) FROM cfg_user_setting WHERE
+        /*$sql = "SELECT COUNT(*) FROM cfg_user_setting WHERE
         acl_user_id = ".intval($new_user_id)." AND handle = '{$handle}'";
         $res = $this->db->query($sql, \PDO::FETCH_NUM);
         $row = $res->fetch();
-        if (!intval($row[0])) {
-          $sql = "INSERT INTO cfg_user_setting SET acl_user_id = {$new_user_id}, handle = '{$handle}', val = '{$value}', updated = NOW()";
+        if (!intval($row[0])) {*/
+          $sql = "REPLACE INTO cfg_user_setting SET acl_user_id = {$new_user_id}, handle = '{$handle}', val = '{$value}', updated = NOW()";
           $this->db->query($sql);
-        }
-      
+        //}      
       }
     }
   }
@@ -337,7 +338,10 @@ class PBXPhone {
         return false;
       } else {
         if (intval($id)) {
-          return $data[0]["id"] == intval($id);
+          if (isset($data[0]) && isset($data[0]["id"]) && intval($data[0]["id"])) {
+            return $data[0]["id"] == intval($id);
+          }
+          return true;
         } else {
           if (COUNT($data)) {
             return COUNT($data);
