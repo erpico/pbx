@@ -273,10 +273,14 @@ $app->get('/auth/logout', function (Request $request, Response $response, array 
 
 $app->get('/[{name}]', function (Request $request, Response $response, array $args) {
     // Sample log message
-    $this->logger->info("Loading WebApp");
+    // $this->logger->info("Loading WebApp");
 
+    $page = "index.phtml";
+    if ($args["name"] == "import") {
+      $page = "import.phtml";
+    }
     // Render index view
-    return $this->renderer->render($response, 'index.phtml', $args);
+    return $this->renderer->render($response, $page, $args);
 });
 
 $app->get('/phones/list', function (Request $request, Response $response, array $args) use($app) {
@@ -523,6 +527,24 @@ $app->post('/phones/groups/{id}/save', function (Request $request, Response $res
   return $response->withJson($phone->addUpdatePhoneGroup($params));
 })->add('\App\Middleware\OnlyAuthUser');
 
+$app->any('/config/sip', function (Request $request, Response $response, array $args) use($app) {
+  $helper = new PBXConfigHelper();
+  
+  return $response->withJson($helper->getOptions(PBXConfigHelper::SIP_FILE));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->any('/config/queues', function (Request $request, Response $response, array $args) use($app) {
+  $helper = new PBXConfigHelper();
+
+  return $response->withJson($helper->getOptions(PBXConfigHelper::QUEUES_FILE));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->any('/config/extensions', function (Request $request, Response $response, array $args) use($app) {
+  $helper = new PBXConfigHelper();
+
+  return $response->withJson($helper->getOptions(PBXConfigHelper::RULES_FILE));
+})->add('\App\Middleware\OnlyAuthUser');
+
 $app->get('/extended_calls/list', function (Request $request, Response $response, array $args) use($app) {
   $oldCdr = new PBXOldCdr();
   $filter = $request->getParam("filter", []);
@@ -543,3 +565,118 @@ $app->get('/extended_contact_calls/list', function (Request $request, Response $
 
   return $response->withJson($oldContactCdr->fetchList($filter));
 })->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/upload', function ($request, $response, $args) {
+  $config = require(__DIR__ . '/settings.php');
+
+  include __DIR__ . '/classes/ErpicoFileUploader.php';
+
+  $uploadPath = $config['settings']['uploadPath'];
+
+  if (isset($_FILES['file'])) {
+    $_FILES['upload'] = $_FILES['file'];
+  }
+
+  if (is_null($_FILES['upload'])) {
+      return $response->withJson([ "status" => "server"]);
+  }
+
+  $result = ErpicoFileUploader::moveFile($_FILES['upload'], $uploadPath);
+
+  return $response->withJson($result);
+});
+
+$app->post('/config/import', function (Request $request, Response $response, array $args) use($app) {
+  $config = require(__DIR__ . '/settings.php');
+
+  $files = $request->getParam("files", "");
+  if ($files === "asterisk") {
+    $filesArr = PBXConfigHelper::getAsteriskFiles();
+    $uploadPath = PBXConfigHelper::ASTERISK_DIR;
+    if (is_bool($filesArr)) {
+      return $response->withJson(["result" => false, "message" => "Папка ".PBXConfigHelper::ASTERISK_DIR." отсутсвует или нет доступа на её чтение"]);
+    }
+  } else {
+    $filesArr = json_decode($files);
+    $uploadPath = $config['settings']['uploadPath'];
+  }
+  
+  $configImport = new ConfigImport($filesArr, $uploadPath);
+  
+  return $response->withJson($configImport->getConfigData());
+})->add('\App\Middleware\OnlyAuthUser');
+  
+  $app->post('/models/data/import', function (Request $request, Response $response, array $args) use($app) {
+    $channels = $request->getParam("channels", "");
+    $channels = json_decode($channels, true);
+    $phones = $request->getParam("phones", "");
+    $phones = json_decode($phones, true);
+    $channelModel= new ChannelModel();
+    $phoneModel = new PhoneModel();
+    $providersChannels = $channelModel->compareChannels($channels);
+    $providersPhones = $phoneModel->compareChannels($phones);
+    PBXConfigHelper::setPatterns($providersChannels);
+    PBXConfigHelper::setPatterns($providersPhones);
+
+    $savedData = [];
+    $errorCount = 0;
+    foreach ($phones as $phone) {
+      $groupId = $phoneModel->getPhoneGroup($phone["provider"]);
+      if (!$groupId) {
+        $groupId = $phoneModel->setPhoneGroupValues($phone, $providersPhones);
+      }
+      $sId = $phoneModel->setPhoneValues($phone, $groupId);
+      if ($sId) {
+        $savedData[] = $phoneModel->getPhone($sId);
+      } else {
+        $errorCount++;
+      }
+      unset($sId);
+    }
+    $phoneCount = COUNT($savedData);
+    foreach ($channels as $channel) {      
+      $sId = $channelModel->setChannelValues($channel);
+      if ($sId) {
+        $savedData[] = $channelModel->getChannel($sId);
+      } else {
+        $errorCount++;
+      }
+      unset($sId);
+    }
+    $channelCount = COUNT($savedData) - $phoneCount;
+    return $response->withJson([
+      "result"=>true,
+      "message"=>"Каналы сохранены успешно",
+      "data" => $savedData,
+      "phoneCount" => $phoneCount,
+      "channelCount" => $channelCount,
+      "errorCount" => $errorCount
+      ]);
+  });
+
+  $app->post('/models/data/save', function (Request $request, Response $response, array $args) use($app) {
+    $item = $request->getParams();
+    $channelModel= new ChannelModel();
+    $phoneModel = new PhoneModel();
+    $isNew = false;
+    if (array_key_exists("previousType", $item)) {
+      if ($item["type"] != $item["previousType"]) {
+        $isNew = true;
+        if ($item["previousType"] == "channel") {
+          $channelModel->deleteById($item["id"]);
+        } else {
+          $phoneModel->deleteById($item["id"]);
+        }
+      }
+    } else {
+      var_dump($item);
+    }
+  
+    if ($item["type"] == "channel") {
+      $res = $channelModel->updateItem($item, $isNew);
+    } else {
+      $res = $phoneModel->updateItem($item, $isNew);
+    }
+
+    return $response->withJson(["result" => $res ? true : false, "message" => $res ? "Сохранение прошло успешно " : "Проихошла ошибка при сохранинения" ]);
+  });

@@ -85,10 +85,14 @@ require_once( __DIR__ . "/channels.php");
 require_once( __DIR__ . "/outgoingcampaign.php");
 require_once( __DIR__ . "/contact_groups.php");
 require_once( __DIR__ . "/rules.php");
-  require_once( __DIR__ . "/Translator.php");
+require_once( __DIR__ . "/helpers/config_helper.php");
+require_once( __DIR__ . "/Translator.php");
 require_once( __DIR__ . "/pbx_settings.php");
 require_once( __DIR__ . "/old_cdr.php");
 require_once( __DIR__ . "/old_contact_cdr.php");
+require_once( __DIR__ . "/import.php");
+require_once( __DIR__ . "/models/ChannelModel.php");
+require_once( __DIR__ . "/models/PhoneModel.php");
 
 if (!isset($PBXUser)){
   $PBXUser = new \Erpico\User();

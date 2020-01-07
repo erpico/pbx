@@ -1,28 +1,28 @@
 {
-  "_from": "@xbs/webix-pro",
-  "_id": "@xbs/webix-pro@7.0.0",
+  "_from": "@xbs/webix-pro@6.4.6",
+  "_id": "@xbs/webix-pro@6.4.6",
   "_inBundle": false,
-  "_integrity": "sha512-TNqSrIgdn7gs09EjIk8ByBEIox2EEe99hmxUcyZFhJVRxQOFzQAUNdNbHnVBjQd+DxIqo3WzPIx8lR6zATBRQQ==",
+  "_integrity": "sha512-3lOOyBw0ndYie1efQwgz4m1+fC7vF7hX+edF789CMC5A58mks2pS6yD5rohhXIV5SaP7Pd9PXic5qbYqiB2diw==",
   "_location": "/@xbs/webix-pro",
   "_phantomChildren": {},
   "_requested": {
-    "type": "tag",
+    "type": "version",
     "registry": true,
-    "raw": "@xbs/webix-pro",
+    "raw": "@xbs/webix-pro@6.4.6",
     "name": "@xbs/webix-pro",
     "escapedName": "@xbs%2fwebix-pro",
     "scope": "@xbs",
-    "rawSpec": "",
+    "rawSpec": "6.4.6",
     "saveSpec": null,
-    "fetchSpec": "latest"
+    "fetchSpec": "6.4.6"
   },
   "_requiredBy": [
     "#USER",
     "/"
   ],
-  "_resolved": "https://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-7.0.0.tgz",
-  "_shasum": "7d1d515fd6d887f7a8a88fbdb86d461aa4678023",
-  "_spec": "@xbs/webix-pro",
+  "_resolved": "https://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-6.4.6.tgz",
+  "_shasum": "980b207455f90a97c3e8d08e38928d61d2d2f197",
+  "_spec": "@xbs/webix-pro@6.4.6",
   "_where": "C:\\Projects\\Test\\webix",
   "author": {
     "name": "XB Software"
@@ -45,5 +45,5 @@
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "types": "types/webix.d.ts",
-  "version": "7.0.0"
+  "version": "6.4.6"
 }

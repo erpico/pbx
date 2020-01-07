@@ -334,9 +334,12 @@ class PBXPhone {
       if (COUNT($data) > 1) {
         if (!intval($id)) {
           return COUNT($data);
-        }
+        }        
         return false;
       } else {
+        if (!COUNT($data)) {
+          return true;
+        }
         if (intval($id)) {
           if (isset($data[0]) && isset($data[0]["id"]) && intval($data[0]["id"])) {
             return $data[0]["id"] == intval($id);
@@ -345,6 +348,7 @@ class PBXPhone {
         } else {
           if (COUNT($data)) {
             return COUNT($data);
+            var_dump($data);
           } else {
             return true;
           }

@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>ErpicoPBX 3.0</title>
+
+    <!-- Webix files-->
+    <link rel="stylesheet" href="./webix/webix.css" type="text/css">
+    <script src="./webix/webix.js" type="text/javascript"></script>
+
+    <link rel="stylesheet" href="./webix/skins/flat.css">
+    <link rel="stylesheet" href="./webix/skins/custom_style.css">
+
+    <link rel="stylesheet" href="./webix/fonts/fontawesome-all.css">
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+          integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <script type="text/javascript" src="./helpers/nicedit.js"></script>
+    <script type="text/javascript" src="./helpers/language.js"></script>
+    <script type="text/javascript" src="./helpers/i18n/ru.js"></script>
+
+    <!-- Error tracking -->
+    <script src="https://cdn.ravenjs.com/3.10.0/raven.min.js"></script>
+
+    <!-- The App -->
+
+    <link rel="stylesheet" href="./codebase/admin.css">
+    <link rel="stylesheet" href="./assets/erpico.css">
+
+
+</head>
+<body>
+
+<script type="module">
+import {Auth} from "./sources/libs/auth.js";
+import {Guiutils} from "./sources/libs/guiutils.js";
+  webix.guiutils = new Guiutils();
+  webix.auth = new Auth();  
+  webix.auth.check(() => {
+    var files = [],
+        dataType = [
+          { id: "phone", value: "Телефон" },
+          { id: "channel", value: "Канал" },
+        ];
+    webix.ui({
+      id: "uploaderForm", scroll: "y",view: "form", rows: [
+        {
+          cols: [
+            {},
+            {
+              view: "uploader", value: "Загрузить файлы",
+              id: "fileUploader",
+              link: "mylist",
+              autosend: true,
+              upload: "/upload",
+            },
+            {}
+          ]
+        },
+        {
+          view: "list", id: "mylist", type: "uploader",
+          autoheight: true, borderless: true
+        },
+        { id:"getDataBtn",
+          cols: [
+            {},
+            {
+              view: "button", label: "Получить данные", click: function () {
+                files = [];
+                webix.extend($$("uploaderForm"), webix.ProgressBar);
+                $$("uploaderForm").showProgress();
+                $$("uploaderForm").disable();
+                $$("fileUploader").files.data.each(function (obj) {
+                  var status = obj.status;
+                  
+                  if (status == "server") {
+                    files.push(obj.hash);
+                  }
+                });
+                getImportData(files);
+              }
+            },
+            {
+              view: "button", label: "Получить данные из /etc/asterisk", click: function () {                
+                getImportData("asterisk");
+              }
+            },
+            {}
+          ]
+        },
+        {
+          id: "phoneChannels",
+          view: "datatable",
+          height: 500,
+          hidden: true,
+          editable: true,
+          columns: [
+              {
+                id: "type", header: [{text: "Тип"}, ""], options: dataType,
+                editor: "select",
+                width: 150
+              },
+              {
+                id: "name", header: [{text: "Название"}, ""],
+                editor: "text",
+                fillspace: 1
+              }           
+          ]
+        },
+        {
+          cols: [
+            {},
+            {
+              view: "button", id: "saveButton", hidden: true, label: "Сохранить", click: function () {                
+                $$("uploaderForm").showProgress();
+                $$("uploaderForm").disable();
+                var phones = [],
+                    channels = [],
+                    data = $$("phoneChannels").serialize();
+                data.forEach(o => {
+                  if (o.type === "phone") {
+                    phones.push(o);
+                  } else {
+                    channels.push(o);
+                  }    
+                });               
+                webix.ajax().post(
+                  "/models/data/import",
+                  {
+                    "channels": channels,
+                    "phones": phones
+                  },
+                  {
+                    error: function (text, data, XmlHttpRequest) {
+                      webix.extend($$("uploaderForm"), webix.ProgressBar);
+                      $$("uploaderForm").hideProgress();
+                      $$("uploaderForm").enable();
+                      var jdata = data.json();
+                      webix.message({"type": "error", "text": jdata.message ? jdata.message : text});
+                    },
+                    success: function (text, data, XmlHttpRequest) {
+                      $$("uploaderForm").hideProgress();
+                      $$("uploaderForm").enable();
+                      var jdata = data.json();
+                      if (jdata.result) {
+                        webix.message({"type": "success", "text": jdata.message});
+                        if (jdata.data) {
+                          showSavedData(jdata);
+                        }
+                      } else {
+                        webix.message({"type": "error", "text": jdata.message});
+                      }
+                    }
+                  }
+                );
+              }
+            },
+            {}
+          ]
+        },
+        {
+          id: "saveData",
+          view: "datatable",
+          hidden: true,
+          editable: true,
+          columns: [
+              {
+                id: "id", header: [{text: "№"}, {
+                  content: 'textFilter'
+                }], width: 50
+              },
+              {
+                id: "type", header: [{text: "Тип"}, ""], options: dataType,
+                editor: "select",
+                width: 150
+              },
+              {
+                id: "name", header: [{text: "Название"}, ""],
+                editor: "text",
+                width: 150
+              },
+              {
+                id: "provider", header: [{text: "Провайдер"}, ""], fillspace: 1, options: "/config/sip"
+              },
+              {
+                id: "phone", header: [{text: "Номер"}, {
+                  content: 'textFilter'
+                }], fillspace: 1
+              },
+              {
+                id: "login", header: [{text: "Логин"}, {
+                  content: 'textFilter'
+                }], fillspace: 1
+              },
+              {
+                id: "model", header: [{text: "Модель"}, {
+                  content: 'textFilter'
+                }], fillspace: 1
+              },
+              {
+                id: "mac", header: [{text: "MAC"}, {
+                  content: 'textFilter'
+                }], fillspace: 1
+              }, 
+              {
+                id: "host", header: [{text: "Хост"}, {
+                  content: 'textFilter'
+                }], fillspace: 1
+              },
+              {
+                id: "port", header: [{text: "Порт"}, {
+                  content: 'textFilter'
+                }], fillspace: 1
+              },
+              {
+                id: "rules", header: [{text: "Правила набора номера "}, {
+                  content: 'textFilter'
+                }], fillspace: 1, options: "/config/extensions"
+              },
+              {
+                id: "default_phone", header: [{text: "Внешний номер по умолчанию"}, {
+                  content: 'textFilter'
+                }], fillspace: 1
+              },
+              {
+                id: "save", header:[ "", ""] ,width: 50, template: '<span class="webix_icon_btn fa fa-file-alt saveRow" style="max-width:32px;"></span>'
+              },
+          ],
+          data:[],
+          on: {
+            onBeforeEditStart: function(cell) {
+              if(cell.column === "type" && cell.row) {
+                let item = $$("saveData").getItem(cell.row);
+                item.previousType = item.type;
+                $$("saveData").updateItem(cell.row, item);
+              }
+              return true;
+            }
+          },
+          onClick:{ 
+              "saveRow":function(event, cell, target){
+                if (cell.row) {
+                  saveRow(cell.row);
+                }
+                return false;
+              }
+          },
+        }
+      ]
+    });
+    webix.extend($$("uploaderForm"), webix.ProgressBar);
+  })
+ 
+
+  function getImportData(files) {
+    webix.ajax().post(
+                  "/config/import",
+                  {"files": files},
+                  {
+                    error: function (text, data, XmlHttpRequest) {
+                      $$("phoneChannels").hide();
+                      $$("saveButton").hide();
+                      $$("uploaderForm").hideProgress();
+                      $$("uploaderForm").enable();
+                      var jdata = data.json();
+                      closeAll();
+                      webix.message({"type": "error", "text": jdata.message ? jdata.message : text});
+                    },
+                    success: function (text, data, XmlHttpRequest) {
+                      $$("uploaderForm").hideProgress();
+                      $$("uploaderForm").enable();
+                      var jdata = data.json();
+                      if (jdata.result == false || jdata.error) {
+                        closeAll();
+                        webix.message({"type": "error", "text": jdata.message ? jdata.message : text});
+                        return;
+                      }
+                      if (!jdata.length) {
+                        closeAll();
+                        webix.message({"type": "error", "text": "Данные не получены"});
+                        return;
+                      }
+                      $$("phoneChannels").show();
+                      $$("saveButton").show();
+                      $$("phoneChannels").parse(jdata);
+                    }
+                  }
+                );
+  }
+
+  function closeAll() {
+    $$("saveData").clearAll();
+    $$("saveData").hide();
+    $$("saveButton").hide();
+    $$("phoneChannels").queryView({view:"list"},"all").map(view => view.clearAll());
+    $$("phoneChannels").hide();
+  }
+
+  function saveRow(id) {
+    webix.extend($$("saveData"), webix.ProgressBar);
+    $$("saveData").disable();
+    let item = $$("saveData").getItem(id);
+    if (id) {
+      webix.ajax().post(
+        "/models/data/save", item,
+        {
+          error: function (text, data, XmlHttpRequest) {            
+            $$("saveData").hideProgress();
+            $$("saveData").enable();
+            var jdata = data.json();
+            webix.message({"type": "error", "text": jdata.message ? jdata.message : text});
+          },
+          success: function (text, data, XmlHttpRequest) {
+            $$("saveData").hideProgress();
+            $$("saveData").enable();
+            var jdata = data.json();
+            if (jdata.result) {
+              webix.message({"type": "success", "text": jdata.message});
+            } else {
+              webix.message({"type": "error", "text": jdata.message});
+            }       
+          }
+        }
+      );
+    }
+  }
+  function showSavedData(data) {
+    $$("fileUploader").hide();
+    $$("mylist").hide();
+    $$("getDataBtn").hide();
+    $$("phoneChannels").hide();
+    $$("saveButton").hide();
+
+    if ($$("$layout1")) {
+      $$("$layout1").hide()
+    }
+    if ($$("$layout2")) {
+      $$("$layout2").hide()
+    }
+    
+
+    webix.guiutils.modalWindow(data.message,"Импортировано телефонов: "+data.phoneCount+", каналов "+data.channelCount+", ошибок "+data.errorCount)
+    $$("saveData").refreshColumns()
+    $$("saveData").show();
+    $$("saveData").clearAll();
+    $$("saveData").parse(data.data);
+  }
+</script>
+</body>
+</html>
