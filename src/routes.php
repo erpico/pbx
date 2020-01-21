@@ -92,20 +92,27 @@ $findrecord = function (Request $request, Response $response, array $args) use($
       // Regular
       $date = str_replace(" ", "-", $row['calldate']);
       $time = strtotime($row['calldate']);    
-      $uniqid = substr($row['uniqueid'], 0, -2);
+      $uniqid = $row['uniqueid'];//substr($row['uniqueid'], 0, /*-2*/0);
       if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
       $src = $row['src'];
       $dst = $row['dst'];
-  
+//  var_dump($row);
+//  die($uniqid);
       $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*-".$uniqid."*");    
-
+//var_dump($files);
       if (!is_array($files) || !count($files)) {        
-          return $response->withStatus(404)
+	  // Last change....
+	  
+	  $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*-$src-*".substr($uniqid, 0, -2)."*");    
+	  //var_dump($files);die();
+	  if (!is_array($files) || !count($files)) {
+            return $response->withStatus(404)
               ->withHeader('Content-Type', 'text/html')
               ->write('Record not found in filesystem');
+          }
       }
       $filename = $files[0];    
-      
+
       if (!file_exists($filename)) {
         return $response->withStatus(404)
           ->withHeader('Content-Type', 'text/html')
@@ -113,7 +120,7 @@ $findrecord = function (Request $request, Response $response, array $args) use($
       
       }
   }
- // die($filename);
+//  die($filename);
   $fh = fopen($filename, 'rb');
   $stream = new Slim\Http\Stream($fh);
   return $response            
@@ -273,14 +280,10 @@ $app->get('/auth/logout', function (Request $request, Response $response, array 
 
 $app->get('/[{name}]', function (Request $request, Response $response, array $args) {
     // Sample log message
-    // $this->logger->info("Loading WebApp");
+    $this->logger->info("Loading WebApp");
 
-    $page = "index.phtml";
-    if ($args["name"] == "import") {
-      $page = "import.phtml";
-    }
     // Render index view
-    return $this->renderer->render($response, $page, $args);
+    return $this->renderer->render($response, 'index.phtml', $args);
 });
 
 $app->get('/phones/list', function (Request $request, Response $response, array $args) use($app) {
@@ -566,117 +569,32 @@ $app->get('/extended_contact_calls/list', function (Request $request, Response $
   return $response->withJson($oldContactCdr->fetchList($filter));
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->post('/upload', function ($request, $response, $args) {
-  $config = require(__DIR__ . '/settings.php');
+$app->any('/config/phone/{mac}', function (Request $request, Response $response, array $args) use($app) {
+  global $app;    
+  $container = $app->getContainer();
 
-  include __DIR__ . '/classes/ErpicoFileUploader.php';
-
-  $uploadPath = $config['settings']['uploadPath'];
-
-  if (isset($_FILES['file'])) {
-    $_FILES['upload'] = $_FILES['file'];
+  $mac = $args['mac'];
+  // Search for phone with such MAC
+  $po = new PBXPhone();
+  $list = $po->fetchList(["mac" => $mac]);
+  if (count($list) == 0) {
+    return $response->withStatus(404)
+          ->withHeader('Content-Type', 'text/plain')
+          ->write('No configuration file for this phone');
   }
 
-  if (is_null($_FILES['upload'])) {
-      return $response->withJson([ "status" => "server"]);
+  $data = $list[0];
+
+  $data['server'] = $container['server_host'];
+
+  $template = file_get_contents(__DIR__."/../templates/phones/yealink-t.tpl");
+
+  foreach ($data as $k => $v) {
+    $template = str_replace("#$k#", $v, $template);
   }
 
-  $result = ErpicoFileUploader::moveFile($_FILES['upload'], $uploadPath);
-
-  return $response->withJson($result);
+  return $response->withStatus(200)
+          ->withHeader('Content-Type', 'text/plain')
+          ->write($template);
+  
 });
-
-$app->post('/config/import', function (Request $request, Response $response, array $args) use($app) {
-  $config = require(__DIR__ . '/settings.php');
-
-  $files = $request->getParam("files", "");
-  if ($files === "asterisk") {
-    $filesArr = PBXConfigHelper::getAsteriskFiles();
-    $uploadPath = PBXConfigHelper::ASTERISK_DIR;
-    if (is_bool($filesArr)) {
-      return $response->withJson(["result" => false, "message" => "Папка ".PBXConfigHelper::ASTERISK_DIR." отсутсвует или нет доступа на её чтение"]);
-    }
-  } else {
-    $filesArr = json_decode($files);
-    $uploadPath = $config['settings']['uploadPath'];
-  }
-  
-  $configImport = new ConfigImport($filesArr, $uploadPath);
-  
-  return $response->withJson($configImport->getConfigData());
-})->add('\App\Middleware\OnlyAuthUser');
-  
-  $app->post('/models/data/import', function (Request $request, Response $response, array $args) use($app) {
-    $channels = $request->getParam("channels", "");
-    $channels = json_decode($channels, true);
-    $phones = $request->getParam("phones", "");
-    $phones = json_decode($phones, true);
-    $channelModel= new ChannelModel();
-    $phoneModel = new PhoneModel();
-    $providersChannels = $channelModel->compareChannels($channels);
-    $providersPhones = $phoneModel->compareChannels($phones);
-    PBXConfigHelper::setPatterns($providersChannels);
-    PBXConfigHelper::setPatterns($providersPhones);
-
-    $savedData = [];
-    $errorCount = 0;
-    foreach ($phones as $phone) {
-      $groupId = $phoneModel->getPhoneGroup($phone["provider"]);
-      if (!$groupId) {
-        $groupId = $phoneModel->setPhoneGroupValues($phone, $providersPhones);
-      }
-      $sId = $phoneModel->setPhoneValues($phone, $groupId);
-      if ($sId) {
-        $savedData[] = $phoneModel->getPhone($sId);
-      } else {
-        $errorCount++;
-      }
-      unset($sId);
-    }
-    $phoneCount = COUNT($savedData);
-    foreach ($channels as $channel) {      
-      $sId = $channelModel->setChannelValues($channel);
-      if ($sId) {
-        $savedData[] = $channelModel->getChannel($sId);
-      } else {
-        $errorCount++;
-      }
-      unset($sId);
-    }
-    $channelCount = COUNT($savedData) - $phoneCount;
-    return $response->withJson([
-      "result"=>true,
-      "message"=>"Каналы сохранены успешно",
-      "data" => $savedData,
-      "phoneCount" => $phoneCount,
-      "channelCount" => $channelCount,
-      "errorCount" => $errorCount
-      ]);
-  });
-
-  $app->post('/models/data/save', function (Request $request, Response $response, array $args) use($app) {
-    $item = $request->getParams();
-    $channelModel= new ChannelModel();
-    $phoneModel = new PhoneModel();
-    $isNew = false;
-    if (array_key_exists("previousType", $item)) {
-      if ($item["type"] != $item["previousType"]) {
-        $isNew = true;
-        if ($item["previousType"] == "channel") {
-          $channelModel->deleteById($item["id"]);
-        } else {
-          $phoneModel->deleteById($item["id"]);
-        }
-      }
-    } else {
-      var_dump($item);
-    }
-  
-    if ($item["type"] == "channel") {
-      $res = $channelModel->updateItem($item, $isNew);
-    } else {
-      $res = $phoneModel->updateItem($item, $isNew);
-    }
-
-    return $response->withJson(["result" => $res ? true : false, "message" => $res ? "Сохранение прошло успешно " : "Проихошла ошибка при сохранинения" ]);
-  });

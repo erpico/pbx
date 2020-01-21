@@ -334,7 +334,7 @@ class Nps {
     while ($rowdetractorsList = $resdetractorsList->fetch()){
         array_push($listIdD, $rowdetractorsList['nps_id']);
     }            
-    if (!COUNT($listIdP)) {
+    if (!strlen($listIdP)) {
       return [];
     }
     $resdetractorsListRes = $this->db->query("SELECT 

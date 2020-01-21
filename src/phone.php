@@ -58,14 +58,15 @@ class PBXPhone {
     if (intval($onlyCount)) {
       $ssql = " COUNT(*) ";  
     } else {
-      $ssql = "`id`";
+      $ssql =  self::getTableName().".`id`";
       foreach (self::FIELDS as $field => $isInt) {        
         if (strlen($ssql)) $ssql .= ",";
-        $ssql .= "`".$field."`";        
+        $ssql .= self::getTableName().".`".$field."`";        
       }
     }
 
-    $sql .= $ssql." FROM ".self::getTableName();
+    $sql .= $ssql.", acl_user.fullname AS user_name FROM ".self::getTableName();
+    $sql .= " LEFT JOIN acl_user ON (acl_user.id = acl_user_phone.user_id) ";
     $wsql = "";
     if (is_array($filter)) {
       $fields = self::FIELDS;
@@ -75,7 +76,7 @@ class PBXPhone {
         if (isset($fields[$key])) {
           if (array_key_exists($key,$fields) && (intval($fields[$key]) ? intval($value) : strlen($value) )) {
             if (strlen($wsql)) $wsql .= " AND ";
-            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
+            $wsql .= self::getTableName().".`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
           }
         }        
       }
@@ -432,7 +433,7 @@ class PBXPhone {
                  "  secret = {$p['password']}\n".
                  "  nat = yes\n".
                  "  context = {$p['rules']}\n".
-                 "  callerid = {$p['phone']} <{$p['phone']}>\n\n";
+                 "  callerid = {$p['user_name']} <{$p['phone']}>\n\n";
     }
     return $result;    
   }

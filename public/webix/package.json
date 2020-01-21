@@ -1,49 +1,72 @@
 {
-  "_from": "@xbs/webix-pro@6.4.6",
-  "_id": "@xbs/webix-pro@6.4.6",
-  "_inBundle": false,
-  "_integrity": "sha512-3lOOyBw0ndYie1efQwgz4m1+fC7vF7hX+edF789CMC5A58mks2pS6yD5rohhXIV5SaP7Pd9PXic5qbYqiB2diw==",
+  "_args": [
+    [
+      "@xbs/webix-pro",
+      "/mnt/c/Projects/erpicopbx/www"
+    ]
+  ],
+  "_from": "@xbs/webix-pro@latest",
+  "_id": "@xbs/webix-pro@7.1.1",
+  "_inCache": true,
+  "_installable": true,
   "_location": "/@xbs/webix-pro",
+  "_nodeVersion": "10.16.3",
+  "_npmUser": {
+    "email": "cawnpm",
+    "name": "mkozhukh"
+  },
+  "_npmVersion": "6.9.0",
   "_phantomChildren": {},
   "_requested": {
-    "type": "version",
-    "registry": true,
-    "raw": "@xbs/webix-pro@6.4.6",
     "name": "@xbs/webix-pro",
-    "escapedName": "@xbs%2fwebix-pro",
+    "raw": "@xbs/webix-pro",
+    "rawSpec": "",
     "scope": "@xbs",
-    "rawSpec": "6.4.6",
-    "saveSpec": null,
-    "fetchSpec": "6.4.6"
+    "spec": "latest",
+    "type": "tag"
   },
   "_requiredBy": [
-    "#USER",
-    "/"
+    "#USER"
   ],
-  "_resolved": "https://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-6.4.6.tgz",
-  "_shasum": "980b207455f90a97c3e8d08e38928d61d2d2f197",
-  "_spec": "@xbs/webix-pro@6.4.6",
-  "_where": "C:\\Projects\\Test\\webix",
+  "_resolved": "http://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-7.1.1.tgz",
+  "_shasum": "f5a1cfe13ebba3f0c46b6aab79d8e3e104153e5b",
+  "_shrinkwrap": null,
+  "_spec": "@xbs/webix-pro",
+  "_where": "/mnt/c/Projects/erpicopbx/www",
   "author": {
     "name": "XB Software"
   },
-  "bundleDependencies": false,
-  "deprecated": false,
+  "dependencies": {},
   "description": "Webix UI",
+  "devDependencies": {},
+  "dist": {
+    "integrity": "sha512-Yb0Rfb00BUdh+wUcgv5V53LEgAITPCdMECOP4rKyKCS9/ezXACj/SUodOd+qsV5sxSP0kaHcpVxb1T/XFaEBWQ==",
+    "shasum": "f5a1cfe13ebba3f0c46b6aab79d8e3e104153e5b",
+    "tarball": "https://npm.webix.com/@xbs%2fwebix-pro/-/webix-pro-7.1.1.tgz"
+  },
   "keywords": [
-    "webix",
     "ui",
+    "webix",
     "widgets"
   ],
   "license": "SEE LICENSE IN license.text",
   "main": "webix.js",
+  "maintainers": [
+    {
+      "name": "mkozhukh",
+      "email": "cawnpm"
+    }
+  ],
   "name": "@xbs/webix-pro",
+  "optionalDependencies": {},
   "publishConfig": {
     "registry": "https://npm.webix.com"
   },
+  "readme": "ERROR: No README data found!",
+  "readmeFilename": "readme.txt",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "types": "types/webix.d.ts",
-  "version": "6.4.6"
+  "version": "7.1.1"
 }

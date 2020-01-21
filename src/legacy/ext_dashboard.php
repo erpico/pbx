@@ -853,7 +853,9 @@ class Ext_dashboard {
         $cdr_report[$num]['agent_name'] = $this->auth->fullname_agent($list['agentname']);
         $cdr_report[$num]['agent_name_short'] = $this->auth->fullname_agent_short($list['agentname']);
 
-        $cdr_report[$num]['transfer'] = $list['transfer']." (".round($list['transfer']/$cdr_report[$num]['served']*100)."%)";;
+        if ($cdr_report[$num]['served'] !== 0){
+            $cdr_report[$num]['transfer'] = $list['transfer']." (".round($list['transfer']/$cdr_report[$num]['served']*100)."%)";
+        } 
 
         $cdr_report[$num]['sum_talktime'] = $utils->time_format($list[1]);
         $cdr_report[$num]['sum_holdtime'] = $utils->time_format($list[2]);
