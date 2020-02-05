@@ -949,7 +949,7 @@ class Ext_dashboard {
     if (!isset($filter['parent'])) {
       // By month
       if (!$onlycount) {
-        // $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m'), queue_cdr.calldate";
+         $sql .= "GROUP BY DATE_FORMAT(calldate,'%Y-%m')";
       }
     } else {
       $parent = $filter['parent'];
@@ -981,12 +981,15 @@ class Ext_dashboard {
         }
       }
     }
+//    die($sql);
     $result = $this->db->query($sql);
     $table = [];
     if ($onlycount) {
       // $row = $result->fetch(\PDO::FETCH_NUM);
       // return intval($row[0]);
     }
+//    $rows= $result->fetchAll(\PDO::FETCH_BOTH);
+//    print_r($rows);die;
     while ($row = $result->fetch(\PDO::FETCH_BOTH)) {
       $served = $row[3] + $row[4] + $row[5];
       $unserved = $row[6] + $row[8] + $row[7] + $row[9] + $row[10] + $row['ringnoanswer'];
@@ -995,6 +998,9 @@ class Ext_dashboard {
       $lcr = $row['abandon'] + $row['exitempty'] + $row['exittimeout'];
 
       $tr = [];
+      if (!$row['calltime']) {
+        continue;
+      }
 
       if (isset($type)) {
         switch ($type) {

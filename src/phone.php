@@ -22,11 +22,11 @@ class PBXPhone {
   ];
 
   public function __construct() {
-    global $app;    
+    global $app;
     $container = $app->getContainer();
     $this->db = $container['db'];
     $this->server_host = $container['server_host'];
-    
+    $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
     $this->utils = new Erpico\Utils();
   }
@@ -53,15 +53,15 @@ class PBXPhone {
     return $this->cfgSettings;
   }
 
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0) {
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $likeStringValues = true) {
     $sql = "SELECT ";
     if (intval($onlyCount)) {
-      $ssql = " COUNT(*) ";  
+      $ssql = " COUNT(*) ";
     } else {
       $ssql =  self::getTableName().".`id`";
-      foreach (self::FIELDS as $field => $isInt) {        
+      foreach (self::FIELDS as $field => $isInt) {
         if (strlen($ssql)) $ssql .= ",";
-        $ssql .= self::getTableName().".`".$field."`";        
+        $ssql .= self::getTableName().".`".$field."`";
       }
     }
 
@@ -76,9 +76,9 @@ class PBXPhone {
         if (isset($fields[$key])) {
           if (array_key_exists($key,$fields) && (intval($fields[$key]) ? intval($value) : strlen($value) )) {
             if (strlen($wsql)) $wsql .= " AND ";
-            $wsql .= self::getTableName().".`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
+            $wsql .= self::getTableName().".`".$key."` ".(intval($fields[$key]) ? "='" : ($likeStringValues ? "LIKE '%" : "='" ))."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : ($likeStringValues ? "%'" : "'" ));
           }
-        }        
+        }
       }
     }
 
@@ -100,29 +100,26 @@ class PBXPhone {
 
     return $result;
   }
-  
-  private function isUniquePhone($phone, $id = 0) {
-    $data = $this->fetchList(["phone" => $phone]);
-    if (is_array($data)) {
-      if (COUNT($data) > 1) {
-        return false;
-      } else if (COUNT($data) == 1){
-        return $data[0]["id"] == intval($id);
-      }
-    }
-    return true;
-  }
 
-  private function isUniqueLogin($login, $id) {
-    $data = $this->fetchList(["login" => $login]);
-    if (is_array($data)) {
-      if (COUNT($data) > 1) {
-        return false;
-      } else if (COUNT($data) == 1) {
-        return $data[0]["id"] == intval($id);
+  private function isUniqueColumn($column, $code, $id) {
+    if (in_array($column, SELF::FIELDS)) {
+      $data = $this->fetchList([$column => $code], 0, 3, 0, 0);
+      if (is_array($data)) {
+        if (COUNT($data) > 1) {
+          return false;
+        } else if (COUNT($data) == 1) {
+          if (intval($id)) {
+            return $data[0]["id"] == intval($id);
+          } else {
+            return false;
+          }
+        }
       }
+      return true;
+    } else {
+      throw new Exception("Undefined column ".$column." given", 1);
     }
-    return true;
+    
   }
 
   public function addUpdate($values) {
@@ -135,14 +132,14 @@ class PBXPhone {
         $sql = "INSERT INTO ".$this->getTableName()." SET ";
       }
       if (isset($values["login"]) && strlen($values["login"])) {
-        if (!$this->isUniqueLogin($values['login'], $values['id'])) {
+        if (!$this->isUniqueColumn("login", $values['login'], $values['id'])) {
           return [ "result" => false, "message" => "Логин занят другим пользователем"];
         }
       } else {
         return [ "result" => false, "message" => "Логин не может быть пустым"];
       }
       if (isset($values["phone"]) && strlen($values["phone"])) {
-        if (!$this->isUniquePhone($values['phone'], $values['id'])) {
+        if (!$this->isUniqueColumn("phone",$values['phone'], $values['id'])) {
           return [ "result" => false, "message" => "Телефон занят другим пользователем"];
         }
       } else {
@@ -154,12 +151,28 @@ class PBXPhone {
           return ["result" => false, "message" => "password can`t be empty"];
         }
       }
+
+      if (isset($values['mac'])) {
+        $mac = preg_replace("/[^0123456789ABCDEF]/", '', strtoupper($values['mac']));
+
+        if (strlen($mac) == 12) {
+          // Add dashes
+          $nmac = "";    
+          for ($i = 0; $i < strlen($mac); $i++) {
+            $nmac .= $mac[$i];
+            if ($i % 2) $nmac .= ":";
+          }
+          $mac = trim($nmac, ":");
+        }
+
+        $values['mac'] = $mac;
+      }
       
       foreach (self::FIELDS as $field => $isInt) {
         if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
-          if (strlen($ssql)) $ssql .= ",";          
-            $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
-        }  
+          if (strlen($ssql)) $ssql .= ",";
+            $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";
+        }
       }
 
       if (strlen($ssql)) {
@@ -174,9 +187,9 @@ class PBXPhone {
                 $old_user_id = intval($old_user[0]["user_id"]);
               }
             }
-          }         
+          }
         }
-        $this->db->query($sql);   
+        $this->db->query($sql);
         if (isset($values['user_id']) && intval($values['user_id'])) {
           $new_user_id = intval($values["user_id"]);
         } else {
@@ -190,23 +203,63 @@ class PBXPhone {
           $this->setPhoneToGroup(intval($values["group_id"]), $id);
         } else {
           $this->deletePhoneFromGroup($id);
-        } 
+        }
 
-        $this->setCfgSettings($this->server_host, $values["login"], $values["password"], $values["phone"], $values["model"] == "erpico" ? 1 : 0);        
+        $this->setCfgSettings($this->server_host, $values["login"], $values["password"], $values["phone"], $values["model"] == "erpico" ? 1 : 0);
         $this->setUserConfig($new_user_id, $old_user_id);
         return [ "result" => true, "message" => "Операция прошла успешно"];
       }
     }
     return [ "result" => false, "message" => "Произошла ошибка выполнения операции"];
   }
+  
+  /**
+   * @param $id
+   *
+   * @return array
+   */
+  public function remove($id) {
+    try {
+      if (!intval($id)) {
+        return ["result" => false, "message" => "# телефона не может быть пустым"];
+      }
+      if ($this->deleteOtherPhonesFromGroup(intval($id)) && $this->db->query("DELETE FROM ".self::getTableName()
+                                                                             ." WHERE id = ".intval($id))) {
+        return ["result" => true, "message" => "Удаление прошло успешно"];
+      }
+    } catch (Exception $ex) {
+      $this->logger->error($ex->getMessage()." ON LINE ".$ex->getLine());
+      return ["result" => false, "message" => "Произошла ошибка удаления"];
+    }
+  }
+  
+  /**
+   * @param $id
+   *
+   * @return array
+   */
+  public function removePhoneFroup($id) {
+    try {
+      if (!intval($id)) {
+        return ["result" => false, "message" => "# группы не может быть пустым"];
+      }
+      if ($this->deleteOtherPhonesFromGroup(intval($id)) && $this->db->query("DELETE FROM ".self::getGroupsTableName()
+                                                                            ." WHERE id = ".intval($id))) {
+        return ["result" => true, "message" => "Удаление прошло успешно"];
+      }
+    } catch (Exception $ex) {
+      $this->logger->error($ex->getMessage()." ON LINE ".$ex->getLine());
+      return ["result" => false, "message" => "Произошла ошибка удаления"];
+    }
+  }
 
   public function setUserConfig($new_user_id, $old_user_id) {
-    $settings = $this->getCfgSettings();    
+    $settings = $this->getCfgSettings();
     foreach ($settings as $handle => $value) {
       if (intval($old_user_id)) {
         $sql = "DELETE FROM cfg_user_setting WHERE acl_user_id = {$old_user_id} AND handle = '{$handle}'";
         $this->db->query($sql);
-      } 
+      }
       if (intval($new_user_id)) {
         /*$sql = "SELECT COUNT(*) FROM cfg_user_setting WHERE
         acl_user_id = ".intval($new_user_id)." AND handle = '{$handle}'";
@@ -215,20 +268,20 @@ class PBXPhone {
         if (!intval($row[0])) {*/
           $sql = "REPLACE INTO cfg_user_setting SET acl_user_id = {$new_user_id}, handle = '{$handle}', val = '{$value}', updated = NOW()";
           $this->db->query($sql);
-        //}      
+        //}
       }
     }
   }
 
-  public function fetchGroupsList($filter = "", $start = 0, $end = 20, $onlyCount = 0) {
+  public function fetchGroupsList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $likeStringValues = true) {
     $sql = "SELECT ";
     if (intval($onlyCount)) {
-      $ssql = " COUNT(*) ";  
+      $ssql = " COUNT(*) ";
     } else {
       $ssql = "`id`";
-      foreach (self::GROUPS_FIELDS as $field => $isInt) {        
+      foreach (self::GROUPS_FIELDS as $field => $isInt) {
         if (strlen($ssql)) $ssql .= ",";
-        $ssql .= "`".$field."`";        
+        $ssql .= "`".$field."`";
       }
     }
 
@@ -242,9 +295,9 @@ class PBXPhone {
         if (isset($fields[$key])) {
           if (array_key_exists($key,$fields) && (intval($fields[$key]) ? intval($value) : strlen($value) )) {
             if (strlen($wsql)) $wsql .= " AND ";
-            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
+            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" :  ($likeStringValues ? "LIKE '%" : "='" ))."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : ($likeStringValues ? "%'" : "'" ));
           }
-        }        
+        }
       }
     }
     if (strlen($wsql)) {
@@ -276,8 +329,15 @@ class PBXPhone {
       } else {
         $sql = "INSERT INTO ".$this->getGroupsTableName()." SET ";
       }
+      if (isset($values["code"]) && strlen($values["code"])) {
+        if (!$this->isUniqueGroupColumn("code", $values['code'], $values['id'])) {
+          return [ "result" => false, "message" => "Код занят другой группой"];
+        }
+      } else {
+        return [ "result" => false, "message" => "Код не может быть пустым"];
+      }
       if (isset($values["name"]) && strlen($values["name"])) {
-        if (!$this->isUniqueGroupName($values['name'], $values['id'])) {
+        if (!$this->isUniqueGroupColumn("name", $values['name'], $values['id'])) {
           return [ "result" => false, "message" => "Название занято другой группой"];
         }
       } else {
@@ -286,9 +346,9 @@ class PBXPhone {
       
       foreach (self::GROUPS_FIELDS as $field => $isInt) {
         if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
-          if (strlen($ssql)) $ssql .= ",";          
-            $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
-        }  
+          if (strlen($ssql)) $ssql .= ",";
+            $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";
+        }
       }
 
       if (strlen($ssql)) {
@@ -308,7 +368,7 @@ class PBXPhone {
               foreach ($newPhones as $phone) {
                 if (intval($phone)) {
                   if (!in_array(intval($phone), $groupPhones)) {
-                    $this->setPhoneToGroup($id, intval($phone));                    
+                    $this->setPhoneToGroup($id, intval($phone));
                   }
                   $checkedPhones[] = intval($phone);
                 }
@@ -321,7 +381,7 @@ class PBXPhone {
             }
           } else {
             $this->deleteOtherPhonesFromGroup($id);
-          }  
+          }
           return [ "result" => true, "message" => "Операция прошла успешно"];
         }
       }
@@ -329,34 +389,25 @@ class PBXPhone {
     return [ "result" => false, "message" => "Произошла ошибка выполнения операции"];
   }
 
-  private function isUniqueGroupName($name, $id) {
-    $data = $this->fetchGroupsList(["name" => $name]);
-    if (is_array($data)) {
-      if (COUNT($data) > 1) {
-        if (!intval($id)) {
-          return COUNT($data);
-        }        
-        return false;
-      } else {
-        if (!COUNT($data)) {
-          return true;
-        }
-        if (intval($id)) {
-          if (isset($data[0]) && isset($data[0]["id"]) && intval($data[0]["id"])) {
+  private function isUniqueGroupColumn($column, $code, $id) {
+    if (in_array($column, SELF::GROUPS_FIELDS)) {
+      $data = $this->fetchGroupsList([$column => $code], 0, 3, 0, 0);
+      if (is_array($data)) {
+        if (COUNT($data) > 1) {
+          return false;
+        } else if (COUNT($data) == 1) {
+          if (intval($id)) {
             return $data[0]["id"] == intval($id);
-          }
-          return true;
-        } else {
-          if (COUNT($data)) {
-            return COUNT($data);
-            var_dump($data);
           } else {
-            return true;
+            return false;
           }
         }
       }
+      return true;
+    } else {
+      throw new Exception("Undefined column ".$column." given", 1);
     }
-    return true;
+    
   }
 
   private function deletePhoneFromGroup($phone_id) {
@@ -365,7 +416,7 @@ class PBXPhone {
     if ($res) {
       return true;
     }
-    return false;      
+    return false;
   }
 
   private function deleteOtherPhonesFromGroup($group_id, $phones = []) {
@@ -374,7 +425,7 @@ class PBXPhone {
       if (COUNT($phones)) {
         $sql .= " AND phone_id NOT IN (".implode(",", $phones).")";
       }
-       
+      
       $res = $this->db->query($sql);
       if ($res) {
         return true;
@@ -423,7 +474,7 @@ class PBXPhone {
   public function getConfig() {
     $phones = $this->fetchList(0, 0, 1000000, 0);
 
-    $result = "; ErpicoPBX Phones Configuration \n; WARNING! This lines is autogenerated. Don't modify it.\n\n";    
+    $result = "; ErpicoPBX Phones Configuration \n; WARNING! This lines is autogenerated. Don't modify it.\n\n";
 
     foreach ($phones as $p) {
       $result .= "[{$p['login']}]\n".
@@ -435,13 +486,13 @@ class PBXPhone {
                  "  context = {$p['rules']}\n".
                  "  callerid = {$p['user_name']} <{$p['phone']}>\n\n";
     }
-    return $result;    
+    return $result;
   }
 
   public function getPjsipConfig() {
     $phones = $this->fetchList(0, 0, 1000000, 0);
 
-    $result = "; ErpicoPBX Phones Configuration \n; WARNING! This lines is autogenerated. Don't modify it.\n\n";    
+    $result = "; ErpicoPBX Phones Configuration \n; WARNING! This lines is autogenerated. Don't modify it.\n\n";
 
     foreach ($phones as $p) {
       $result .= "[{$p['login']}]\n".
@@ -458,20 +509,20 @@ class PBXPhone {
                  "  auth={$p['login']}\n".
                  "  context={$p['rules']}\n\n";
     }
-    return $result;    
+    return $result;
   }
 
   public function getGroupCode($name) {
     $translator = new Erpico\Translator($name);
     $value = $translator->translate();
-    $test_result = $this->isUniqueGroupName($value, 0);
-    
+    $test_result = $this->isUniqueGroupColumn("code",$value, 0);
+    $i = 0;
     while (!is_bool($test_result)  || !$test_result) {
-      if (is_numeric($test_result)) {
-        $value .= $test_result;
-      }
-      $test_result = $this->isUniqueGroupName($value, 0);      
-    }    
-    return $value;
+      $safeValue = $value;
+      $safeValue .= ++$i;
+      $test_result = $this->isUniqueGroupColumn("code", $safeValue, 0);
+      
+    }
+    return $value .= $i ? $i : "";
   }
 }

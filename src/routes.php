@@ -40,6 +40,20 @@ $app->get('/cdr/list', function (Request $request, Response $response, array $ar
     ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
+$app->get('/cdr/list/{id}', function (Request $request, Response $response, array $args) use($app) {
+   // $id = $request->getParam('id', 0);
+    $id = (float)$args["id"];
+   // die(var_dump($id));
+    $key = $request->getParam('key', 0);
+    $status = $request->getParam('status', 0);
+    $call = $request->getParam('call', 0);
+    $missed = $request->getParam('missed', 0);
+
+      $cdr = new PBXCdr($key, $status, $call, $missed);
+      return $response->withJson([
+        "data" => $cdr->getReportsByUid($id),
+    ]);
+})->add('\App\Middleware\OnlyAuthUser');
 /*$app->get('/controllers/findrecord.php', function (Request $request, Response $response, array $args) use($app) {
   $id = $request->getParam('id', 0);
   return $response->withRedirect("/recording/$id"); 
@@ -176,6 +190,13 @@ $app->post('/users/{id}/save', function (Request $request, Response $response, a
 
     return $response->withJson($user->addUpdate($params));
 });
+  
+$app->post('/users/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+    $id = intval($args['id']);
+    $user = new User();
+    
+    return $response->withJson($user->remove($id));
+  });
 
 $app->get('/users/user_groups', function (Request $request, Response $response, array $args) use($app) {
     $user = new User();
@@ -227,6 +248,14 @@ $app->post('/groups/{id}/save', function (Request $request, Response $response, 
     return $response->withJson($user->addUpdateGroup($params));
 });
 
+$app->post('/groups/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+  $params = $request->getParams();
+  $id = intval($args['id']);
+  $user = new User();
+  
+  return $response->withJson($user->removeGroup($id));
+})->add('\App\Middleware\OnlyAuthUser');
+
 $app->get('/groups/users/short', function (Request $request, Response $response, array $args) use($app) {
     $user = new User();    
     $filter = $request->getParam('filter', "");
@@ -262,6 +291,12 @@ $app->post('/contact_groups/{id}/save', function (Request $request, Response $re
 
   return $response->withJson($contact_groups->save($name, $queues, $items_users, $items_queues));
 })->add('\App\Middleware\OnlyAuthUser');
+  
+  $app->post('/contact_groups/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+    $id = intval($args["id"]);
+    $contact_groups = new PBXContactGroups($id);
+    return $response->withJson($contact_groups->remove($id));
+  })->add('\App\Middleware\OnlyAuthUser');
 
 $app->post('/contact_groups/{id}', function (Request $request, Response $response, array $args) use($app) {
   $id = intval($args["id"]);  
@@ -315,6 +350,14 @@ $app->post('/phones/{phone_id}/save', function (Request $request, Response $resp
     $res = $phone->addUpdate($values);
     return $response->withJson($res);
 })->add('\App\Middleware\OnlyAuthUser');
+  
+  $app->post('/phones/{phone_id}/remove', function (Request $request, Response $response, array $args) use($app) {
+    $phone = new PBXPhone();
+  
+    $id = intval($args["phone_id"]);
+    $res = $phone ->remove($id);
+    return $response->withJson($res);
+  })->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/queues/list', function (Request $request, Response $response, array $args) use($app) {
     $queue = new PBXQueue();
@@ -344,6 +387,14 @@ $app->post('/queues/{queues_id}/save', function (Request $request, Response $res
     $res = $queue->addUpdate($values);
     return $response->withJson($res);
 })->add('\App\Middleware\OnlyAuthUser');
+  
+  $app->post('/queues/{queues_id}/remove', function (Request $request, Response $response, array $args) use($app) {
+    $queue = new PBXQueue();
+  
+    $id = intval($args["queues_id"]);
+    $res = $queue->remove($id);
+    return $response->withJson($res);
+  })->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/queues/code', function (Request $request, Response $response, array $args) use($app) {
   $queue = new PBXQueue();
@@ -388,7 +439,14 @@ $app->post('/channels/{channels_id}/save', function (Request $request, Response 
     $res = $channels->addUpdate($values);
     return $response->withJson($res);
 })->add('\App\Middleware\OnlyAuthUser');
-
+  
+  $app->post('/channels/{channels_id}/remove', function (Request $request, Response $response, array $args) use($app) {
+    $channels = new PBXChannel();
+    
+    $id = intval($args["channels_id"]);
+    $res = $channels->remove($id);
+    return $response->withJson($res);
+  })->add('\App\Middleware\OnlyAuthUser');
  
 $app->get('/outgoingcampaign/list', function (Request $request, Response $response, array $args) use($app) {
     $outgoingcampaign = new PBXOutgoingCampaign();
@@ -529,6 +587,12 @@ $app->post('/phones/groups/{id}/save', function (Request $request, Response $res
 
   return $response->withJson($phone->addUpdatePhoneGroup($params));
 })->add('\App\Middleware\OnlyAuthUser');
+  
+  $app->post('/phones/groups/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+    $id = intval($args["id"]);
+    $phone = new PBXPhone();
+    return $response->withJson($phone->removePhoneFroup($id));
+  })->add('\App\Middleware\OnlyAuthUser');
 
 $app->any('/config/sip', function (Request $request, Response $response, array $args) use($app) {
   $helper = new PBXConfigHelper();
@@ -573,7 +637,18 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
   global $app;    
   $container = $app->getContainer();
 
-  $mac = $args['mac'];
+  $mac = strtoupper(str_replace(".cfg", "", $args['mac']));
+
+  if (strlen($mac) == 12) {
+    // Add dashes
+    $nmac = "";    
+    for ($i = 0; $i < strlen($mac); $i++) {
+      $nmac .= $mac[$i];
+      if ($i % 2) $nmac .= ":";
+    }
+    $mac = trim($nmac, ":");
+  }
+
   // Search for phone with such MAC
   $po = new PBXPhone();
   $list = $po->fetchList(["mac" => $mac]);
@@ -597,4 +672,62 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
           ->withHeader('Content-Type', 'text/plain')
           ->write($template);
   
+});
+
+$app->post('/phones/provisioning/start', function (Request $request, Response $response, array $args) use($app) {
+  $data = $request->getParams();
+
+  $ip_phone  = $data['ip'];
+  $mac       =  $data['mac'];
+  $port_phone= 5060;
+  $ip_pbx    = "192.168.139.210";
+  $port_pbx  = "5060";
+
+  $phone_user = 'autoprovision_user';
+  $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
+
+  $url = "http://tns-e-main.clients.tlc.local/config/phone/80:5E:C0:18:09:E9";//http://$ip_pbx/config/phone/$mac";
+
+  /*$msg =  "NOTIFY sip:{$phone_user}@{$ip_phone}:{$port_phone};ob SIP/2.0\r\n".
+        "Via: SIP/2.0/UDP {$ip_pbx}:{$port_pbx};branch=z9hG4bK12fd4e5c;rport\r\n".
+        "Max-Forwards: 70\r\n".
+        "From: \"asterisk\" <sip:asterisk@{$ip_pbx}>;tag=as54cd2be9\r\n".
+        "To: <sip:{$phone_user}@{$ip_phone}:{$port_phone};ob>\r\n".
+        "Contact: <sip:asterisk@{$ip_pbx}:{$port_pbx}>\r\n".
+        //"Call-ID: 4afab6ce2bff0be11a4af41064340242@{$ip_pbx}:{$port_pbx}\r\n".
+        //"CSeq: 10 NOTIFY\r\n".
+        "User-Agent: mikopbx\r\n".
+        "Content-Type: application/url\r\n".
+        "Subscription-State: terminated;reason=timeout\r\n".
+        "Event: ua-profile;profile-type=\"device\";vendor=\"Erpico\";model=\"ErpicoPBX\";version=\"3.0\"\r\n".
+        'Content-Length: '.strlen($url)."\r\n".
+         "\r\n".
+         $url;
+  $len = strlen($msg);
+  socket_sendto($sock, $msg, $len, 0, $ip_phone, $port_phone);
+  */
+
+  $msg =  "NOTIFY sip:{$phone_user}@{$ip_phone}:{$port_phone};ob SIP/2.0\r\n".
+      "Via: SIP/2.0/UDP {$ip_pbx}:{$port_pbx};branch=z9hG4bK12fd4e5c;rport\r\n".
+      "Max-Forwards: 70\r\n".
+      "From: \"asterisk\" <sip:asterisk@{$ip_pbx}>;tag=as54cd2be9\r\n".
+      "To: <sip:{$phone_user}@{$ip_phone}:{$port_phone};ob>\r\n".
+      "Contact: <sip:asterisk@{$ip_pbx}:{$port_pbx}>\r\n".
+      "Call-ID: 4afab6ce2bff0be11a4af41064340242@{$ip_pbx}:{$port_pbx}\r\n".
+      //"CSeq: 102 NOTIFY\r\n".
+      "User-Agent: mikopbx\r\n".
+      "Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE\r\n".
+      "Supported: replaces, timer\r\n".
+      "Subscription-State: terminated\r\n".
+      "Event: check-sync;reboot=true\r\n".
+      "Content-Length: 0\r\n\n";
+
+  $len = strlen($msg);
+  socket_sendto($sock, $msg, $len, 0, $ip_phone, $port_phone);
+  socket_close($sock);
+
+  return $response->withStatus(200)
+          ->withHeader('Content-Type', 'text/plain')
+          ->write("Something happen: $url");
+
 });

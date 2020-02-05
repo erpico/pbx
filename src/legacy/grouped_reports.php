@@ -575,7 +575,6 @@ class Grouped_reports {
 
     $result = $this->db->query($sql);
     $res = [];
-    $res[] = ['id' => 0, 'value' => 'All'];
     while($row = $result->fetch(\PDO::FETCH_ASSOC)) {
       if (intval($row['id'])) {
         $res[] = $row;

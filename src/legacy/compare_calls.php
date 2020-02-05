@@ -56,7 +56,7 @@ class Compare_calls {
           "	WHERE calldate>'".$date2."' AND calldate<'".$date1."'  ";
     }
     else $demand_dailyreport = $demand_dailyreport.
-      "	WHERE calldate>'".date("Y-m-d")."' AND calldate<'".date("Y-m-d", time() + 86400)."'  ";
+      "	WHERE calldate>='".date("Y-m-d 00:00:00")."' AND calldate<='".date("Y-m-d 23:59:59", time() + 86400)."'  ";
 
     if(isset($filter['src'])) $demand_dailyreport = $demand_dailyreport.
       "	AND src LIKE '%".$filter['src']."%' ";
@@ -177,7 +177,7 @@ class Compare_calls {
       };
       $wsql = "	WHERE calldate>'".$date2."' AND calldate<'".$date1."'  ";
     }
-    else $wsql = "	WHERE calldate>'".date("Y-m-d")."' AND calldate<'".date("Y-m-d", time() + 86400)."'  ";
+    else $wsql = "	WHERE calldate>='".date("Y-m-d 00:00:00")."' AND calldate<='".date("Y-m-d 23:59:59", time() + 86400)."'  ";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);

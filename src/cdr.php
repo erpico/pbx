@@ -23,6 +23,30 @@ class PBXCdr {
     return 'cdr';
   }
 
+  public function getReportsByUid($id) {
+    $sql =  "SELECT 
+          calldate AS time, 
+          src, 
+          agentdev AS dst, 
+          queue, 
+          reason, 
+          holdtime AS hold, 
+          talktime AS talk, 
+          uniqid, 
+          agentname,
+          queue,
+          channel,
+          dstchannel
+    FROM queue_cdr WHERE uniqid = '{$id}' 
+     UNION ALL
+    SELECT calldate AS time, src, dst, name, disposition AS reason, duration - billsec AS hold , billsec AS talk, uniqueid AS uniqid, '', '', channel, dstchannel
+    FROM cdr WHERE uniqueid = '{$id}'";
+    $result_cdr = $this->db->query($sql);      
+    $cdr = $result_cdr->fetchAll(\PDO::FETCH_ASSOC);
+
+    return $cdr;      
+  }
+
   public function getReport($filter, $start = 0, $limit = 20, $onlyCount = 0, $serverFooter = 0, $_lcd = 0) {
     $ext = $this->user->allow_extens();
     $extens = $this->utils->sql_allow_extens($ext);
@@ -53,7 +77,12 @@ class PBXCdr {
           $cwsql .= "AND calldate <= '".date("Y-m-d H:i:59", $d)."' ";
           $timeisset++;
         }
-      }  
+      }
+      if(isset($filter['userfield']) && strlen($filter['userfield'])) {
+        
+        $qwsql .= "	AND a.userfield LIKE '%".addslashes($filter['userfield'])."%' ";
+        $cwsql .= "	AND userfield LIKE '%".addslashes($filter['userfield'])."%' ";
+      }
       if(isset($filter['src']) && strlen($filter['src'])) {
         $qwsql .= "	AND (a.src LIKE '%".addslashes($filter['src'])."%' OR a.agentdev LIKE '%".addslashes($filter['src'])."%')";
         $cwsql .= "	AND (src LIKE '%".addslashes($filter['src'])."%' OR dst LIKE '%".addslashes($filter['src'])."%' )";
@@ -183,6 +212,7 @@ class PBXCdr {
       $cdr = [];                
 
       $res = $this->db->query($sql);
+      //die(var_dump($res));
       $lcd -= 3600*24;
 
     } while ($lcd > $mintime && $res->rowCount() == 0);
@@ -277,7 +307,6 @@ class PBXCdr {
         // Just add new line
         $cdr[] = $cv;
     }
-
     return $cdr;
   }
 

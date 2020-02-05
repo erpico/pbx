@@ -19,13 +19,32 @@ class PBXQueue {
     global $app;    
     $container = $app->getContainer();
     $this->db = $container['db'];
-
+    $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
     $this->utils = new Erpico\Utils();    
   }
 
   private function getTableName() {
     return "queue";
+  }
+  
+  /**
+   * @param $id
+   *
+   * @return array
+   */
+  public function remove($id) {
+    try {
+      if (!intval($id)) {
+        return ["result" => false, "message" => "# очереди не может быть пустым"];
+      }
+      if ($this->db->query("DELETE FROM ".self::getTableName()." WHERE id = ".intval($id))) {
+        return ["result" => true, "message" => "Удаление прошло успешно"];
+      }
+    } catch (Exception $ex) {
+      $this->logger->error($ex->getMessage()." ON LINE ".$ex->getLine());
+      return ["result" => false, "message" => "Произошла ошибка удаления"];
+    }
   }
 
   public function getName($id) {
@@ -38,7 +57,7 @@ class PBXQueue {
     }
     return "";
   }
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $fullnameAsValue = 0) {
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $fullnameAsValue = 0, $likeStringValues = true) {
     $sql = "SELECT ";
     if (intval($onlyCount)) {
       $ssql = " COUNT(*) ";  
@@ -59,7 +78,7 @@ class PBXQueue {
         if (isset($fields[$key])) {
           if (array_key_exists($key,$fields) && (intval($fields[$key]) ? intval($value) : strlen($value) )) {
             if (strlen($wsql)) $wsql .= " AND ";
-            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
+            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" :  ($likeStringValues ? "LIKE '%" : "='" ))."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : ($likeStringValues ? "%'" : "'" ));
           }
         }        
       }
@@ -100,27 +119,22 @@ class PBXQueue {
     }
     return ["ids" => $ids, "names" => $names]; 
   }
-  private function isUniqueName($name, $id) {
-    $data = $this->fetchList(["name" => $name]);
-    if (is_array($data)) {
-      if (COUNT($data) > 1) {
-        if (!intval($id)) {
-          return COUNT($data);
-        }
-        return false;
-      } else {
-        if (intval($id)) {
-          return $data[0]["id"] == intval($id);
-        } else {
-          if (COUNT($data)) {
-            return COUNT($data);
+  private function isUniqueColumn($column, $name, $id) {
+    if (in_array($column, SELF::FIELDS)) {
+      $data = $this->fetchList([$column => $name], 0, 3, 0, 0, 0);
+      if (is_array($data)) {
+        if (COUNT($data) > 1) {
+          return false;
+        } else if (COUNT($data) == 1){
+          if (intval($id)) {
+            return $data[0]["id"] == intval($id);
           } else {
-            return true;
+            return false;
           }
         }
       }
-    }
-    return true;
+      return true;
+    }    
   }
 
   public function addUpdate($values) {
@@ -130,11 +144,17 @@ class PBXQueue {
       } else {
         $sql = "INSERT INTO ".$this->getTableName()." SET ";
       }
-      if (isset($values["nmae"]) && strlen($values["name"])) {
-        if (!$this->isUniqueName($values['name'], $values['id'])) {
-          return [ "result" => false, "message" => "Название занято"];
+      if (isset($values["name"]) && strlen($values["name"])) {
+        if (!$this->isUniqueColumn("name",$values['name'], $values['id'])) {
+          return [ "result" => false, "message" => "Код занят другой очередью"];
         }
       }
+      if (isset($values["fullname"]) && strlen($values["fullname"])) {
+        if (!$this->isUniqueColumn("fullname",$values['fullname'], $values['id'])) {
+          return [ "result" => false, "message" => "Название занято другой очередью"];
+        }
+      }
+      
       if (!isset($values["name"]) || !strlen($values["name"])) {
         if (!intval($values["id"])) {
           return [ "result" => false, "message" => "Код не может быть пустым"];
@@ -221,14 +241,13 @@ class PBXQueue {
   public function getCode($name) {
     $translator = new Erpico\Translator($name);
     $value = $translator->translate();
-    $test_result = $this->isUniqueName($value, 0);
-    
+    $test_result = $this->isUniqueColumn("name", $value, 0);
+    $i = 0;
     while (!is_bool($test_result)  || !$test_result) {
-      if (is_numeric($test_result)) {
-        $value .= $test_result;
-      }
-      $test_result = $this->isUniqueName($value, 0);      
+      $safeValue = $value;
+      $safeValue .= ++$i;
+      $test_result = $this->isUniqueColumn("name",$safeValue, 0);      
     }    
-    return $value;
+    return  $value .= $i ? $i : "";
   }
 }

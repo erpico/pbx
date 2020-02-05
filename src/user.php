@@ -322,7 +322,6 @@ class User
     return $result;
   }
 
-
   public function deny_numbers()
   {
     if(isset($_COOKIE['token'])) {
@@ -388,7 +387,6 @@ class User
     return $user_deny;
   }
 
-
   public function fullname_queue($x){
     if (!is_string($x)) return $x;
     $result_queue = $this->db->query("SELECT fullname FROM queue WHERE name='".$x."' LIMIT 1 ");
@@ -396,13 +394,11 @@ class User
     return $myrow_queue['fullname']!="" ? $myrow_queue['fullname'] : $x;
   }
 
-
   public function fullname_agent($x){
     $result_queue = $this->db->query("SELECT fullname FROM acl_user WHERE name='".$x."' LIMIT 1 ");
     $myrow_queue = $result_queue->fetch(\PDO::FETCH_ASSOC);
     return $myrow_queue['fullname']!="" ? $myrow_queue['fullname'] : $x;
   }
-
 
   public function fullname_agent_short($x, $l = 6){
     $result_queue = $this->db->query("SELECT fullname FROM acl_user WHERE name='".$x."' LIMIT 1 ");
@@ -412,14 +408,13 @@ class User
     return mb_substr($fullname,0,$l,"UTF-8");
   }
 
-
   public function getAgentPhone($x){
     $result_queue = $this->db->query("SELECT B.val FROM acl_user AS A LEFT JOIN cfg_user_setting AS B ON (A.id = B.acl_user_id) WHERE A.name = '$x' AND B.handle = 'cti.ext' LIMIT 1 ");
     $myrow_queue = $result_queue->fetch(\PDO::FETCH_ASSOC);
     return $myrow_queue['val']!="" ? $myrow_queue['val'] : $x;
   }
 
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlycount = 0, $shortlist = 0, $fullnameAsValue = 0)
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlycount = 0, $shortlist = 0, $fullnameAsValue = 0, $likeStringValues = true)
   {
     if ($onlycount) {
       $sql = "SELECT 
@@ -442,15 +437,15 @@ class User
       }
       if (isset($filter['fullname']) && strlen($filter['fullname'])) {
         if (strlen($wsql)) $wsql .= " AND ";
-        $wsql .= " U.fullname LIKE '%".trim(addslashes($filter['fullname']))."%'";
+        $wsql .= " U.fullname ".($likeStringValues ? "LIKE '%" : "='" ).trim(addslashes($filter['fullname'])).($likeStringValues ? "%'" : "'" );
       }
       if (isset($filter['phone']) && strlen($filter['phone'])) {
         if (strlen($wsql)) $wsql .= " AND ";
-        $wsql .= " C.val LIKE '%".trim(addslashes($filter['phone']))."%'";
+        $wsql .= " C.val ".($likeStringValues ? "LIKE '%" : "='" ).trim(addslashes($filter['phone'])).($likeStringValues ? "%'" : "'" );
       }
       if (isset($filter['description']) && strlen($filter['description'])) {
         if (strlen($wsql)) $wsql .= " AND ";
-        $wsql .= " U.description LIKE '%".trim(addslashes($filter['description']))."%'";
+        $wsql .= " U.description ".($likeStringValues ? "LIKE '%" : "='" ).trim(addslashes($filter['description'])).($likeStringValues ? "%'" : "'" );
       }
       if (isset($filter['state']) && intval($filter['state'])) {
         if (strlen($wsql)) $wsql .= " AND ";
@@ -462,7 +457,7 @@ class User
       }
       if (isset($filter['value']) && strlen($filter['value'])) {
         if (strlen($wsql)) $wsql .= " AND ";
-        $wsql .= " (U.name LIKE '%".trim(addslashes($filter['value']))."%' OR U.fullname LIKE '%".trim(addslashes($filter['value']))."%')";
+        $wsql .= " (U.name ".($likeStringValues ? "LIKE '%" : "='" ).trim(addslashes($filter['value'])).($likeStringValues ? "%'" : "'" )." OR U.fullname ".($likeStringValues ? "LIKE '%" : "='" ).trim(addslashes($filter['value'])).($likeStringValues ? "%'" : "'" ).")";
       }
     }
     if (strlen($wsql)) {
@@ -519,6 +514,7 @@ class User
       "ids" => $result_id
     ];
   }
+
   public function getUsersGroup($id)
   {
     $sql = "SELECT
@@ -553,15 +549,23 @@ class User
         $sql = " INSERT INTO acl_user SET ";
       };
       if (isset($params['name']) && strlen(trim($params['name']))) {
-        $sql .= "`name` = '".trim(addslashes($params['name']))."',";
+        if (!$this->isUniqueColumn("name", $params['name'], $params['id'])) {
+          return [ "result" => false, "message" => "Логин занят другим пользователем"];
+        } else {
+          $sql .= "`name` = '".trim(addslashes($params['name']))."',";
+        }
       } else {
-        return ["result" => false, "message" => "name can`t be empty"];
+        return ["result" => false, "message" => "Логин не может быть пустым"];
       }
 
       if (isset($params['fullname']) && strlen(trim($params['fullname']))) {
-        $sql .= "`fullname` = '".trim(addslashes($params['fullname']))."',";
+        if (!$this->isUniqueColumn("fullname", $params['fullname'], $params['id'])) {
+          return [ "result" => false, "message" => "Ф.И.О. занято другим пользователем"];
+        } else {
+          $sql .= "`fullname` = '".trim(addslashes($params['fullname']))."',";
+        }
       } else {
-        return ["result" => false, "message" => "fullname can`t be empty"];
+        return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
       }
 
       if (isset($params['state']) && intval($params['state'])) {
@@ -628,6 +632,21 @@ class User
 
   }
 
+  public function remove($id) {
+    try {
+      if (!intval($id)) {
+        return ["result" => false, "message" => "# пользователя не может быть пустым"];
+      }
+      if ($this->db->query("UPDATE acl_user SET state=3 WHERE id = ".intval($id))) {
+//        $this->deleteUserGroupsExceptFor([0],$id);
+        return ["result" => true, "message" => "Удаление прошло успешно"];
+      }
+    } catch (Exception $ex) {
+      $this->logger->error($ex->getMessage()." ON LINE ".$ex->getLine());
+      return ["result" => false, "message" => "Произошла ошибка удаления"];
+    }
+  }
+  
   public function deleteUserGroupsExceptFor($ids, $user_id) {
     if (is_array($ids)) {
     $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_group_id NOT IN (".implode(",",$ids).") AND acl_user_id = {$user_id}";
@@ -665,7 +684,7 @@ class User
 
     return $result;
   }
-  public function getAllGroups($filter = "", $start = 0, $end = 20, $onlycount = 0 )
+  public function getAllGroups($filter = "", $start = 0, $end = 20, $onlycount = 0, $likeStringValues = true)
   {
     if (intval($onlycount)) {
       $sql = "SELECT COUNT(*) FROM acl_user_group";
@@ -676,7 +695,7 @@ class User
     if (is_array($filter)) {
       if (isset($filter['name']) && strlen(trim(addslashes($filter['name'])))) {
         if (strlen($wsql)) $wsql .= " AND ";
-        $wsql .= "`name` LIKE '%".trim(addslashes($filter['name']))."%'";
+        $wsql .= "`name` ".($likeStringValues ? "LIKE '%" : "='" )."".trim(addslashes($filter['name'])).($likeStringValues ? "%'" : "'" );
       }
       if (isset($filter['id']) && intval(addslashes($filter['id']))) {
         if (strlen($wsql)) $wsql .= " AND ";
@@ -684,7 +703,7 @@ class User
       }
       if (isset($filter['description']) && strlen(trim(addslashes($filter['description'])))) {
         if (strlen($wsql)) $wsql .= " AND ";
-        $wsql .= "`description`LIKE '%".trim(addslashes($filter['description']))."%'";
+        $wsql .= "`description` ".($likeStringValues ? "LIKE '%" : "='" )."".trim(addslashes($filter['description'])).($likeStringValues ? "%'" : "'" );
       }
     }
     if (strlen($wsql)) {
@@ -706,6 +725,69 @@ class User
     return $result;
   }
 
+  public function isUniqueColumn($column, $value, $id = 0)
+  {    
+    try {
+      $data = $this->fetchList([$column => $value], 0, 3, 0, 0, 0, 0);
+      if (is_array($data)) {
+        if (COUNT($data) > 1) {
+          return false;
+        } else if (COUNT($data) == 1){
+          if (intval($id)) {
+            return $data[0]["id"] == intval($id);
+          } else {
+            return false;
+          }        
+        }
+        return true;
+      }
+    } catch (\Throwable $th) {
+      $th->getMessage();
+    }
+  }
+
+  public function isUniqueColumnGroup($column, $value, $id = 0)
+  {    
+    try {
+      $data = $this->getAllGroups([$column => $value], 0, 3, 0, 0);
+      if (is_array($data)) {
+        if (COUNT($data) > 1) {
+          return false;
+        } else if (COUNT($data) == 1){
+          if (intval($id)) {
+            return $data[0]["id"] == intval($id);
+          } else {
+            return false;
+          }        
+        }
+        return true;
+      }
+    } catch (\Throwable $th) {
+      $th->getMessage();
+    }
+  }
+  
+  /**
+   * @param $id
+   *
+   * @return array
+   */
+  public function removeGroup($id)
+  {
+    try {
+      if (!intval($id)) {
+        return ["result" => false, "message" => "# группы не может быть пустым"];
+      }
+      if ($this->db->query("DELETE FROM acl_user_group WHERE id = ".intval($id))) {
+        $this->deleteUsersFromGroupsExceptFor($id, [0]);
+        return ["result" => true, "message" => "Удаление прошло успешно"];
+      }
+    } catch (Exception $ex) {
+      $this->logger->error($ex->getMessage()." ON LINE ".$ex->getLine());
+      return ["result" => false, "message" => "Произошла ошибка удаления"];
+    }
+  }
+  
   public function addUpdateGroup($params)
   {
     try {
@@ -716,10 +798,13 @@ class User
         $sql = "INSERT INTO acl_user_group SET ";
       }
       if (isset($params['name']) && strlen(trim($params['name']))) {
-        $sql .= "`name` = '".trim(addslashes($params['name']))."'";
+        if (!$this->isUniqueColumnGroup("name", $params['name'], $params['id'])) {
+          return [ "result" => false, "message" => "Название занято другой группой"];
+        }
       } else {
-        return ["result" => false, "message" => "name can`t be empty"];
+        return ["result" => false, "message" => "Название не может быть пустым"];
       }
+      $sql .= "`name` = '".trim(addslashes($params['name']))."'";
       if (isset($params['description']) && strlen(trim($params['description']))) {
         $sql .= ",`description` = '".trim(addslashes($params['description']))."'";
       }

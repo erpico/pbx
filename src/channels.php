@@ -18,7 +18,7 @@ class PBXChannel {
     global $app;    
     $container = $app->getContainer();
     $this->db = $container['db'];
-
+    $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
     $this->utils = new Erpico\Utils();
   }
@@ -27,7 +27,7 @@ class PBXChannel {
     return "peers";
   }
 
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0) {
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $likeStringValues = true) {
     $sql = "SELECT ";
     if (intval($onlyCount)) {
       $ssql = " COUNT(*) ";  
@@ -49,7 +49,7 @@ class PBXChannel {
         if (isset($fields[$key])) {
           if (array_key_exists($key,$fields) && (intval($fields[$key]) ? intval($value) : strlen($value) )) {
             if (strlen($wsql)) $wsql .= " AND ";
-            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
+            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" :  ($likeStringValues ? "LIKE '%" : "='" ))."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : ($likeStringValues ? "%'" : "'" ));
           }
         }        
       }
@@ -72,53 +72,44 @@ class PBXChannel {
     return $result;
   }
   
-  private function isUniquePhone($phone, $id = 0) {
-    $data = $this->fetchList(["phone" => $phone]);
-    if (is_array($data)) {
-      if (COUNT($data) > 1) {
-        return false;
-      } else if (COUNT($data) == 1){
-        return $data[0]["id"] == intval($id);
-      }
-    }
-    return true;
-  }
-
-  private function isUniqueLogin($login, $id) {
-    $data = $this->fetchList(["login" => $login]);
-    if (is_array($data)) {
-      if (COUNT($data) > 1) {
-        return false;
-      } else if (COUNT($data) == 1) {
-        return $data[0]["id"] == intval($id);
-      }
-    }
-    return true;
-  }
-
-  private function isUniqueName($name, $id) {
-    $data = $this->fetchList(["name" => $name]);
-    if (is_array($data)) {
-      if (COUNT($data) > 1) {
-        if (!intval($id)) {
-          return COUNT($data);
-        }
-        return false;
-      } else {
-        if (intval($id)) {
-          return $data[0]["id"] == intval($id);
-        } else {
-          if (COUNT($data)) {            
-            return COUNT($data);
+  private function isUniqueColumn($column, $value, $id = 0) {    
+    if (in_array($column, self::FIELDS)) {
+      $data = $this->fetchList([$column => $value], 0, 3, 0, 0);      
+      if (is_array($data)) {
+        if (COUNT($data) > 1) {
+          return false;
+        } else if (COUNT($data) == 1){
+          if (intval($id)) {
+            return $data[0]["id"] == intval($id);
           } else {
-            return true;
-          }
+            return false;
+          }        
         }
       }
+    } else {
+      throw new Exception("Undefined ".$column." column given", 1);
     }
     return true;
   }
-
+  
+  /**
+   * @param $id
+   *
+   * @return array
+   */
+  public function remove($id) {
+    try {
+      if (!intval($id)) {
+        return ["result" => false, "message" => "# канала не может быть пустым"];
+      }
+      if ($this->db->query("DELETE FROM ".self::getTableName()." WHERE id = ".intval($id))) {
+        return ["result" => true, "message" => "Удаление прошло успешно"];
+      }
+    } catch (Exception $ex) {
+      $this->logger->error($ex->getMessage()." ON LINE ".$ex->getLine());
+      return ["result" => false, "message" => "Произошла ошибка удаления"];
+    }
+  }
 
   public function addUpdate($values) {
     if (is_array($values)) {
@@ -128,22 +119,29 @@ class PBXChannel {
         $sql = "INSERT INTO ".$this->getTableName()." SET ";
       }
       if (isset($values["login"]) && strlen($values["login"])) {
-        if (!$this->isUniqueLogin($values['login'], $values['id'])) {
-          return [ "result" => false, "message" => "Логин занят другим пользователем"];
+        if (!$this->isUniqueColumn("login", $values['login'], $values['id'])) {
+          return [ "result" => false, "message" => "Логин занят другим коналом"];
         }
       } else {
         return [ "result" => false, "message" => "Логин не может быть пустым"];
       }
       if (isset($values["name"]) && strlen($values["name"])) {
-        if (!$this->isUniqueName($values['name'], $values['id'])) {
-          return [ "result" => false, "message" => "Код занят другим пользователем"];
+        if (!$this->isUniqueColumn("name", $values['name'], $values['id'])) {
+          return [ "result" => false, "message" => "Код занят другим коналом"];
         }
       } else {
         return [ "result" => false, "message" => "Код не может быть пустым"];
       }
+      if (isset($values["fullname"]) && strlen($values["fullname"])) {
+        if (!$this->isUniqueColumn("fullname", $values['fullname'], $values['id'])) {
+          return [ "result" => false, "message" => "Название занят другим коналом"];
+        }
+      } else {
+        return [ "result" => false, "message" => "Название не может быть пустым"];
+      }      
       if (isset($values["phone"]) && strlen($values["phone"])) {
-        if (!$this->isUniquePhone($values['phone'], $values['id'])) {
-          return [ "result" => false, "message" => "Телефон занят другим пользователем"];
+        if (!$this->isUniqueColumn("phone", $values['phone'], $values['id'])) {
+          return [ "result" => false, "message" => "Телефон занят другим коналом"];
         }
       }
       if (!isset($values["password"]) || !strlen($values["password"])) {
@@ -261,18 +259,18 @@ class PBXChannel {
     }
     return $result;    
   }
+  
   public function getCode($name) {
     $translator = new Erpico\Translator($name);
     $value = $translator->translate();
-    $test_result = $this->isUniqueName($value, 0);
-    
+    $test_result = $this->isUniqueColumn("name", $value, 0);
+    $i = 0;
     while (!is_bool($test_result)  || !$test_result) {
-      if (is_numeric($test_result)) {
-        $value .= $test_result;
-      }
-      $test_result = $this->isUniqueName($value, 0);      
+      $safeValue = $value;
+      $safeValue .= ++$i;
+      $test_result = $this->isUniqueColumn("name", $safeValue, 0);      
     }    
-    return $value;
+    return $value .= $i ? $i : "";
   }
 
 }

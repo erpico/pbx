@@ -13,6 +13,7 @@ class PBXContactGroups {
     global $app;    
     $container = $app->getContainer();
     $this->db = $container['db'];
+    $this->logger = $container['logger'];
     $this->setId(intval($id));
     $this->setName('');
     if (intval($id)) {
@@ -45,8 +46,29 @@ class PBXContactGroups {
   public function getName() {
     return $this->name;
   }
+  
+  /**
+   * @param $id
+   *
+   * @return array
+   */
+  public function remove($id) {
+    try {
+      if (!intval($id)) {
+        return ["result" => false, "message" => "# группы не может быть пустым"];
+      }
+      if ($this->db->query("DELETE FROM ".self::getTableName()." WHERE id = ".intval($id))) {
+        $this->deleteQueues();
+        $this->deleteItems();
+        return ["result" => true, "message" => "Удаление прошло успешно"];
+      }
+    } catch (Exception $ex) {
+      $this->logger->error($ex->getMessage()." ON LINE ".$ex->getLine());
+      return ["result" => false, "message" => "Произошла ошибка удаления"];
+    }
+  }
 
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0) {
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $likeStringValues = true) {
     $sql = "SELECT ";
     if (intval($onlyCount)) {
       $ssql = " COUNT(*) ";  
@@ -67,7 +89,7 @@ class PBXContactGroups {
         if (isset($fields[$key])) {
           if (array_key_exists($key,$fields) && (intval($fields[$key]) ? intval($value) : strlen($value) )) {
             if (strlen($wsql)) $wsql .= " AND ";
-            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" : "LIKE '%")."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : "%'");
+            $wsql .= "`".$key."` ".(intval($fields[$key]) ? "='" :  ($likeStringValues ? "LIKE '%" : "='" ))."".($fields[$key] ? intval($value) : trim(addslashes($value)))."".(intval($fields[$key]) ? "'" : ($likeStringValues ? "%'" : "'" ));
           }
         }        
       }
@@ -161,17 +183,38 @@ class PBXContactGroups {
     return ["ids" => $ids, "names" => $names, "phones" => $phones]; 
   }  
 
+  private function isUniqueColumn($column, $value) {
+    if (in_array($column, self::FIELDS)) {
+      $data = $this->fetchList([$column => $value], 0, 3, 0, 0);      
+      if (is_array($data)) {
+        if (COUNT($data) > 1) {
+          return false;
+        } else if (COUNT($data) == 1){
+          if (intval($this->getId())) {
+            return $data[0]["id"] == intval($this->getId());
+          } else {
+            return false;
+          }        
+        }
+      }
+    } else {
+      throw new Exception("Undefined ".$column." column given", 1);
+    }
+    return true;    
+  }
+
   public function save($name, $queues, $items_users, $items_queues) {
     if (intval($this->getId())) {
       $sql = " UPDATE contact_groups SET";
     } else {
       $sql = " INSERT INTO contact_groups SET";
     }
-    if (!strlen($name)) {
-      return [
-        "result" => FALSE,
-        "message" => "Имя не может быть пустым"
-      ];
+    if (isset($name) && strlen($name)) {
+      if (!$this->isUniqueColumn("name", $name)) {
+        return [ "result" => false, "message" => "Название занято другой группой"];
+      }
+    } else {
+      return [ "result" => false, "message" => "Название не может быть пустым"];
     }
     $sql .= " `name` = '".trim(addslashes($name))."'";
     if (intval($this->getId())) {

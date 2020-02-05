@@ -13,7 +13,7 @@ then
 else
   cp sip.conf.new sip.conf
   cp sip.registry.conf.new sip.registry.conf
-  asterisk -rx "sip reload"
+  sudo asterisk -rx "sip reload"
 fi
 
 if diff queues.conf queues.conf.new > /dev/null 2>&1
@@ -21,5 +21,13 @@ then
   echo "Queue config not changed"
 else
   cp queues.conf.new queues.conf
-  asterisk -rx "queue reload all"
+  sudo asterisk -rx "queue reload all"
+fi
+
+if diff pjsip.conf pjsip.conf.new > /dev/null 2>&1
+then
+  echo "PJSIP config not changed"
+else
+  cp pjsip.conf.new pjsip.conf
+  sudo asterisk -rx "core reload"
 fi
