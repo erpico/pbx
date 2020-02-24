@@ -177,9 +177,9 @@ $app->get('/users/list', function (Request $request, Response $response, array $
     $user = new User();
 
     return $response->withJson([
-        "data" => $user->fetchList($filter, $start, $count, 0),
-        "total_count" => $user->fetchList($filter, $start, $count, 1),
-        "pos" => $start
+        "data" => $user->fetchList($filter, $start, $count, 0),        
+        "pos" => (int)$start,
+        "total_count" => $user->fetchList($filter, $start, $count, 1)
     ]);
 })->add('\App\Middleware\OnlyAuthUser');
 

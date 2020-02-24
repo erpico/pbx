@@ -48,11 +48,20 @@
     padding-right: 0;
 }
 
+.webix_sidebar .webix_tree_branch_2 .webix_tree_item{
+    height: 34px;
+    line-height: 34px;
+    padding-left: 43px;
+}
+
 /*selected items*/
 .webix_sidebar .webix_tree_item.webix_selected span {
-    color: #fff;
+    color: #27ae60;
     font-weight: bold;
     background: transparent;
+}
+.webix_sidebar .webix_tree_branch_1>.webix_tree_item.webix_selected span {
+    color: #fff;
 }
 
 .webix_sidebar .webix_tree_item.webix_selected .webix_sidebar_icon,
@@ -92,6 +101,24 @@
 
 }
 
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_sidebar_selected + .webix_tree_leaves .webix_tree_item,
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_selected {
+    box-shadow: inset 3px 0 #1CA1C1;
+    background: #ddd;
+}
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_sidebar_selected + .webix_tree_leaves .webix_tree_item:hover,
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_selected:hover{
+    background: #dadada;
+}
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_selected,
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_selected:hover,
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_selected:focus,
+.webix_sidebar.webix_sidebar_left .webix_tree_item.webix_selected:active {
+    background-color: #27ae60;
+}
+.webix_tree_item.webix_sidebar_selected .webix_tree_branch_2 .webix_tree_item.webix_selected{
+    background-color: #27ae60;
+}
 .webix_hcell span.webix_input_icon {
     background-color: transparent;
 }

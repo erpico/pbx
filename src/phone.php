@@ -19,7 +19,8 @@ class PBXPhone {
     "pattern" => 0,
     "rules" => 0,
     "outgoing_phone" => 0
-  ];
+  ],
+  ERPICO_MODEL = 'erpico';
 
   public function __construct() {
     global $app;
@@ -131,6 +132,7 @@ class PBXPhone {
       } else {
         $sql = "INSERT INTO ".$this->getTableName()." SET ";
       }
+      // TO DO create phone service with validate and insert data
       if (isset($values["login"]) && strlen($values["login"])) {
         if (!$this->isUniqueColumn("login", $values['login'], $values['id'])) {
           return [ "result" => false, "message" => "Логин занят другим пользователем"];
@@ -167,6 +169,15 @@ class PBXPhone {
 
         $values['mac'] = $mac;
       }
+      if ($values['model'] === self::ERPICO_MODEL && $values['user_id']) {
+        $phonesWithThisUsers =  $this->fetchList(["user_id" => intval($values['user_id'])], 0, 2, 0);
+        foreach ($phonesWithThisUsers as $phone) {
+          if ($phone['id'] != $values['id']) {
+            return [ "result" => false, "message" => "У данного пользователя уже есть телефон с такой же моделью"];
+          }
+        }
+
+      }      
       
       foreach (self::FIELDS as $field => $isInt) {
         if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {

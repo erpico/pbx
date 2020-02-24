@@ -38,7 +38,7 @@ class PBXQueue {
       if (!intval($id)) {
         return ["result" => false, "message" => "# очереди не может быть пустым"];
       }
-      if ($this->db->query("DELETE FROM ".self::getTableName()." WHERE id = ".intval($id))) {
+      if ($this->db->query("SET FOREIGN_KEY_CHECKS=0; DELETE FROM ".self::getTableName()." WHERE id = ".intval($id). "; SET FOREIGN_KEY_CHECKS = 1; ")) {
         return ["result" => true, "message" => "Удаление прошло успешно"];
       }
     } catch (Exception $ex) {
@@ -107,17 +107,15 @@ class PBXQueue {
   }
   
   public function getQueueAgent($id) {
-    $sql = "SELECT queue_agent.acl_user_id, acl_user.name FROM queue_agent 
+    $sql = "SELECT queue_agent.acl_user_id, acl_user.name, queue_agent.phone, queue_agent.static, queue_agent.penalty FROM queue_agent 
     LEFT JOIN acl_user ON (acl_user.id = queue_agent.acl_user_id)
     WHERE queue_agent.queue_id = '{$id}'";
-    $res = $this->db->query($sql, \PDO::FETCH_NUM);
-    $ids = [];
-    $names = [];
+    $res = $this->db->query($sql);
+    $result = [];
     while ($row = $res->fetch()) {
-      $ids[] = $row[0];
-      $names[] = $row[1];
+      $result[] = $row;
     }
-    return ["ids" => $ids, "names" => $names]; 
+    return $result; 
   }
   private function isUniqueColumn($column, $name, $id) {
     if (in_array($column, SELF::FIELDS)) {
@@ -163,7 +161,7 @@ class PBXQueue {
         $pattern = '/[A-Za-z0-9\_]/'; 
         $matches = preg_replace ($pattern, "", $values["name"]); 
         if (strlen($matches)) {
-          return [ "result" => false, "message" => "Код может содержать только символы английского алфамита и знак '_'"];
+          return [ "result" => false, "message" => "Код может содержать только символы английского алфавита и знак '_'"];
         }
       }
       foreach (self::FIELDS as $field => $isInt) {
@@ -184,22 +182,16 @@ class PBXQueue {
         } else {
           $id = $this->db->lastInsertId();
         }
-        if (isset($values['users_ids']) && trim(strlen($values['users_ids']))){
-          $users = explode(",",trim($values['users_ids']));
+        $this->deleteQueueAgents($id);
+        $agents = json_decode($values["agents"], true);
+        if (is_array($agents)){
           $ids = [];
-          foreach ($users as $user_id) {
-            if (intval($user_id)) {
-              $ids[] = intval($user_id);
-            }          
+          foreach ($agents as $a) {            
+            if (intval($a['acl_user_id']) == 0 && intval($a['phone']) == 0){
+              return [ "result" => false, "message" => "Укажите номер телефона или выберите сотрудника."];
+            }                      
+            $this->saveQueueAgents($id, $a);            
           }
-          if (COUNT($ids)) {
-            $this->deleteQueueAgentsExceptFor($id, $ids);
-            foreach ($ids as $u_id) {
-              $this->saveQueueAgents($id, $u_id);
-            }
-          }
-        } else {
-          $this->deleteQueueAgentsExceptFor($id, [0]);
         }
         return [ "result" => true, "message" => "Операция прошла успешно"];
       }
@@ -207,33 +199,60 @@ class PBXQueue {
     return [ "result" => false, "message" => "Произошла ошибка выполнения операции"];
   }
 
-  public function deleteQueueAgentsExceptFor($queue_id, $user_ids) {
-    $sql = "DELETE FROM queue_agent WHERE queue_id = {$queue_id} AND acl_user_id NOT IN (".implode(",",$user_ids).")";
+  public function deleteQueueAgents($queue_id) {
+    $sql = "DELETE FROM queue_agent WHERE queue_id = {$queue_id}";    
+    $this->db->query($sql);
+    return true;
+  } 
+
+  public function deleteQueueAgentsExceptFor($queue_id, $user_id) {
+    $sql = "DELETE FROM queue_agent WHERE queue_id = {$queue_id}";
+    if ($user_id == null){
+      $sql .= " AND acl_user_id IS NULL";
+    } else {
+      $sql .= " AND acl_user_id = {$user_id}";
+    }
     $this->db->query($sql);
     return true;
   } 
   
-  public function saveQueueAgents($queue_id, $user_id) {
-        $sql = "SELECT COUNT(*) FROM queue_agent WHERE
-        queue_id = ".intval($queue_id)." AND acl_user_id = {$user_id}";
+  public function saveQueueAgents($queue_id, $obj) {
+        $wsql = " queue_id = ".intval($queue_id).
+                " AND acl_user_id ".(intval($obj['acl_user_id']) ? " = '".intval($obj['acl_user_id'])."'" : "IS NULL").
+                " AND phone ".(!is_null($obj['phone']) && strlen($obj['phone']) ? " = '".addslashes($obj['phone'])."'" : "IS NULL");
+
+        $sql = "SELECT COUNT(*) FROM queue_agent WHERE $wsql";
+         
         $res = $this->db->query($sql, \PDO::FETCH_NUM);
         $row = $res->fetch();
         if (!intval($row[0])) {
-          $sql = "INSERT INTO queue_agent 
-          (queue_id, acl_user_id, penalty) 
-          VALUES 
-          (".intval($queue_id).",{$user_id}, 0)";
-          $this->db->query($sql);
+            $sql = "INSERT INTO queue_agent 
+            (queue_id, penalty, phone, static, acl_user_id) 
+            VALUES 
+            (".intval($queue_id).", ".intval($obj["penalty"]).", ".
+            (!is_null($obj['phone']) && strlen($obj['phone']) ? "'".addslashes($obj['phone'])."'" : "NULL"). ", ".
+            intval($obj["static"]).", ".
+            (intval($obj['acl_user_id']) ? "'".intval($obj['acl_user_id'])."'" : "NULL").
+            ")";            
+            $this->db->query($sql);
         }
   }
 
   public function getConfig() {
-    $phones = $this->fetchList(0, 0, 1000000, 0);
+    $queues = $this->fetchList(0, 0, 1000000, 0);
 
     $result = "; ErpicoPBX Queues Configuration\n; WARNING! This lines is autogenerated. Don't modify it.\n\n";    
 
-    foreach ($phones as $p) {
-      $result .= "[{$p['name']}](${p['pattern']})\n\n";                 
+    foreach ($queues as $p) {
+      $result .= "[{$p['name']}]({$p['pattern']})\n";    
+      if (is_array($p['agents'])) {
+        foreach ($p['agents'] as $a) {
+          if ($a['static'] && strlen($a['phone'])) {
+            $result .= "member => Local/{$a['phone']}@queue_member,{$a['penalty']},{$a['phone']}\n";
+          }
+        }
+      }
+      $result .= "\n";
     }
     return $result;    
   }
@@ -250,4 +269,5 @@ class PBXQueue {
     }    
     return  $value .= $i ? $i : "";
   }
+
 }
