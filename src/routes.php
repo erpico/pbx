@@ -78,7 +78,7 @@ $findrecord = function (Request $request, Response $response, array $args) use($
       // Queue
       $date = str_replace(" ", "-", $row['calldate']);
   
-      $agent = $row['agentname'];
+      $agent = str_replace("/", "-", $row['agentname']);
       
       $uniqid = $row['uniqid'];
       $cid = $row['src'];
@@ -224,6 +224,17 @@ $app->get('/settings/{key}/{id}', function (Request $request, Response $response
     return $response->withJson(["data"=>$settings->getGroupSettings($id)]);
   }
   return $response->withJson(["data"=>[]]);
+});
+
+$app->get('/settings/user/{user_id}/default/{handle}', function (Request $request, Response $response, array $args) use($app) {
+  $settings = new PBXSettings();  
+  if (!(int)$args['user_id']) {
+    return $response
+    ->withJson(['result' => false, 'message' => 'Пользователь не обнаружен'])
+    ->withStatus(400);  
+  }
+
+  return $response->withJson($settings->deleteUserSettingByHandle(trim($args['handle']), (int)$args['user_id']));  
 });
 
 $app->get('/groups/list', function (Request $request, Response $response, array $args) use($app) {

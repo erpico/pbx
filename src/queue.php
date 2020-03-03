@@ -182,16 +182,23 @@ class PBXQueue {
         } else {
           $id = $this->db->lastInsertId();
         }
-        $this->deleteQueueAgents($id);
+        //$this->deleteQueueAgents($id);
         $agents = json_decode($values["agents"], true);
-        if (is_array($agents)){
-          $ids = [];
-          foreach ($agents as $a) {            
+        if (is_array($agents) && count($agents)){
+          $this->deleteQueueAgentsExceptFor($id);
+          foreach ($agents as $a) {
             if (intval($a['acl_user_id']) == 0 && intval($a['phone']) == 0){
               return [ "result" => false, "message" => "Укажите номер телефона или выберите сотрудника."];
-            }                      
-            $this->saveQueueAgents($id, $a);            
+            }
+            if (intval($a['acl_user_id']) || intval($a['phone'])) {
+              if ($a['acl_user_id'] == ""){
+                $a['acl_user_id'] = NULL;
+              }
+              $this->saveQueueAgents($id, $a['acl_user_id'], $a);
+            }
           }
+        } else {
+          $this->deleteQueueAgentsExceptFor($id);
         }
         return [ "result" => true, "message" => "Операция прошла успешно"];
       }
@@ -199,41 +206,32 @@ class PBXQueue {
     return [ "result" => false, "message" => "Произошла ошибка выполнения операции"];
   }
 
-  public function deleteQueueAgents($queue_id) {
-    $sql = "DELETE FROM queue_agent WHERE queue_id = {$queue_id}";    
-    $this->db->query($sql);
-    return true;
-  } 
-
-  public function deleteQueueAgentsExceptFor($queue_id, $user_id) {
+  public function deleteQueueAgentsExceptFor($queue_id) {
     $sql = "DELETE FROM queue_agent WHERE queue_id = {$queue_id}";
-    if ($user_id == null){
-      $sql .= " AND acl_user_id IS NULL";
-    } else {
-      $sql .= " AND acl_user_id = {$user_id}";
-    }
     $this->db->query($sql);
     return true;
   } 
   
-  public function saveQueueAgents($queue_id, $obj) {
-        $wsql = " queue_id = ".intval($queue_id).
-                " AND acl_user_id ".(intval($obj['acl_user_id']) ? " = '".intval($obj['acl_user_id'])."'" : "IS NULL").
-                " AND phone ".(!is_null($obj['phone']) && strlen($obj['phone']) ? " = '".addslashes($obj['phone'])."'" : "IS NULL");
-
-        $sql = "SELECT COUNT(*) FROM queue_agent WHERE $wsql";
-         
+  public function saveQueueAgents($queue_id, $user_id, $agents) {
+    $sql = "SELECT COUNT(*) FROM queue_agent WHERE queue_id = ".intval($queue_id)." AND phone = '{$agents["phone"]}'";
+         if ($user_id == NULL){
+          $sql .= " AND acl_user_id IS NULL";
+        } else {
+          $sql .= " AND acl_user_id = {$user_id}";
+        }
+        //die($sql);
         $res = $this->db->query($sql, \PDO::FETCH_NUM);
         $row = $res->fetch();
         if (!intval($row[0])) {
             $sql = "INSERT INTO queue_agent 
             (queue_id, penalty, phone, static, acl_user_id) 
             VALUES 
-            (".intval($queue_id).", ".intval($obj["penalty"]).", ".
-            (!is_null($obj['phone']) && strlen($obj['phone']) ? "'".addslashes($obj['phone'])."'" : "NULL"). ", ".
-            intval($obj["static"]).", ".
-            (intval($obj['acl_user_id']) ? "'".intval($obj['acl_user_id'])."'" : "NULL").
-            ")";            
+            (".intval($queue_id).", ".intval($agents["penalty"]).", '".intval($agents["phone"])."', ".intval($agents["static"]).", ";
+            if ($user_id == NULL){
+              $sql .= " NULL )";
+            } else {
+              $sql .= " {$user_id} )";
+            }
             $this->db->query($sql);
         }
   }

@@ -24,6 +24,16 @@ class PBXSettings {
     return $this->id = intval($id);
   }
 
+  public function getDefaultSettingsByHandle($handle) {
+    $sql = "SELECT  id, handle, val FROM cfg_setting WHERE handle = '$handle'";
+    $res = $this->db->query($sql);
+    $row = $res->fetch();
+    
+    $res = strlen($row['val']) ? true : false;
+
+    return ['result' => $res, 'value' => $row['val']];
+  }
+
   private function getDefaultSettings() {
     $sql = "SELECT  id, handle, val, updated FROM cfg_setting";
     $result = [];
@@ -38,7 +48,20 @@ class PBXSettings {
     $sql = "SELECT id, handle, val FROM cfg_user_setting WHERE handle = '".trim(addslashes($handle))."' AND acl_user_id = '".intval($user_id)."' LIMIT 1";
     $res = $this->db->query($sql);
     $row = $res->fetch();
+
     return $row;
+  }
+
+  public function deleteUserSettingByHandle($handle, $user_id) {
+    try {
+      $sql = "DELETE FROM cfg_user_setting WHERE handle = '".trim(addslashes($handle))."' AND acl_user_id = '".intval($user_id)."'";
+      $res = $this->db->query($sql);      
+      $result = ['result' => true, 'message' => ''];
+    } catch (\Throwable $th) {
+      $result = ['result' => false, 'message' => $th->getMessage()];
+    }
+
+    return $result;
   }
 
   private function getGroupSettingByHandle($handle = "", $group_id) {
@@ -79,8 +102,9 @@ class PBXSettings {
     usort ($result, function ($left, $right) {
       return $right['main'] - $left['main'];
     });
+
     return $result;
-  } 
+  }
   
   public function getGroupSettings($group_id) {
     $settings = $this->getDefaultSettings();
