@@ -1,7 +1,7 @@
-# Install
+# ErpicoPBX Application
 
-Install composer (getcomposer.org or via Yum/Apt) and run 'composer install'
+* Point your virtual host document root to your new application's `public/` directory.
+* Ensure `logs/` is web writeable.
 
-Configure webserver to public folder. Ensure mod_rewrite is enabled and AllowOverride is All in config.
+That's it! Now go build something cool.
 
-Make folder logs writtable to Apache.

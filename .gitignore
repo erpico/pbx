@@ -1,0 +1,10 @@
+/vendor/
+/logs/*
+!/logs/README.md
+/configs
+/queues
+/deprecated
+/tmp/*
+composer.lock
+composer.phar
+
