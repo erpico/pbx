@@ -203,8 +203,7 @@ class PBXChannel {
                  "  context = {$p['rules']}\n".
                  "  fromuser = {$p['phone']}\n".
                  "  insecure = port,invite\n".
-                 "  qualify = yes\n".                 
-                 "  callerid = {$p['phone']} <{$p['phone']}>\n\n";
+                 "  qualify = yes\n\n";
     }
     return $result;    
   }
