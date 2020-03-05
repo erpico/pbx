@@ -199,9 +199,9 @@ class PBXChannel {
                  "  remotesecret = {$p['password']}\n".
                  "  defaultuser = {$p['login']}\n".
                  "  fromdomain = {$p['host']}\n".
+                 "  fromuser = {$p['login']}\n".
                  "  nat = yes\n".
-                 "  context = {$p['rules']}\n".
-                 "  fromuser = {$p['phone']}\n".
+                 "  context = {$p['rules']}\n".                 
                  "  insecure = port,invite\n".
                  "  qualify = yes\n\n";
     }
