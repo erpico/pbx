@@ -49,10 +49,8 @@ $app->get('/cdr/list/{id}', function (Request $request, Response $response, arra
     $call = $request->getParam('call', 0);
     $missed = $request->getParam('missed', 0);
 
-      $cdr = new PBXCdr($key, $status, $call, $missed);
-      return $response->withJson([
-        "data" => $cdr->getReportsByUid($id),
-    ]);
+    $cdr = new PBXCdr($key, $status, $call, $missed);
+    return $response->withJson($cdr->getReportsByUid($id));
 })->add('\App\Middleware\OnlyAuthUser');
 /*$app->get('/controllers/findrecord.php', function (Request $request, Response $response, array $args) use($app) {
   $id = $request->getParam('id', 0);

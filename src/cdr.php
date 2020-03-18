@@ -199,10 +199,12 @@ class PBXCdr {
                   a.uniqid, 
                   a.agentname,
                   a.userfield
-        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql AND a.calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND a.calldate <= '".date('Y-m-d H:i:s', $lcd)."'
+        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql 
+        ".($limit != 1000000 ? "AND a.calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND a.calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
         UNION
         SELECT calldate, src, dst, name, disposition, duration - billsec, billsec, uniqueid AS uniqid, '', userfield
-        FROM cdr WHERE 1=1 $extens $cwsql AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' 
+        FROM cdr WHERE 1=1 $extens $cwsql 
+        ".($limit != 1000000 ? "AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
         ) AS c ORDER BY calldate DESC ";        
       
       /*if (isset($start) && isset($limit)){
