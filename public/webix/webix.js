@@ -1,6 +1,6 @@
 /**
  * @license
- * Webix UI v.7.1.1
+ * Webix UI v.7.2.2
  * This software is covered by Webix Commercial License.
  * Usage without proper license is prohibited.
  * (c) XB Software Ltd.
@@ -24,6 +24,26 @@
     }
 
     return _typeof(obj);
+  }
+
+  function _toConsumableArray(arr) {
+    return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _nonIterableSpread();
+  }
+
+  function _arrayWithoutHoles(arr) {
+    if (Array.isArray(arr)) {
+      for (var i = 0, arr2 = new Array(arr.length); i < arr.length; i++) arr2[i] = arr[i];
+
+      return arr2;
+    }
+  }
+
+  function _iterableToArray(iter) {
+    if (Symbol.iterator in Object(iter) || Object.prototype.toString.call(iter) === "[object Arguments]") return Array.from(iter);
+  }
+
+  function _nonIterableSpread() {
+    throw new TypeError("Invalid attempt to spread non-iterable instance");
   }
 
   var global = window;
@@ -2112,6 +2132,13 @@
       var spans = [];
       var styles = [];
       var sizes = [];
+      var types = [];
+      var cellTypes = {
+        n: "number",
+        d: "date",
+        s: "string",
+        b: "boolean"
+      };
 
       if (sheet && sheet["!ref"]) {
         var range = XLS.utils.decode_range(sheet["!ref"]),
@@ -2137,6 +2164,7 @@
                 ncell = cell.f.charAt(0) == "=" ? cell.f : "=" + cell.f;else if (cell.t == "d" && isDate(cell.v)) ncell = i18n.dateFormatStr(cell.v);else ncell = cell.v;
               nrow.push(ncell);
               if (cell.s) styles.push([row - yCorrection, col - xCorrection, cell.s]);
+              if (cell.t) types.push([row - yCorrection, col - xCorrection, cellTypes[cell.t]]);
             }
           }
 
@@ -2177,6 +2205,7 @@
         spans: spans,
         styles: styles,
         sizes: sizes,
+        types: types,
         excel: true
       };
     },
@@ -2737,13 +2766,9 @@
       }
 
       if (pos$$1.y < top + sense) {
-        this._auto_scrollTo(scroll.x, scroll.y - sense * 2, pos$$1);
-
-        return true;
+        return this._auto_scrollTo(scroll.x, scroll.y - sense * 2, pos$$1, "y");
       } else if (pos$$1.y > bottom - sense) {
-        this._auto_scrollTo(scroll.x, scroll.y + sense * 2, pos$$1);
-
-        return true;
+        return this._auto_scrollTo(scroll.x, scroll.y + sense * 2, pos$$1, "y");
       }
 
       return false;
@@ -2754,19 +2779,22 @@
       var scroll = this.getScrollState();
 
       if (pos$$1.x < left + sense) {
-        this._auto_scrollTo(scroll.x - sense * 2, scroll.y, pos$$1);
-
-        return true;
+        return this._auto_scrollTo(scroll.x - sense * 2, scroll.y, pos$$1, "x");
       } else if (pos$$1.x > right - sense) {
-        this._auto_scrollTo(scroll.x + sense * 2, scroll.y, pos$$1);
-
-        return true;
+        return this._auto_scrollTo(scroll.x + sense * 2, scroll.y, pos$$1, "x");
       }
 
       return false;
     },
-    _auto_scrollTo: function (x, y, pos$$1) {
-      if (this.callEvent("onBeforeAutoScroll", [pos$$1])) this.scrollTo(x, y);
+    _auto_scrollTo: function (x, y, pos$$1, mode) {
+      if (this.callEvent("onBeforeAutoScroll", [pos$$1])) {
+        this.scrollTo(x, y);
+        this.callEvent("onAfterAutoScroll", []);
+        var scroll = this.getScrollState();
+        return scroll[mode] === (mode === "x" ? x : y);
+      }
+
+      return false;
     }
   };
 
@@ -3468,6 +3496,176 @@
     });
   });
 
+  var fullscreen = {
+    set: function (view, config) {
+      config = config || {};
+      if (this._view) this.exit();
+      if ($$(view)) view = $$(view);else {
+        if (typeof view == "string") view = document.getElementById(view);
+        if (view instanceof Element) view = {
+          $view: view,
+          $html: true
+        };
+        assert(view, "Incorrect view for fullscreen mode");
+      }
+      this._view = view;
+      this._pos = this._setPosition();
+      var viewConfig = view.config;
+
+      if (view.setPosition) {
+        viewConfig.fullscreen = true;
+        view.resize();
+      } else {
+        this._fullscreen = ui({
+          view: "window",
+          head: this._getHeadConfig(config),
+          fullscreen: true,
+          borderless: true,
+          //better resize logic
+          body: {
+            rows: []
+          }
+        });
+        if (viewConfig) this._sizes = {
+          width: viewConfig.width,
+          minWidth: viewConfig.minWidth,
+          maxWidth: viewConfig.maxWidth,
+          height: viewConfig.height,
+          minHeight: viewConfig.minHeight,
+          maxHeight: viewConfig.maxHeight
+        };
+
+        if (view.getParentView && view.getParentView()) {
+          this._parent = view.getParentView();
+
+          if (this._parent.index) {
+            this._pos.index = this._parent.index(view);
+            this._pos.active = this._parent.getActiveId ? this._parent.getActiveId() == viewConfig.id : false;
+          }
+        } else {
+          this._parent = view.$view.parentNode;
+          this._pos.node = create("div"); //save old position
+
+          this._parent.replaceChild(this._pos.node, view.$view);
+        }
+
+        this._fullscreen.getBody().addView(view.$html ? {
+          view: "template",
+          content: view.$view,
+          css: "webix_fullscreen_html"
+        } : view);
+
+        this._fullscreen.show();
+
+        this._setSizes(view);
+      }
+    },
+    exit: function () {
+      if (this._view) {
+        var viewConfig = this._view.config;
+
+        this._setPosition(true);
+
+        if (this._view.setPosition) {
+          viewConfig.fullscreen = false;
+
+          this._view.resize();
+        } else {
+          if (this._parent instanceof Element) {
+            this._view._parent_cell = null;
+            if (this._view._set_inner) this._view._set_inner(this._view.config);
+
+            this._parent.replaceChild(this._view.$view, this._pos.node);
+          } else {
+            if (!isUndefined(this._pos.index)) {
+              this._parent.addView(this._view, this._pos.index);
+
+              if (this._pos.active) this._view.show(false, false);
+            } else {
+              this._view._parent_cell = this._parent;
+
+              this._parent._replace(this._view);
+            }
+          }
+
+          this._setSizes(this._view, this._sizes); //prevent view destruction (with layout)
+
+
+          if (!this._view.$html) this._fullscreen.getBody()._cells = []; //we can't set head false with replace, so we need to close win
+
+          this._fullscreen.close();
+        }
+
+        this._clearValues();
+      }
+    },
+    _clearValues: function () {
+      delete this._parent;
+      delete this._view;
+      delete this._sizes;
+      delete this._pos;
+      delete this._fullscreen;
+    },
+    _setPosition: function (restore) {
+      var _this = this;
+
+      var view = this._view;
+      var oldStyles = {};
+
+      if (view.setPosition) {
+        if (restore) view.setPosition(this._pos.left, this._pos.top);else {
+          oldStyles.left = view.config.left;
+          oldStyles.top = view.config.top;
+          view.setPosition(0, 0);
+        }
+      } else {
+        var rules = ["position", "top", "bottom", "left", "right"];
+        var style = view.$view.style;
+        rules.forEach(function (rule) {
+          if (restore) style[rule] = _this._pos[rule];else {
+            oldStyles[rule] = style[rule];
+            style[rule] = rule == "position" ? "relative" : 0;
+          }
+        });
+      }
+
+      return oldStyles;
+    },
+    _setSizes: function (view, sizes) {
+      if (!view.$html) {
+        sizes = sizes || {
+          height: 0,
+          minHeight: 0,
+          maxHeight: 0,
+          width: 0,
+          minWidth: 0,
+          maxWidth: 0
+        };
+        view.define(sizes);
+        view.resize();
+      }
+    },
+    _getHeadConfig: function (config) {
+      var _this2 = this;
+
+      if (config.head === false || _typeof(config.head) == "object") return config.head;else {
+        return {
+          cols: [{
+            template: config.head || "",
+            type: "header",
+            borderless: true
+          }, {
+            view: "icon",
+            icon: "wxi-close",
+            click: function () {
+              _this2.exit();
+            }
+          }]
+        };
+      }
+    }
+  };
+
   var UIManager = {
     _view: null,
     _hotkeys: {},
@@ -3573,7 +3771,7 @@
         if (this.canFocus(view)) {
           this.setFocus(view);
         } //remove focus from an unreachable view
-        else e.target.blur();
+        else if (view.$view.contains(e.target)) e.target.blur();
       } else this.setFocus(null);
 
       return true;
@@ -3774,7 +3972,8 @@
       }
     },
     _keycode: function (key, ctrl, shift, alt, meta) {
-      return key.toLowerCase() + "_" + ["", ctrl ? "1" : "0", shift ? "1" : "0", alt ? "1" : "0", meta ? "1" : "0"].join("");
+      //key can be undefined (browser autofill)
+      return (key || "").toLowerCase() + "_" + ["", ctrl ? "1" : "0", shift ? "1" : "0", alt ? "1" : "0", meta ? "1" : "0"].join("");
     },
     _check_keycode: function (e) {
       var keyCode = e.which || e.keyCode;
@@ -3878,7 +4077,12 @@
         }
 
         var top = view.getTopParentView();
-        if (top && top.setPosition) top._hide();
+
+        if (top && top.setPosition) {
+          if (fullscreen._fullscreen == top) fullscreen.exit();
+
+          top._hide();
+        }
       }
     });
     UIManager.addHotKey("shift+tab", UIManager._tab_logic);
@@ -5846,7 +6050,7 @@
       window.setTimeout(function () {
         Touch._set_scroll_pos();
 
-        if (!Touch._scroll_stat.hidden) {
+        if (Touch._scroll_stat && !Touch._scroll_stat.hidden) {
           if (Touch._scroll[0]) Touch._scroll[0].style.visibility = "visible";
           if (Touch._scroll[1]) Touch._scroll[1].style.visibility = "visible";
         }
@@ -6193,7 +6397,8 @@
 
 
       if (master && master._getDragItemPos) {
-        if (!dragCtrl._html) dragCtrl.createDrag(e);
+        if (!dragCtrl._html && !dragCtrl.createDrag(e)) return;
+        e.longtouch_drag = true;
         var ctx = dragCtrl._drag_context;
         dragCtrl._html.style.left = e.x + dragCtrl.left + (ctx.x_offset || 0) + "px";
         dragCtrl._html.style.top = e.y + dragCtrl.top + (ctx.y_offset || 0) + "px";
@@ -6232,7 +6437,7 @@
       DragControl._saved_event = e;
       var passive = env.touch ? {
         passive: false
-      } : passive;
+      } : null;
       DragControl._webix_drag_mm = event$1(document.body, env.mouse.move, DragControl._startDrag, passive);
       DragControl._webix_drag_mu = event$1(document, env.mouse.up, DragControl._preStartFalse); //need to run here, or will not work in IE
 
@@ -6271,7 +6476,7 @@
 
       var passive = env.touch ? {
         passive: false
-      } : passive;
+      } : null;
       DragControl._webix_drag_mm = event$1(document.body, env.mouse.move, DragControl._moveDrag, passive);
       DragControl._webix_drag_mu = event$1(document, env.mouse.up, DragControl._stopDrag);
 
@@ -6514,11 +6719,15 @@
   var Movable = {
     move_setter: function (value) {
       if (value) {
+        exports.extend(this, Move, true);
         DragControl.addDrag(this._headobj ? this._headobj : this.$view, this);
+        delete this.move_setter; //prevent double initialization
       }
 
       return value;
-    },
+    }
+  };
+  var Move = {
     $dragCreate: function (object, e) {
       if (this.config.move) {
         var elOffset = offset(object);
@@ -6920,7 +7129,9 @@
       //do not hide modal windows
       if (this._settings.hidden || this._settings.modal || this._hide_timer) return; //do not hide submenu when clicking on menu folder
 
-      if (e && e.showpopup && (e.showpopup == this._settings.id || this.getTopMenu && this.getTopMenu()._settings.id == e.showpopup)) return; //do not hide popup, when we have modal layer above the popup
+      if (e && e.showpopup && (e.showpopup == this._settings.id || this.getTopMenu && this.getTopMenu()._settings.id == e.showpopup)) return; //do not hide popup, when starting dnd with a long touch
+
+      if (e && env.touch && e.longtouch_drag) return; //do not hide popup, when we have modal layer above the popup
 
       if (state._modality && this._viewobj.style.zIndex <= state._modality) return; //ignore inside clicks and clicks in child-popups
 
@@ -7225,7 +7436,21 @@
       minWidth: 300,
       minHeight: 200
     }
-  };
+  }; //global longtouch handler
+
+  attachEvent("onLongTouch", function (ev) {
+    if (!ev || !ev.target) return;
+    var view = $$(ev.target);
+
+    if (view) {
+      view = view.queryView(function (a) {
+        return !a.getParentView();
+      }, "parent") || view;
+      var popups = state._popups;
+      var index$$1 = popups.find(view);
+      if (index$$1 !== -1) ev.click_view = index$$1;
+    }
+  });
   var view$3 = exports.protoUI(api$3, base$1.view, Movable, Modality, EventSystem, ResizeArea);
   var window$1 = {
     api: api$3,
@@ -7387,11 +7612,13 @@
     clipboard_setter: function (value) {
       if (value === true || value === 1) value = "modify";
       this.attachEvent("onAfterSelect", function (id) {
-        var item = this.getItem(id);
-        var text = this.type.templateCopy(item);
-        clipbuffer.set(text, this);
-        clipbuffer.focus();
-        UIManager.setFocus(this);
+        if (!this.getEditor || !this.getEditor()) {
+          var item = this.getItem(id);
+          var text = this.type.templateCopy(item);
+          clipbuffer.set(text, this);
+          clipbuffer.focus();
+          UIManager.setFocus(this);
+        }
       });
       this.attachEvent("onPaste", function (text) {
         if (!isUndefined(this._paste[this._settings.clipboard])) this._paste[this._settings.clipboard].call(this, text);
@@ -7462,13 +7689,12 @@
       }, true);
     },
     _getPageWidth: function (options) {
-      if (options.fit == "page") return Infinity;
       var size = options.size;
       var width = size[options.mode == "portrait" ? "width" : "height"];
       return Math.min(width * env.printPPI - 2 * env.printMargin);
     },
     _getTableArray: function (options, base, start) {
-      var maxWidth = this._getPageWidth(options);
+      var maxWidth = options.fit == "page" ? Infinity : this._getPageWidth(options);
 
       var xCount = options.xCount || this._getVisibleRange()._dx;
 
@@ -7896,9 +8122,15 @@
       var _this = this;
 
       // update scroll when showing view
-      if (view.attachEvent) view.attachEvent("onViewShow", function () {
-        return _this._resize_scroll(view);
-      }); // update scroll on data change
+      if (view.attachEvent) {
+        view.attachEvent("onViewShow", function () {
+          return _this._resize_scroll(view);
+        });
+        view.attachEvent("onAfterAutoScroll", function () {
+          return _this._resize_scroll(view);
+        });
+      } // update scroll on data change
+
 
       if (view.data && view.data.attachEvent) view.data.attachEvent("onStoreUpdated", function () {
         return _this._resize_scroll(view);
@@ -9184,21 +9416,42 @@
     /*
     	sort data in collection
     		by - settings of sorting
-    	
-    	or
-    	
-    		by - sorting function
+    		or
+    		by - array of settings
+    		or
+    			by - sorting function
     		dir - "asc" or "desc"
-    		
-    	or
-    	
-    		by - property
+    		or
+    			by - property
     		dir - "asc" or "desc"
     		as - type of sortings
-    	
-    	Sorting function will accept 2 parameters and must return 1,0,-1, based on desired order
+    		Sorting function will accept 2 parameters and must return 1,0,-1, based on desired order
     */
     sort: function (by, dir, as) {
+      var _this = this;
+
+      var parameters;
+      var sort = by;
+
+      if (isArray(sort)) {
+        sort = sort.map(function (a) {
+          return _this._sort_init(a);
+        });
+        parameters = [sort];
+      } else {
+        sort = this._sort_init(by, dir, as);
+        parameters = [sort.by, sort.dir, sort.as, sort];
+      }
+
+      if (!this.callEvent("onBeforeSort", parameters)) return;
+      var sorter = this.sorting.create(sort);
+      this.order = this._sort_core(sorter, this.order);
+      if (this._filter_order && this._filter_order.length != this.order.length) this._filter_order = this._sort_core(sorter, this._filter_order); //repaint self
+
+      this.refresh();
+      this.callEvent("onAfterSort", parameters);
+    },
+    _sort_init: function (by, dir, as) {
       var sort = by;
       if (typeof by == "function") sort = {
         as: by,
@@ -9209,17 +9462,9 @@
         as: as
       };
       if (typeof sort.by == "string") sort.by = sort.by.replace(/#/g, "");
-      var parameters = [sort.by, sort.dir, sort.as, sort];
-      if (!this.callEvent("onBeforeSort", parameters)) return;
-      this.order = this._sort_core(sort, this.order);
-      if (this._filter_order && this._filter_order.length != this.order.length) this._filter_order = this._sort_core(sort, this._filter_order); //repaint self
-
-      this.refresh();
-      this.callEvent("onAfterSort", parameters);
+      return sort;
     },
-    _sort_core: function (sort, order) {
-      var sorter = this.sorting.create(sort);
-
+    _sort_core: function (sorter, order) {
       if (this.order.length) {
         var pre = order.splice(0, this.$freeze); //get array of IDs
 
@@ -9455,6 +9700,7 @@
     },
     sorting: {
       create: function (config) {
+        if (isArray(config)) return this._multi(config);
         return this._dir(config.dir, this._by(config.by, config.as));
       },
       as: {
@@ -9493,6 +9739,23 @@
         "raw": function (a, b) {
           return a > b ? 1 : a < b ? -1 : 0;
         }
+      },
+      _multi: function (methods) {
+        var _this2 = this;
+
+        methods = methods.map(function (c) {
+          return _this2._dir(c.dir, _this2._by(c.by, c.as));
+        });
+        return function (a, b) {
+          var result,
+              i = 0;
+
+          do {
+            result = methods[i](a, b);
+          } while (!result && methods[++i]);
+
+          return result;
+        };
       },
       _by: function (prop, method) {
         if (!prop) return method;
@@ -9579,7 +9842,14 @@
         }
 
         if (state) {
-          if (state.sort) params.push("sort[" + state.sort.id + "]=" + encodeURIComponent(state.sort.dir));
+          if (state.sort) {
+            var sort = isArray(state.sort) ? state.sort : [state.sort];
+
+            for (var i = 0; i < sort.length; i++) {
+              params.push("sort[" + sort[i].id + "]=" + encodeURIComponent(sort[i].dir));
+            }
+          }
+
           if (state.filter) for (var key in state.filter) {
             var filterValue = state.filter[key];
             if (_typeof(filterValue) == "object") filterValue = ajax().stringify(filterValue); //server daterangefilter
@@ -9757,6 +10027,8 @@
 
   var DataState = {
     getState: function () {
+      var _this = this;
+
       var cols_n = this.config.columns.length;
       var columns = this.config.columns;
       var settings = {
@@ -9774,11 +10046,15 @@
 
       settings.order = [].concat(this._hidden_column_order.length ? this._hidden_column_order : settings.ids);
 
-      if (this._last_sorted) {
-        settings.sort = {
-          id: this._last_sorted,
-          dir: this._last_order
-        };
+      if (this._last_order.length) {
+        var sort = this._last_order.map(function (id) {
+          return {
+            id: id,
+            dir: _this._last_sorted[id].dir
+          };
+        });
+
+        settings.sort = sort.length == 1 ? sort[0] : sort;
       } //this method will try to access the rendered values
       //just ignore it if grid is not rendered yet
 
@@ -9808,7 +10084,9 @@
     setState: function (obj) {
       var columns = this.config.columns;
       if (!obj) return;
-      this._last_sorted = null;
+      this.markSorting();
+      this._last_order = [];
+      this._last_sorted = {};
       this.blockEvent();
 
       if (obj.order && obj.order.length) {
@@ -9834,15 +10112,14 @@
 
       if (obj.ids) {
         var reorder = false;
-        var cols = this.config.columns;
 
-        for (var _i2 = 0; _i2 < cols.length; _i2++) {
-          if (cols[_i2].id != obj.ids[_i2]) reorder = true;
+        for (var _i2 = 0; _i2 < columns.length; _i2++) {
+          if (columns[_i2].id != obj.ids[_i2]) reorder = true;
         }
 
         if (reorder) {
           for (var _i3 = 0; _i3 < obj.ids.length; _i3++) {
-            cols[_i3] = this.getColumnConfig(obj.ids[_i3]) || cols[_i3];
+            columns[_i3] = this.getColumnConfig(obj.ids[_i3]) || columns[_i3];
           }
 
           this.refreshColumns();
@@ -9872,8 +10149,19 @@
       this.callEvent("onStructureUpdate", []);
 
       if (obj.sort) {
-        var column = columns[this.getColumnIndex(obj.sort.id)];
-        if (column) this._sort(obj.sort.id, obj.sort.dir, column.sort);
+        var sort = obj.sort,
+            multi = true;
+
+        if (!isArray(sort)) {
+          sort = [sort];
+          multi = false;
+        }
+
+        for (var _i5 = 0; _i5 < sort.length; _i5++) {
+          var _col = this.getColumnConfig(sort[_i5].id);
+
+          if (_col) this._sort(_col.id, sort[_i5].dir, _col.sort, multi);
+        }
       }
 
       if (obj.filter) {
@@ -9911,8 +10199,8 @@
         var select = obj.select;
         this.unselect();
 
-        for (var _i5 = 0; _i5 < select.length; _i5++) {
-          if (!select[_i5].row || this.exists(select[_i5].row)) this._select(select[_i5], true);
+        for (var _i6 = 0; _i6 < select.length; _i6++) {
+          if (!select[_i6].row || this.exists(select[_i6].row)) this._select(select[_i6], true);
         }
       }
 
@@ -10104,7 +10392,9 @@
         context.from = this;
 
         if (this.callEvent("onBeforeDrag", [context, e])) {
-          if (Touch) Touch._start_context = null; //set drag representation
+          if (env.touch && this._touch_scroll == "touch") delay(function () {
+            Touch._start_context = null;
+          }); //set drag representation
 
           return context.html || this.$dragHTML(this.getItem(id), e, context);
         }
@@ -10719,7 +11009,13 @@
       if (this.config.popup) {
         return this.config.popup.config.id;
       } else if (config) {
-        return create_suggest(config);
+        var suggest = create_suggest(config);
+        $$(suggest).attachEvent("onValueSuggest", function () {
+          delay(function () {
+            callEvent("onEditEnd", []);
+          });
+        });
+        return suggest;
       } else return this._shared_suggest(config);
     },
     _shared_suggest: function () {
@@ -10810,6 +11106,11 @@
       popup._show_selection = function () {};
 
       popup.linkInput(document.body);
+      popup.attachEvent("onValueSuggest", function () {
+        delay(function () {
+          callEvent("onEditEnd", []);
+        });
+      });
     },
     popupType: "richselect"
   }, editors.popup);
@@ -10997,8 +11298,15 @@
         var node = this._init_editor(id, type, show);
 
         if (type.config.liveEdit) this._live_edits_handler = this.attachEvent("onKeyPress", this._handle_live_edits);
-        var area = type.getPopup ? type.getPopup(node)._viewobj : node;
-        if (area) _event(area, "click", this._reset_active_editor);
+        var area = [node];
+        if (type.getEditorArea) area = type.getEditorArea();else if (type.getPopup) area = [type.getPopup()._viewobj];
+
+        if (area) {
+          for (var i = 0; i < area.length; i++) {
+            _event(area[i], "click", this._reset_active_editor);
+          }
+        }
+
         if (node) _event(node, "change", this._on_editor_change, {
           bind: {
             view: this,
@@ -13098,28 +13406,22 @@
       var auto = value === "auto";
       var marker = value == "x" ? "x" : value == "xy" ? "xy" : auto ? "xy" : "y";
 
-      if (Touch.$active && this._touch_scroll == "touch") {
-        this._dataobj.setAttribute("touch_scroll", marker);
-
-        if (this.attachEvent) this.attachEvent("onAfterRender", bind(this._refresh_scroll, this));
+      if (env.$customScroll) {
+        CustomScroll.enable(this, marker);
       } else {
-        if (env.$customScroll) {
-          CustomScroll.enable(this, marker);
+        var node = this._dataobj.parentNode.style;
+
+        if (auto) {
+          node.overflowX = node.overflowY = "auto";
         } else {
-          var node = this._dataobj.parentNode.style;
+          if (marker.indexOf("x") != -1) {
+            this._scroll_x = true;
+            node.overflowX = "scroll";
+          }
 
-          if (auto) {
-            node.overflowX = node.overflowY = "auto";
-          } else {
-            if (marker.indexOf("x") != -1) {
-              this._scroll_x = true;
-              node.overflowX = "scroll";
-            }
-
-            if (marker.indexOf("y") != -1) {
-              this._scroll_y = true;
-              node.overflowY = "scroll";
-            }
+          if (marker.indexOf("y") != -1) {
+            this._scroll_y = true;
+            node.overflowY = "scroll";
           }
         }
       }
@@ -13151,23 +13453,6 @@
     scrollTo: function (x, y) {
       this._dataobj.parentNode.scrollLeft = x;
       this._dataobj.parentNode.scrollTop = y;
-    },
-    _refresh_scroll: function () {
-      Touch._clear_artefacts();
-
-      Touch._scroll_end();
-
-      var s = this.getScrollState();
-      var dx = this._dataobj.offsetWidth - this.$width - s.x;
-      var dy = this._dataobj.offsetHeight - this.$height - s.y; //if current scroll is outside of data area
-
-      if (dx < 0 || dy < 0) {
-        //scroll to the end of data area
-        var x = dx < 0 ? Math.min(-dx - s.x, 0) : -s.x;
-        var y = dy < 0 ? Math.min(-dy - s.y, 0) : -s.y;
-
-        Touch._set_matrix(this._dataobj, x, y, 0);
-      }
     }
   };
 
@@ -14512,10 +14797,12 @@
     },
     templateCopy_setter: template,
     _sel_to_clip: function () {
-      var data = this._get_sel_text();
+      if (!this.getEditor || !this.getEditor()) {
+        var data = this._get_sel_text();
 
-      clipbuffer.set(data);
-      UIManager.setFocus(this);
+        clipbuffer.set(data);
+        UIManager.setFocus(this);
+      }
     },
     _get_sel_text: function () {
       var data = [];
@@ -15586,9 +15873,7 @@
         } else functor.call(this, this.getItem(key), false);
       }
     },
-    _sort_core: function (sort, order) {
-      var sorter = this.sorting.create(sort);
-
+    _sort_core: function (sorter, order) {
       for (var key in this.branch) {
         var bset = this.branch[key];
         var data = [];
@@ -16635,7 +16920,7 @@
     }
   };
 
-  var version$1 = "7.1.1";
+  var version$1 = "7.2.2";
   var name$1 = "core";
 
   var errorMessage = "non-existing view for export";
@@ -16649,6 +16934,11 @@
     };
   }
 
+  function getStyles(r, c, styles) {
+    //row index, column index, styles array
+    if (styles[r] && styles[r][c]) return styles[r][c];
+    return "";
+  }
   function getExportScheme(view, options) {
     var scheme = [];
     var h_count = 0,
@@ -16965,46 +17255,57 @@
 
   var font = {};
   var toPDF = function (id, options) {
-    return require([env.cdn + "/extras/pdfjs.js", env.cdn + "/extras/html2canvas-1.0.min.js"]).then(function () {
-      options = options || {};
-      options.export_mode = "pdf";
-      options._export_font = font;
-      options.fontName = options.fontName || "pt-sans.regular";
-      options.display = options.display || "table";
-      id = isArray(id) ? id : [id];
-      var views = [];
+    options = options || {};
+    options.export_mode = "pdf";
+    options._export_font = font;
+    options.fontName = options.fontName || "pt-sans.regular";
+    var display = options.display = options.display || "table";
+    options.styles = options.display == "image" ? false : options.styles;
+    id = isArray(id) ? id : [id];
+    var views = [];
 
-      for (var i = 0; i < id.length; i++) {
-        if (!id[i].id) id[i] = {
-          id: id[i]
-        };
-        var view = $$(id[i].id);
+    for (var i = 0; i < id.length; i++) {
+      if (!id[i].id) id[i] = {
+        id: id[i]
+      };
+      var view = $$(id[i].id);
+
+      if (view) {
         var viewOptions = exports.extend(id[i].options || {}, options);
-        if (view && view.$exportView) view = view.$exportView(viewOptions);
+        if (view.$exportView) view = view.$exportView(viewOptions); //$exportView returns array
 
-        if (view) {
-          if (viewOptions.display !== "table") {
+        if (isArray(view)) {
+          views = views.concat(view);
+          if (options.autowidth) getAutowidth(viewOptions, options);
+        } else {
+          //display table should be first (in case of styles:true $exportView adds styles to the first view)
+          if (display == "table" || display == "all") {
+            if (view.data && view.data.pull) {
+              var scheme = getExportScheme(view, viewOptions);
+              views.push({
+                scheme: scheme,
+                exportData: getExportData(view, viewOptions, scheme),
+                viewOptions: viewOptions
+              });
+              if (options.autowidth) getAutowidth(view, options, scheme);
+            }
+          }
+
+          if (display == "image" || display == "all") {
             views.push({
               node: view.$view,
               viewOptions: viewOptions
             });
-            if (options.autowidth) options.width = Math.max(options.width || 0, view.$view.$width);
-          }
-
-          if (viewOptions.display !== "image" && view.data && view.data.pull) {
-            var scheme = getExportScheme(view, viewOptions);
-            views.push({
-              scheme: scheme,
-              data: getExportData(view, viewOptions, scheme),
-              viewOptions: viewOptions
-            });
-            if (options.autowidth) getAutowidth(scheme, options);
+            if (options.autowidth) getAutowidth(view, options);
           }
         }
-
-        assert(view, errorMessage);
       }
 
+      assert(view, errorMessage);
+    }
+
+    if (options.dataOnly) return views;
+    return require([env.cdn + "/extras/pdfjs.js", env.cdn + "/extras/html2canvas-1.0.min.js"]).then(function () {
       if (views.length == 0) return Deferred.reject(errorMessage);
 
       if (font[options.fontName]) {
@@ -17051,7 +17352,7 @@
         if (viewOptions.textBefore) addText(doc, "before", viewOptions.textBefore);
         if (images[_i]) doc.image(images[_i], {
           align: "center"
-        });else addPDFTable(views[_i].scheme, views[_i].data, viewOptions, doc);
+        });else addPDFTable(views[_i], doc);
         if (viewOptions.textAfter) addText(doc, "after", viewOptions.textAfter);
         if (_i != views.length - 1) doc.pageBreak();
       }
@@ -17088,15 +17389,20 @@
     });
   }
 
-  function getAutowidth(scheme, options) {
+  function getAutowidth(view, options, scheme) {
     var prop = options.orientation && options.orientation == "landscape" ? "height" : "width";
-    var width = 80; //paddings
+    var width;
 
-    for (var i = 0; i < scheme.length; i++) {
-      width += scheme[i].width;
-    }
+    if (scheme) {
+      width = 80; //paddings
 
-    options[prop] = Math.max(options[prop] || 0, width);
+      for (var i = 0; i < scheme.length; i++) {
+        width += scheme[i].width;
+      }
+    } else if (view.$width) width = view.$width;else //'view' can be local settings and we need to compare them with common ones
+      width = view[prop];
+
+    options[prop] = Math.max(options[prop] || 0, width || 0);
   }
 
   function addPDFDoc(options) {
@@ -17113,7 +17419,11 @@
     });
   }
 
-  function addPDFTable(scheme, data, options, doc) {
+  function addPDFTable(view, doc) {
+    var scheme = view.scheme;
+    var data = view.exportData;
+    var options = view.viewOptions;
+    var styles = view.styles;
     options.header = isUndefined(options.header) || options.header === true ? {} : options.header;
     options.footer = isUndefined(options.footer) || options.footer === true ? {} : options.footer;
     options.table = options.table || {}; //render table
@@ -17155,7 +17465,9 @@
         var header = table.tr(headerOps);
 
         for (var s = 0; s < scheme.length; s++) {
-          header.td(scheme[s].header[_i2].toString());
+          var _options = styles ? getStyles(_i2, s, styles) : {};
+
+          header.td(scheme[s].header[_i2].toString(), _options);
         }
       }
     } //render table data
@@ -17165,7 +17477,9 @@
       var row = table.tr({});
 
       for (var c = 0; c < data[r].length; c++) {
-        row.td(data[r][c]);
+        var _options2 = styles ? getStyles(r + h_count, c, styles) : {};
+
+        row.td(data[r][c], _options2);
       }
     } //render table footer
 
@@ -17181,10 +17495,13 @@
       });
 
       for (var _i3 = 0; _i3 < f_count; _i3++) {
+        var beforeCount = h_count + data.length;
         var footer = table.tr(footerOps);
 
         for (var _s = 0; _s < scheme.length; _s++) {
-          footer.td(scheme[_s].footer[_i3].toString());
+          var _options3 = styles ? getStyles(_i3 + beforeCount, _s, styles) : {};
+
+          footer.td(scheme[_s].footer[_i3].toString(), _options3);
         }
       }
     }
@@ -17365,37 +17682,7 @@
           r: R
         });
         var stringValue = cell.v.toString();
-        var isFormula = stringValue.charAt(0) === "="; // set type based on column's config
-        // skip headers and formula based cells
-
-        var header = (options.docHeader ? 2 : 0) + scheme[0].header.length;
-
-        if (R >= header && !isFormula) {
-          var column = scheme[C];
-          if (column.type) cell.t = types[column.type] || "";
-          if (column.format) cell.z = column.format;
-        } // set type based on cell's value
-
-
-        if (cell.v instanceof Date) {
-          cell.t = cell.t || "n";
-          cell.z = cell.z || XLSX.SSF[table][14];
-          cell.v = excelDate(cell.v);
-        } else if (!cell.t) {
-          if (typeof cell.v === "boolean") cell.t = "b";else if (typeof cell.v === "number" || parseFloat(cell.v) == cell.v) {
-            cell.v = cell.v * 1;
-            cell.t = "n";
-          } else {
-            // convert any other object to a string
-            cell.v = stringValue;
-
-            if (isFormula) {
-              cell.t = "n";
-              cell.f = cell.v;
-              delete cell.v;
-            } else cell.t = "s";
-          }
-        }
+        var isFormula = stringValue.charAt(0) === "=";
 
         if (styles) {
           var cellStyle = getStyles(R, C, styles);
@@ -17405,7 +17692,42 @@
             delete cellStyle.format;
           }
 
+          if (cellStyle.type) {
+            cell.t = types[cellStyle.type];
+            delete cellStyle.type;
+          }
+
           cell.s = cellStyle;
+        } // set type based on column's config
+        // skip headers and formula based cells
+
+
+        var header = (options.docHeader ? 2 : 0) + scheme[0].header.length;
+
+        if (R >= header && !isFormula) {
+          var column = scheme[C];
+          if (column.type && !cell.t) cell.t = types[column.type] || "";
+          if (column.format && !cell.z) cell.z = column.format;
+        } // set type based on cell's value
+
+
+        if (cell.v instanceof Date) {
+          cell.t = cell.t || "n";
+          cell.z = cell.z || XLSX.SSF[table][14];
+          cell.v = excelDate(cell.v);
+        } else if (isFormula) {
+          cell.t = cell.t || "n";
+          cell.f = cell.v.substring(1);
+          delete cell.v;
+        } else if (!cell.t) {
+          if (typeof cell.v === "boolean") cell.t = "b";else if (typeof cell.v === "number" || parseFloat(cell.v) == cell.v) {
+            cell.v = cell.v * 1;
+            cell.t = "n";
+          } else {
+            // convert any other object to a string
+            cell.v = stringValue;
+            cell.t = "s";
+          }
         }
 
         ws[cell_ref] = cell;
@@ -17428,12 +17750,6 @@
     }
 
     return heights;
-  }
-
-  function getStyles(r, c, styles) {
-    //row index, column index, styles array
-    if (styles[r] && styles[r][c]) return styles[r][c];
-    return "";
   }
 
   function getSpans(view, options) {
@@ -17506,7 +17822,8 @@
   }
 
   function excelDate(date) {
-    return Math.round(25569 + date / (24 * 60 * 60 * 1000));
+    var returnDateTime = 25569 + (date.getTime() - date.getTimezoneOffset() * 60 * 1000) / (1000 * 60 * 60 * 24);
+    return returnDateTime.toString().substr(0, 20);
   }
 
   function getColumnsWidths(scheme) {
@@ -17935,7 +18252,13 @@
       contains: "contains",
       notContains: "not contains",
       equal: "equal",
-      notEqual: "not equal"
+      notEqual: "not equal",
+      beginsWith: "begins with",
+      notBeginsWith: "not begins with",
+      endsWith: "ends with",
+      notEndsWith: "not ends with",
+      between: "between",
+      notBetween: "not between"
     }
   };
 
@@ -18111,7 +18434,7 @@
     strToDate: function (format, utc) {
       if (typeof format == "function") return format;
       var mask = format.match(/%[a-zA-Z]/g);
-      var splt = "var temp=date.split(/[^0-9a-zA-Z]+/g);";
+      var splt = "var temp=date.split(/[\\s\\./\\-\\:\\,]+/g);";
       var i, t, s;
 
       if (!i18n.calendar.monthShort_hash) {
@@ -18134,7 +18457,7 @@
         return function (date) {
           if (!date) return "";
           if (_typeof(date) == "object") return date;
-          var temp = date.split(/[^0-9a-zA-Z]+/g);
+          var temp = date.split(/[\s./\-:,]+/g);
           var set = [0, 0, 1, 0, 0, 0, 0];
 
           for (i = 0; i < mask.length; i++) {
@@ -18485,6 +18808,8 @@
     if (locale) {
       locale.priceSettings = copy(locale.priceSettings || locale);
       extend(i18n, locale);
+      delete i18n.calendar.monthShort_hash;
+      delete i18n.calendar.monthFull_hash;
     }
 
     for (var i = 0; i < helpers.length; i++) {
@@ -18640,7 +18965,6 @@
 
   env.printPPI = 96;
   env.printMargin = 0.75 * env.printPPI;
-  var margin = env.printMargin;
   var papers = {
     "a4": "A4",
     "a3": "A3",
@@ -18696,7 +19020,7 @@
     options.scroll = options.scroll || false;
     options.size = sizes[options.paper];
     options.margin = options.margin || options.margin === 0 ? options.margin : {};
-    margin = isNaN(options.margin * 1) ? margin : options.margin;
+    var margin = isNaN(options.margin * 1) ? env.printMargin : options.margin;
     options.margin = {
       top: options.margin.top || options.margin.top === 0 ? options.margin.top : margin,
       bottom: options.margin.bottom || options.margin.bottom === 0 ? options.margin.bottom : margin,
@@ -18767,157 +19091,6 @@
     date: {
       mask: "####-##-## ##:##",
       allow: /[0-9]/g
-    }
-  };
-
-  var fullscreen = {
-    set: function (view, config) {
-      config = config || {};
-      if (this._view) this.exit();
-      if ($$(view)) view = $$(view);else {
-        if (typeof view == "string") view = document.getElementById(view);
-        if (view instanceof Element) view = {
-          $view: view,
-          $html: true
-        };
-        assert(view, "Incorrect view for fullscreen mode");
-      }
-      this._view = view;
-      var viewConfig = view.config;
-
-      if (view.setPosition) {
-        this._pos = {
-          left: view.config.left,
-          top: view.config.top
-        };
-        view.setPosition(0, 0);
-        viewConfig.fullscreen = true;
-        view.resize();
-      } else {
-        this._fullscreen = ui({
-          view: "window",
-          head: this._getHeadConfig(config),
-          fullscreen: true,
-          borderless: true,
-          //better resize logic
-          body: {
-            rows: []
-          }
-        });
-        if (viewConfig) this._sizes = {
-          width: viewConfig.width,
-          minWidth: viewConfig.minWidth,
-          maxWidth: viewConfig.maxWidth,
-          height: viewConfig.height,
-          minHeight: viewConfig.minHeight,
-          maxHeight: viewConfig.maxHeight
-        };
-
-        if (view.getParentView && view.getParentView()) {
-          this._parent = view.getParentView();
-          if (this._parent.index) this._pos = {
-            index: this._parent.index(view),
-            active: this._parent.getActiveId ? this._parent.getActiveId() == viewConfig.id : false
-          };
-        } else {
-          this._parent = view.$view.parentNode;
-          this._pos = create("div"); //save old position
-
-          this._parent.replaceChild(this._pos, view.$view);
-        }
-
-        this._pos.position = view.$view.style.position;
-        view.$view.style.position = "inherit";
-
-        this._fullscreen.getBody().addView(view.$html ? {
-          view: "template",
-          content: view.$view,
-          css: "webix_fullscreen_html"
-        } : view);
-
-        this._fullscreen.show();
-
-        this._setSizes(view);
-      }
-    },
-    exit: function () {
-      if (this._view) {
-        this._view.$view.style.position = this._pos.position;
-        var viewConfig = this._view.config;
-
-        if (this._view.setPosition) {
-          viewConfig.fullscreen = false;
-
-          this._view.setPosition(this._pos.left, this._pos.top);
-
-          this._view.resize();
-        } else {
-          if (this._parent instanceof Element) {
-            this._view._parent_cell = null;
-            if (this._view._set_inner) this._view._set_inner(this._view.config);
-
-            this._parent.replaceChild(this._view.$view, this._pos);
-          } else {
-            if (!isUndefined(this._pos)) {
-              this._parent.addView(this._view, this._pos.index);
-
-              if (this._pos.active) this._view.show(false, false);
-            } else {
-              this._view._parent_cell = this._parent;
-
-              this._parent._replace(this._view);
-            }
-          }
-
-          this._setSizes(this._view, this._sizes); //prevent view destruction (with layout)
-
-
-          if (!this._view.$html) this._fullscreen.getBody()._cells = []; //we can't set head false with replace, so we need to close win
-
-          this._fullscreen.close();
-        }
-
-        this._clearValues();
-      }
-    },
-    _clearValues: function () {
-      delete this._parent;
-      delete this._view;
-      delete this._sizes;
-      delete this._pos;
-    },
-    _setSizes: function (view, sizes) {
-      if (!view.$html) {
-        sizes = sizes || {
-          height: 0,
-          minHeight: 0,
-          maxHeight: 0,
-          width: 0,
-          minWidth: 0,
-          maxWidth: 0
-        };
-        view.define(sizes);
-        view.resize();
-      }
-    },
-    _getHeadConfig: function (config) {
-      var _this = this;
-
-      if (config.head === false || _typeof(config.head) == "object") return config.head;else {
-        return {
-          cols: [{
-            template: config.head || "",
-            type: "header",
-            borderless: true
-          }, {
-            view: "icon",
-            icon: "wxi-close",
-            click: function () {
-              _this.exit();
-            }
-          }]
-        };
-      }
     }
   };
 
@@ -20350,7 +20523,9 @@
           start = config.value.start || new Date();
 
       for (var i = 0; i < count; i++) {
-        var date = wDate.add(start, this._steps[this._zoom_level] * i, "month", true);
+        var date = wDate.copy(start);
+        date.setDate(1);
+        date = wDate.add(date, this._steps[this._zoom_level] * i, "month");
         exports.extend(calendar, {
           events: bind(this._isInRange, this),
           css: basecss + (count === 1 ? "" : i === 0 ? "0" : i + 1 == count ? "N" : "1"),
@@ -20719,6 +20894,113 @@
     view: view$6
   };
 
+  datafilter.excelFilter = {
+    getValue: function (node) {
+      var filter = this._get_filter(node);
+
+      if (filter) return filter.getValue();
+    },
+    setValue: function (node, value) {
+      var filter = this._get_filter(node);
+
+      if (filter) filter.setValue(value);
+    },
+    $icon: true,
+    refresh: function (master, node, config) {
+      if (master.$destructed) return;
+
+      config.compare = function () {
+        return true;
+      };
+
+      config.node = node;
+      node.$webix = config.filter;
+      master.registerFilter(node, config, this);
+      var popup = $$(config.filter);
+      var filter = popup.getBody();
+
+      var data = this._get_data(master, config);
+
+      filter.clearAll();
+      filter.parse(data);
+
+      if (config.value) {
+        var oldCon = filter.getValue().condition;
+        var newCon = config.value.condition || {};
+        filter.setValue(config.value, oldCon.filter == newCon.filter && oldCon.type == newCon.type);
+
+        this._mark_column(config.value, config);
+      }
+
+      node.onclick = function (e) {
+        var target = (e.target || e.srcElement).className;
+        if (target.indexOf("webix_excel_filter") !== -1 && !popup.isVisible()) popup.show(node);
+      };
+    },
+    render: function (master, config) {
+      var _this = this;
+
+      if (!config.filter) {
+        if (config.template) config.template = template(config.template);
+        var filterConfig = exports.extend(config.filterConfig || {}, {
+          view: "filter",
+          mode: config.mode,
+          field: "value",
+          template: function (obj, type) {
+            var value = obj["value"];
+            if (value === undefined || value === null) value = "";
+            if (config.format) value = config.format(value);
+            if (config.template) value = config.template(obj, type, value);
+            return value;
+          }
+        }, true);
+        var suggest = ui({
+          view: "popup",
+          body: filterConfig
+        });
+        var filter = suggest.getBody();
+        filter.attachEvent("onChange", function () {
+          var handler = filter.getFilterFunction();
+
+          config.compare = function (val, f, obj) {
+            return handler({
+              value: obj[config.columnId]
+            });
+          };
+
+          master.filterByAll(); // change state after filtering
+
+          if (config.value) _this._mark_column(config.value, config);
+        });
+        config.originText = config.text || "";
+        config.filter = suggest._settings.id;
+
+        master._destroy_with_me.push(suggest);
+      }
+
+      config.css = (config.css || "") + " webix_ss_excel_filter";
+      return "<span class='webix_excel_filter webix_icon wxi-filter'></span>" + config.originText;
+    },
+    _mark_column: function (value, config) {
+      if (value.includes || value.condition && value.condition.filter) addCss(config.node.firstChild, "webix_ss_filter_active", true);else removeCss(config.node.firstChild, "webix_ss_filter_active");
+    },
+    _get_filter: function (node) {
+      var popup = $$(node.$webix);
+      return popup ? popup.getBody() : null;
+    },
+    _get_data: function (master, config) {
+      var data;
+
+      if (config.options) {
+        data = master._collectValues.call(config.options, "id", "value");
+      } else data = master.collectValues(config.columnId, config.collect);
+
+      return data;
+    }
+  };
+  datafilter.serverExcelFilter = exports.extend({
+    $server: true
+  }, datafilter.excelFilter);
   datafilter.richSelectFilter = {
     getInputNode: function (node) {
       return $$(node.$webix) || null;
@@ -20741,15 +21023,7 @@
     },
     refresh: function (master, node, value) {
       if (master.$destructed) return;
-      var select = $$(value.richselect); //IE8 can destory the content of richselect, so recreating
-
-      if (!select.$view.parentNode) {
-        var d = create("div", {
-          "class": "webix_richfilter"
-        });
-        d.appendChild(select.$view);
-      }
-
+      var select = $$(value.richselect);
       node.$webix = value.richselect;
       node.style.marginLeft = "-10px";
       value.compare = value.compare || this.compare;
@@ -21072,7 +21346,13 @@
       contains: "enthält",
       notContains: "nicht enthält",
       equal: "gleich",
-      notEqual: "ungleich"
+      notEqual: "ungleich",
+      beginsWith: "beginnt mit",
+      notBeginsWith: "nicht beginnt mit",
+      endsWith: "endet mit",
+      notEndsWith: "nicht endet mit",
+      between: "zwischen",
+      notBetween: "nicht zwischen"
     }
   };
 
@@ -21180,7 +21460,13 @@
       contains: "contiene",
       notContains: "not contiene",
       equal: "igual",
-      notEqual: "no es igual"
+      notEqual: "no es igual",
+      beginsWith: "comienza con",
+      notBeginsWith: "no comienza con",
+      endsWith: "termina con",
+      notEndsWith: "no termina con",
+      between: "entre",
+      notBetween: "no entre"
     }
   };
 
@@ -21281,7 +21567,13 @@
       contains: "contient",
       notContains: "ne contient",
       equal: "égal",
-      notEqual: "pas égal"
+      notEqual: "pas égal",
+      beginsWith: "commence par",
+      notBeginsWith: "ne commence par",
+      endsWith: "se termine par",
+      notEndsWith: "pas se termine par",
+      between: "entre",
+      notBetween: "pas entre"
     }
   };
 
@@ -21389,7 +21681,13 @@
       contains: "contiene",
       notContains: "non contiene",
       equal: "uguale",
-      notEqual: "non uguale"
+      notEqual: "non uguale",
+      beginsWith: "inizia con",
+      notBeginsWith: "non inizia con",
+      endsWith: "finisce con",
+      notEndsWith: "non termina con",
+      between: "tra",
+      notBetween: "non tra"
     }
   };
 
@@ -21494,7 +21792,13 @@
       contains: "含まれています",
       notContains: "含まれていません",
       equal: "等しいです",
-      notEqual: "等しくありません"
+      notEqual: "等しくありません",
+      beginsWith: "で始まります",
+      notBeginsWith: "ないで始まります",
+      endsWith: "で終わります",
+      notEndsWith: "で終わりではありません",
+      between: "間に",
+      notBetween: "いない間"
     }
   };
 
@@ -21602,7 +21906,13 @@
       contains: "contém",
       notContains: "não contém",
       equal: "igual",
-      notEqual: "não é igual"
+      notEqual: "não é igual",
+      beginsWith: "começa com",
+      notBeginsWith: "não começa com",
+      endsWith: "termina com",
+      notEndsWith: "não termina com",
+      between: "entre",
+      notBetween: "não entre"
     }
   };
 
@@ -21710,7 +22020,13 @@
       contains: "包含",
       notContains: "不包含",
       equal: "等于",
-      notEqual: "不平等"
+      notEqual: "不平等",
+      beginsWith: "开始于",
+      notBeginsWith: "不开始",
+      endsWith: "结束",
+      notEndsWith: "不是以",
+      between: "之间",
+      notBetween: "不在之间"
     }
   };
 
@@ -21811,7 +22127,13 @@
       contains: "содержит",
       notContains: "не содержит",
       equal: "равно",
-      notEqual: "не равно"
+      notEqual: "не равно",
+      beginsWith: "начинается с",
+      notBeginsWith: "не начинается с",
+      endsWith: "заканчиватся",
+      notEndsWith: "не заканчиватся",
+      between: "между",
+      notBetween: "не между"
     }
   };
 
@@ -21916,7 +22238,13 @@
       contains: "змяшчае",
       notContains: "не змяшчае",
       equal: "роўныя",
-      notEqual: "не роўныя"
+      notEqual: "не роўныя",
+      beginsWith: "пачынаецца з",
+      notBeginsWith: "не пачынаецца з",
+      endsWith: "заканчваецца",
+      notEndsWith: "не сканчаецца",
+      between: "паміж",
+      notBetween: "не паміж"
     }
   };
 
@@ -21964,6 +22292,8 @@
 
         this._viewobj.appendChild(this._dataobj);
       } else this._dataobj.className += " webix_template";
+
+      this.attachEvent("onAfterRender", this._correct_height);
     },
     setValues: function (obj, update) {
       this.data = update ? exports.extend(this.data, obj, true) : obj;
@@ -22029,6 +22359,8 @@
         this.render = function () {};
 
         this._dataobj.appendChild(toNode(config));
+
+        this._correct_height();
       }
     },
     refresh: function () {
@@ -22061,6 +22393,14 @@
     $getSize: function (x, y) {
       if (this._settings.autoheight && (!this._settings.type || this._settings.type == "clean")) this._settings.height = this._get_auto_height();
       return base$1.api.$getSize.call(this, x, y);
+    },
+    _correct_height: function () {
+      //we need to force auto height calculation after content change
+      //dropping the last_size flag will ensure that inner logic of $setSize will be processed
+      if (this._settings.autoheight) {
+        this._last_size = null;
+        this.resize();
+      }
     },
     _get_auto_height: function () {
       var size;
@@ -22167,7 +22507,7 @@
 
       if (typeof value == "string" && value.indexOf("native-") === 0) {
         this._native_scroll = 17;
-        value = value.replace("native-");
+        value = value.replace("native-", "");
         env.$customScroll = false;
       }
 
@@ -22180,9 +22520,9 @@
 
       this._body_cell = new_view;
 
-      this._bodyobj.appendChild(this._body_cell._viewobj);
+      this._dataobj.appendChild(this._body_cell._viewobj);
 
-      this.resize();
+      this.resizeChildren();
     },
     showView: function (id) {
       var topPos = $$(id).$view.offsetTop - $$(id).$view.parentNode.offsetTop;
@@ -26374,9 +26714,12 @@
         "webix_val"); // locate can return null in case of drag
 
         if (value) {
-          this.setValue(value);
-          this.callEvent("onItemClick", [this._settings.value, e]);
-          this.callEvent("onSelect", [this._settings.value]);
+          this.callEvent("onItemClick", [value, e]);
+
+          if (this.getValue() != value) {
+            this.setValue(value);
+            this.callEvent("onSelect", [this._settings.value]);
+          }
         }
       }, this));
 
@@ -26484,6 +26827,7 @@
         }
 
         div = this._getSelectBox();
+        div.setAttribute("webix_val", value);
         style = ["left:" + left + "px", "top:" + top + "px", "width:" + cell.style.width, "height:" + cell.style.height].join(";");
 
         if (typeof div.style.cssText !== "undefined") {
@@ -26735,7 +27079,7 @@
     _set_inner_size: false,
     _types: {
       image: "<button type='button' class='webix_button webix_img_btn' style='line-height:#cheight#px;'><img class='webix_image' style='max-width:#cheight#px; max-height:#cheight#px;' src = '#image#'>#label#</button>",
-      imageTop: "<button type='button' class='webix_button webix_img_btn_top'><div class='webix_image' style='width:100%;height:100%;background-image:url(#image#);'></div><div class='webix_img_btn_text'>#label#</div></button>",
+      imageTop: "<button type='button' class='webix_button webix_img_btn_top'><img class='webix_image' style='max-width:#cheight#px; max-height:#cheight#px;' src = '#image#'><div class='webix_img_btn_text'>#label#</div></button>",
       icon: "<button type='button' class='webix_button webix_img_btn' style='line-height:#cheight#px;'><span class='webix_icon_btn #icon#' style='max-width:#cheight#px;'></span>#label#</button>",
       iconTop: "<button type='button' class='webix_button webix_img_btn_top' style='width:100%;text-align:center;'><span class='webix_icon #icon#'></span><div class='webix_img_btn_text'>#label#</div></button>"
     },
@@ -26832,9 +27176,6 @@
     },
     $prepareValue: function (value) {
       return value === 0 ? "0" : (value || "").toString();
-    },
-    _pattern: function (value) {
-      return value;
     },
     value_setter: function (value) {
       return this.$prepareValue(value);
@@ -27143,6 +27484,10 @@
           return this.getInputNode().value;
         };
 
+        this.$prepareValue = function (value) {
+          return this._pattern(value, false);
+        };
+
         this._pattern = function (value, mode) {
           if (mode === false) return this._getRawValue(value);else return this._matchPattern(value);
         };
@@ -27162,6 +27507,12 @@
             };
           }
         }
+      } // initialize pattern before value_setter
+
+
+      if (pattern) {
+        this._settings.pattern = this.pattern_setter(pattern);
+        delete config.pattern;
       }
     },
     pattern_setter: function (value) {
@@ -27358,10 +27709,10 @@
         config.height = this.defaults.height + (config.label ? this._labelTopHeight : 0); //suggest reference for destructor
 
       this._destroy_with_me = [];
-      this.attachEvent("onAfterRender", this._init_onchange);
-      this.attachEvent("onBlur", function () {
-        if (this._onBlur) this._onBlur();
+      if (this._onBlur) this.attachEvent("onBlur", function () {
+        if (this._rendered_input) this._onBlur();
       });
+      this.attachEvent("onAfterRender", this._init_onchange);
     },
     $renderIcon: function () {
       var config = this._settings;
@@ -27574,6 +27925,9 @@
     },
     _set_inner_size: false,
     _set_default_css: function () {},
+    _pattern: function (value) {
+      return value;
+    },
     $setValue: function (value) {
       this.getInputNode().value = this._pattern(value);
     },
@@ -28297,7 +28651,7 @@
     },
     $compareValue: function (value) {
       var result = richselect.api.$compareValue.apply(this, arguments);
-      if (result && value != this.getText()) this._revertValue();
+      if (result && this._rendered_input && value != this.getText()) this._revertValue();
       return result;
     },
     defaults: {
@@ -28447,7 +28801,8 @@
 
         var width = common._get_input_width(obj);
 
-        var optionWidth = obj.optionWidth || Math.floor(width / options.length);
+        var borders = $name == "contrast" ? 0 : options.length - 1;
+        var optionWidth = obj.optionWidth || Math.floor((width - borders) / options.length);
         var html = "<div style='width:" + width + "px' class='webix_all_segments' role='tablist' aria-label='" + template.escape(obj.label) + "'>";
         var tooltip, isDisabled;
         if (!obj.value) obj.value = common._getFirstActive(true);
@@ -28551,15 +28906,20 @@
       var obj = this._settings;
       var isPressed = value && value != "0";
       var text = (isPressed ? obj.onLabel : obj.offLabel) || obj.label;
-      var first = input.firstChild;
+
+      var children = _toConsumableArray(input.children); //icon or image button
+
+
+      if (this._types[obj.type]) {
+        var icon = children[0];
+        if (icon.nodeName == "SPAN" && obj.onIcon && obj.offIcon && obj.onIcon != obj.offIcon) icon.className = icon.className.replace(isPressed ? obj.offIcon : obj.onIcon, isPressed ? obj.onIcon : obj.offIcon);
+        if (obj.type == "imageTop" || obj.type == "iconTop") children[1].innerHTML = text;else {
+          input.innerHTML = text;
+          input.insertBefore(icon, input.firstChild);
+        }
+      } else input.innerHTML = text;
+
       input.setAttribute("aria-pressed", isPressed ? "true" : "false");
-      input.innerHTML = text; //icon or image button
-
-      if (first && !!this._types[obj.type]) {
-        if (first.nodeName === "SPAN" && obj.onIcon && obj.offIcon && obj.onIcon !== obj.offIcon) first.className = first.className.replace(isPressed ? obj.offIcon : obj.onIcon, isPressed ? obj.onIcon : obj.offIcon);
-        input.insertBefore(first, input.firstChild);
-      }
-
       var changeCss = isPressed ? addCss : removeCss;
       changeCss(input.parentNode, "webix_pressed");
     },
@@ -28931,6 +29291,7 @@
       return oldvalue.toString() == value.toString();
     },
     $prepareValue: function (value) {
+      value = value || [];
       if (typeof value === "string") return value.split(this._settings.separator);
       return isArray(value) ? value : [button$1.api.$prepareValue.call(this, value)];
     },
@@ -28958,7 +29319,12 @@
     }
   };
   editors.multiselect = exports.extend({
-    popupType: "multiselect"
+    popupType: "multiselect",
+    popupInit: function (popup) {
+      popup._show_selection = function () {};
+
+      popup.linkInput(document.body);
+    }
   }, editors.richselect);
   type(list.view, {
     name: "multilist",
@@ -29291,6 +29657,7 @@
       return oldvalue.toString() == value.toString();
     },
     $prepareValue: function (value) {
+      value = value || [];
       if (typeof value === "string") return value.split(this._settings.separator);
       return isArray(value) ? value : [button$1.api.$prepareValue.call(this, value)];
     },
@@ -29401,7 +29768,8 @@
         var calcWidth, width;
         e = e || event; // to show placeholder
 
-        if (this._settings.placeholder && !this._settings.value && !inp.value) width = this._get_input_width(this._settings);else {
+        var value = this._settings.value || [];
+        if (this._settings.placeholder && !inp.value && !value.length) width = this._get_input_width(this._settings);else {
           width = calcWidth = this._calcInputWidth(inp.value);
           if (!this._settings.tagMode && this._getValueListBox().firstChild) width = this._getMultiComboInputWidth();
         }
@@ -30958,9 +31326,6 @@
       }
 
       this.callEvent("onValueSuggest", [data, text]);
-      delay(function () {
-        callEvent("onEditEnd", []);
-      });
     },
     getMasterValue: function () {
       if (this._settings.master) return $$(this._settings.master).getValue();
@@ -31079,6 +31444,8 @@
       this._non_ui_mode = true;
     },
     _suggestions: function (e) {
+      //should be before tab and arrows handlers: IME can call keydown twice
+      if (this._last_delay) this._last_delay = clearTimeout(this._last_delay);
       e = e || event;
       var list = this.getList();
       var trg = e.target || e.srcElement;
@@ -31102,7 +31469,6 @@
 
       var contentEditable = trg.getAttribute("contentEditable") == "true";
       if (isUndefined(trg.value) && !contentEditable) return;
-      if (this._last_delay) this._last_delay = clearTimeout(this._last_delay);
       this._last_delay = delay(function () {
         //focus moved to the different control, suggest is not necessary
         if (!this._non_ui_mode && UIManager.getFocus() != $$(this._settings.master)) return;
@@ -32772,14 +33138,14 @@
       };
       var values = [];
       this.data.each(function (obj) {
-        var test = obj ? obj[id] : "";
+        var lineId = obj ? obj[id] : ""; //special handling for 0 values
 
-        if (test !== undefined && !checks[test]) {
-          checks[test] = true;
-          var lineId = obj[id]; //special handling for 0 values
-          //convert to string to create a valid ID
+        if (lineId === 0) lineId = "0"; //convert to string to create a valid ID
 
-          if (lineId === 0) lineId = "0";
+        if (_typeof(lineId) == "object") lineId = String(lineId);
+
+        if (lineId !== undefined && !checks[lineId]) {
+          checks[lineId] = true;
           values.push({
             id: lineId,
             value: obj[value]
@@ -35510,7 +35876,7 @@
             var context = DragControl.getContext();
             var box = offset(this.$view);
             node.style.display = "none";
-            var html = document.elementFromPoint(pos$$1.x, box.y + 1);
+            var html = document.elementFromPoint(pos$$1.x, box.y + this._settings.headerRowHeight / 2);
             var id = html ? this.locate(html) : null;
             var start = DragControl.getContext().start.column;
 
@@ -35779,13 +36145,12 @@
     _getTableArray: function (options, base, start) {
       var columns = this.config.columns;
       var sel = this.getSelectedId(true);
-
-      var maxWidth = this._getPageWidth(options);
-
+      var maxWidth = options.fit == "page" ? Infinity : this._getPageWidth(options);
       var rightRestriction = 0;
       var bottomRestriction = 0;
       var tableArray = [];
       var newTableStart = 0;
+      var widths = [];
       start = start || 0 + options.xCorrection;
       base = base || [];
       this.eachRow(bind(function (row) {
@@ -35801,6 +36166,7 @@
 
           if (columns[c]) {
             width += columns[c].width;
+            if (rowIndex === 0) widths.push(columns[c].width);
 
             if (width > maxWidth && c > start) {
               // 'c>start' ensures that a single long column will have to fit the page
@@ -35842,7 +36208,7 @@
                   } : null
                 });
 
-                if (cellValue) {
+                if (cellValue || cellValue === 0) {
                   rightRestriction = Math.max(colIndex + 1, rightRestriction);
                   bottomRestriction = Math.max(rowIndex + 1, bottomRestriction);
                 }
@@ -35885,8 +36251,26 @@
         //keep this order as logic relies on the first data row
         if (options.footer) base = this._getTableHeader(base, columns, "footer");
         if (options.header) base = this._getTableHeader(base, columns, "header");
+        if (options.fit == "page") this._correctWidth(base, widths, rightRestriction, options);
       }
       return base;
+    },
+    //a single grid tries to fit to page size - set column width to auto
+    _correctWidth: function (base, widths, rightRestriction, options) {
+      if (rightRestriction && options.trim) widths.length = rightRestriction;
+      var rwidth = 0;
+
+      for (var i = 0; i < widths.length; i++) {
+        rwidth += widths[i];
+      }
+
+      if (rwidth > this._getPageWidth(options)) {
+        base[0].forEach(function (item) {
+          for (var _i = 0; _i < item.length; _i++) {
+            if (item[_i] && item[_i].style && item[_i].style.width) item[_i].style.width = "auto";
+          }
+        });
+      }
     },
     _getTableHTML: function (tableData, options) {
       var container = create("div");
@@ -35937,17 +36321,19 @@
         exports.extend(options, {
           filterHTML: true
         });
-      if (options.export_mode !== "excel" || options.dataOnly || !options.styles) return this;else {
+      var mode = options.export_mode;
+      if (mode != "pdf" && mode != "excel" || options.dataOnly || !options.styles) return this;else {
         //excel export with styles
         options.dataOnly = true;
         options.heights = isUndefined(options.heights) ? "all" : options.heights;
-        var data = toExcel(this, options);
+        var data = mode == "pdf" ? toPDF(this, options) : toExcel(this, options);
         data[0].styles = this._getExportStyles(options);
         delete options.dataOnly;
         return data;
       }
     },
     _getExportStyles: function (options) {
+      var type = options.export_mode;
       var columns = this.config.columns,
           styles = [];
       this._style_hash = this._style_hash || {};
@@ -35956,7 +36342,7 @@
       }, {
         0: {}
       }];
-      if (options.header !== false) styles = this._getExportHStyles(options, "header", styles);
+      if (options.header !== false) styles = this._getExportHStyles(options, "header", styles, type);
       this.data.each(function (obj) {
         var row = {};
 
@@ -35964,8 +36350,6 @@
           var cellCss = this.getCss(obj.id, columns[i].id);
           var columnCss = columns[i].node.className;
           var spanCss = "";
-          var evenCss = this.getIndexById(obj.id) % 2 ? "even" : "odd"; //for skins like metro, web, air
-
           var span = null;
           var node = null;
 
@@ -35999,12 +36383,12 @@
             cnode.appendChild(node);
           }
 
-          row[i] = this._getExportCellStyle(node, [cellCss, columnCss, spanCss, evenCss].join(":"));
+          row[i] = this._getExportCellStyle(node, [cellCss, columnCss, spanCss].join(":"), type);
         }
 
         styles[styles.length] = row;
       }, this);
-      if (options.footer !== false && this.config.footer) styles = this._getExportHStyles(options, "footer", styles);
+      if (options.footer !== false && this.config.footer) styles = this._getExportHStyles(options, "footer", styles, type);
       if (options.docFooter) styles = styles.concat([{
         0: {}
       }, {
@@ -36012,7 +36396,7 @@
       }]);
       return styles;
     },
-    _getExportHStyles: function (options, group, styles) {
+    _getExportHStyles: function (options, group, styles, type) {
       var columns = this.config.columns,
           hs = []; //spans
 
@@ -36029,7 +36413,7 @@
 
             if (node) {
               var name = [node.parentNode.className, header.css || "", "webix_hcell", group];
-              hrow[i] = this._getExportCellStyle(node, name.join(":"));
+              hrow[i] = this._getExportCellStyle(node, name.join(":"), type);
               if (header.colspan || header.rowspan) hs.push([h, i, {
                 colspan: header.colspan - 1 || 0,
                 rowspan: header.rowspan - 1 || 0
@@ -36050,73 +36434,30 @@
 
       return styles;
     },
-    _getExportCellStyle: function (node, name) {
+    _getBorderColor: function (styles, defaultColor, type) {
+      return styles["border-".concat(type, "-width")] == "0px" ? null : color.rgbToHex(styles["border-".concat(type, "-color")]) || defaultColor;
+    },
+    _getExportCellStyle: function (node, name, type) {
       if (this._style_hash[name]) return this._style_hash[name];else {
-        var base = this._getRules(node);
+        var parentStyle;
+        if (node.parentNode && node.parentNode.nodeName == "TD") //borders for header are set for parent td
+          parentStyle = this._getRules(node.parentNode);
 
-        var rules = {
-          font: {},
-          alignment: {},
-          border: {}
-        }; //font
+        var cellStyle = this._getRules(node);
 
-        rules.font.name = base["font-family"].replace(/,.*$/, ""); // cut off fallback font;
-
-        rules.font.sz = base["font-size"].replace("px", "") * 0.75; //px to pt conversion
-
-        rules.font.color = {
-          rgb: color.rgbToHex(base["color"])
+        var bg = color.rgbToHex(cellStyle["background-color"]) || "FFFFFF";
+        var common = {
+          backgroundColor: bg,
+          fontSize: cellStyle["font-size"].replace("px", "") * 0.75,
+          //px to pt conversion
+          color: color.rgbToHex(cellStyle["color"]),
+          textAlign: cellStyle["text-align"],
+          borderRightColor: this._getBorderColor(parentStyle || cellStyle, bg, "right"),
+          borderLeftColor: this._getBorderColor(parentStyle || cellStyle, bg, "left"),
+          borderBottomColor: this._getBorderColor(parentStyle || cellStyle, bg, "bottom"),
+          borderTopColor: this._getBorderColor(parentStyle || cellStyle, bg, "top")
         };
-        if (base["font-weight"] !== "normal" && base["font-weight"] != 400) rules.font.bold = true;
-        if (base["text-decoration-line"] === "underline") rules.font.underline = true;
-        if (base["font-style"] === "italic") rules.font.italic = true;
-        if (base["text-decoration-line"] === "line-through") rules.font.strike = true; //alignment
-
-        rules.alignment.horizontal = base["text-align"];
-        rules.alignment.vertical = base["height"] == base["line-height"] ? "center" : "top";
-        if (base["white-space"] == "normal") rules.alignment.wrapText = true; //rotated header
-
-        if (node.firstChild && node.firstChild.className && node.firstChild.className.indexOf("webix_rotate") !== -1) rules.alignment.textRotation = 90; //background
-
-        var bg = color.rgbToHex(base["background-color"]) || "FFFFFF";
-        rules.fill = {
-          fgColor: {
-            rgb: bg
-          }
-        };
-        if (base["background-image"].indexOf("gradient") !== -1) //air skins use gradient for header
-          rules.fill = {
-            fgColor: {
-              rgb: color.rgbToHex(base["background-image"].substring(base["background-image"].lastIndexOf("(")))
-            }
-          }; //borders
-
-        if (node.parentNode && node.parentNode.nodeName == "TD") //borders for header are set for parent td, so we change base rules here
-          base = this._getRules(node.parentNode);
-        if (base["border-right-width"] !== "0px") rules.border.right = {
-          style: "thin",
-          color: {
-            rgb: color.rgbToHex(base["border-right-color"]) || bg
-          }
-        };
-        if (base["border-bottom-width"] !== "0px") rules.border.bottom = {
-          style: "thin",
-          color: {
-            rgb: color.rgbToHex(base["border-bottom-color"]) || bg
-          }
-        };
-        if (base["border-left-width"] !== "0px") rules.border.left = {
-          style: "thin",
-          color: {
-            rgb: color.rgbToHex(base["border-left-color"]) || bg
-          }
-        };
-        if (base["border-top-width"] !== "0px") rules.border.top = {
-          style: "thin",
-          color: {
-            rgb: color.rgbToHex(base["border-top-color"]) || bg
-          }
-        };
+        var rules = type == "pdf" ? common : this._getExcelCellRules(cellStyle, node, common);
         this._style_hash[name] = rules;
         return rules;
       }
@@ -36143,6 +36484,62 @@
 
       remove(node);
       return style;
+    },
+    _getExcelCellRules: function (cellStyle, node, common) {
+      var rules = {
+        font: {},
+        alignment: {},
+        border: {}
+      }; //font
+
+      rules.font.name = cellStyle["font-family"].replace(/,.*$/, ""); // cut off fallback font;
+
+      rules.font.sz = common.fontSize;
+      rules.font.color = {
+        rgb: common.color
+      };
+      if (cellStyle["font-weight"] !== "normal" && cellStyle["font-weight"] != 400) rules.font.bold = true;
+      if (cellStyle["text-decoration-line"] === "underline") rules.font.underline = true;
+      if (cellStyle["font-style"] === "italic") rules.font.italic = true;
+      if (cellStyle["text-decoration-line"] === "line-through") rules.font.strike = true; //alignment
+
+      rules.alignment.horizontal = common.textAlign;
+      rules.alignment.vertical = cellStyle["height"] == cellStyle["line-height"] ? "center" : "top";
+      if (cellStyle["white-space"] == "normal") rules.alignment.wrapText = true; //rotated header
+
+      if (node.firstChild && node.firstChild.className && node.firstChild.className.indexOf("webix_rotate") !== -1) rules.alignment.textRotation = 90; //background
+
+      rules.fill = {
+        fgColor: {
+          rgb: common.backgroundColor
+        }
+      }; //borders
+
+      if (common.borderRightColor) rules.border.right = {
+        style: "thin",
+        color: {
+          rgb: common.borderRightColor
+        }
+      };
+      if (common.borderBottomColor) rules.border.bottom = {
+        style: "thin",
+        color: {
+          rgb: common.borderBottomColor
+        }
+      };
+      if (common.borderLeftColor) rules.border.left = {
+        style: "thin",
+        color: {
+          rgb: common.borderLeftColor
+        }
+      };
+      if (common.borderTopColor) rules.border.top = {
+        style: "thin",
+        color: {
+          rgb: common.borderTopColor
+        }
+      };
+      return rules;
     },
     _getRules: function (node) {
       var style = {};
@@ -36687,6 +37084,7 @@
       rightSplit: 0,
       topSplit: 0,
       columnWidth: 100,
+      sort: true,
       prerender: false,
       autoheight: false,
       autowidth: false,
@@ -36705,6 +37103,9 @@
       this.defaults.minColumnWidth = $active.dataPadding * 2 + $active.borderWidth;
     },
     on_click: {
+      webix_excel_filter: function () {
+        return false;
+      },
       webix_richfilter: function () {
         return false;
       },
@@ -37072,7 +37473,10 @@
 
       this._size_header_footer_fix();
 
-      if (this._last_sorted) this.markSorting(this._last_sorted, this._last_order);
+      for (var i = 0; i < this._last_order.length; i++) {
+        var col_id = this._last_order[i];
+        this.markSorting(col_id, this._last_sorted[col_id].dir, !!i);
+      }
     },
     _getHeaderHeight: function (header, column, ind) {
       var width = 0;
@@ -37269,7 +37673,7 @@
 
       var scroll = this.getScrollState();
 
-      if (row_ind != -1) {
+      if (row_ind >= this._settings.topSplit || this._settings.prerender && row_ind != -1) {
         var state = this._get_y_range();
 
         if (row_ind < state[0] + 1 || row_ind >= state[1] - 1) {
@@ -37408,13 +37812,12 @@
         var alltd = sec.getElementsByTagName("TD");
 
         for (var i = 0; i < alltd.length; i++) {
-          if (alltd[i].getAttribute(
+          var activeId = alltd[i].getAttribute(
           /*@attr*/
-          "active_id")) {
-            var obj = this._active_headers[alltd[i].getAttribute(
-            /*@attr*/
-            "active_id")];
+          "active_id");
 
+          if (activeId) {
+            var obj = this._active_headers[activeId];
             if (byId && byId != obj.columnId) continue;
             var content = datafilter[obj.content];
 
@@ -37662,7 +38065,7 @@
       return this._getRowHeight(this.data.pull[id]);
     },
     _getHeightByIndexSumm: function (index1, index2) {
-      if (this._settings.fixedRowHeight) return (index2 - index1) * this._settings.rowHeight;else {
+      if (this._settings.fixedRowHeight) return Math.max(index2 - index1, 0) * this._settings.rowHeight;else {
         var summ = 0;
 
         for (; index1 < index2; index1++) {
@@ -37818,14 +38221,11 @@
           start = this.data.$min;
           end = this.data.$max;
         }
-      } //in case of autoheight - request full rendering
+      }
 
+      var xind = start + this._settings.topSplit; //in case of autoheight - request full rendering
 
-      if (this._settings.autoheight) return [start, end, 0];
-      if (full) return [start, end, 0];
-      var xind = start;
-      var topSplit = this._settings.topSplit || 0;
-      if (topSplit) xind += topSplit;
+      if (full || this._settings.autoheight) return [xind, end, 0];
       var rowHeight = this._settings.fixedRowHeight ? this._settings.rowHeight : 0;
 
       if (rowHeight) {
@@ -37864,7 +38264,7 @@
 
       var state = this._get_y_range();
 
-      var freeze = this.config.topSplit;
+      var freeze = this._settings.topSplit;
       var freezeCss = "";
 
       if (rowindex >= freeze) {
@@ -38433,40 +38833,73 @@
         this.render();
       }
     },
-    _on_header_click: function (column) {
+    _on_header_click: function (column, e) {
       var col = this.getColumnConfig(column);
-      if (!col.sort) return;
+      if (!this._settings.sort || !col.sort) return;
       var order = "asc";
-      if (col.id == this._last_sorted) order = this._last_order == "asc" ? "desc" : "asc";
+      if (this._last_sorted[col.id]) order = this._last_sorted[col.id].dir == "asc" ? "desc" : "asc";
 
-      this._sort(col.id, order, col.sort);
+      this._sort(col.id, order, col.sort, e.ctrlKey || e.metaKey);
     },
-    markSorting: function (column, order) {
-      if (!this._sort_sign) this._sort_sign = create("DIV");
-      var parent = this._sort_sign.parentNode;
+    _sort_signs: {},
+    _sort_signs_order: [],
+    markSorting: function (column, direction, preserve) {
+      direction = direction || "asc";
 
-      if (parent) {
-        parent.removeAttribute("aria-sort");
-        parent.removeAttribute("tabindex");
+      if (!preserve) {
+        this._sort_signs_order = [];
+
+        for (var i in this._sort_signs) {
+          if (i !== column) {
+            var parent = this._sort_signs[i].parentNode;
+
+            if (parent) {
+              parent.removeAttribute("aria-sort");
+              parent.removeAttribute("tabindex");
+            }
+
+            remove(this._sort_signs[i]);
+            delete this._sort_signs[i];
+          } else {
+            this._sort_signs_order.push(i);
+
+            this._sort_signs[i].firstChild.innerHTML = "1";
+          }
+        }
       }
 
-      remove(this._sort_sign);
+      if (!column) return;
 
-      if (order) {
+      if (this._sort_signs[column]) {
+        this._sort_signs[column].className = "webix_ss_sort_".concat(direction);
+      } else {
+        var sign = create("div", {
+          class: "webix_ss_sort_".concat(direction)
+        }, "<div class=\"webix_ss_sort_num\">".concat(this._sort_signs_order.length + 1, "</div>"));
+
         var cell = this._get_header_cell(this.getColumnIndex(column));
 
         if (cell) {
-          this._sort_sign.className = "webix_ss_sort_" + order;
           cell.style.position = "relative";
-          cell.appendChild(this._sort_sign);
-          cell.setAttribute("aria-sort", order + "ending");
+          cell.appendChild(sign);
+          cell.setAttribute("aria-sort", direction + "ending");
           cell.setAttribute("tabindex", "0");
         }
 
-        this._last_sorted = column;
-        this._last_order = order;
-      } else {
-        this._last_sorted = this._last_order = null;
+        this._sort_signs[column] = sign;
+
+        this._sort_signs_order.push(column);
+      }
+
+      var first = this._sort_signs[this._sort_signs_order[0]];
+
+      switch (this._sort_signs_order.length) {
+        case 1:
+          addCss(first, "webix_ss_sort_single");
+          break;
+
+        case 2:
+          removeCss(first, "webix_ss_sort_single");
       }
     },
     scroll_setter: function (mode) {
@@ -38484,9 +38917,11 @@
       for (var i = 0; i < cells.length; i++) {
         if (cells[i].getAttribute(
         /*@attr*/
-        "column") == column && !cells[i].getAttribute(
-        /*@attr*/
-        "active_id")) {
+        "column") == column) {
+          var activeId = cells[i].getAttribute(
+          /*@attr*/
+          "active_id");
+          if (activeId && !datafilter[this._active_headers[activeId].content].$icon) return null;
           maybe = cells[i].firstChild;
           if ((cells[i].colSpan || 0) < 2) return maybe;
         }
@@ -38494,32 +38929,60 @@
 
       return maybe;
     },
-    _sort: function (col_id, direction, type$$1) {
+    _last_order: [],
+    _last_sorted: {},
+    _sort: function (col_id, direction, type$$1, preserve) {
       var _this2 = this;
 
+      preserve = this._settings.sort === "multi" && preserve;
       direction = direction || "asc";
-      this.markSorting(col_id, direction);
+
+      if (!preserve) {
+        this._last_order = [];
+        this._last_sorted = {};
+      }
+
+      var col = this.getColumnConfig(col_id);
+      var config = typeof col.sort == "function" ? {
+        as: col.sort,
+        dir: direction
+      } : {
+        by: col.id,
+        dir: direction,
+        as: col.sort
+      };
+      if (!this._last_sorted[col.id]) this._last_order.push(col.id);
+      this._last_sorted[col.id] = config;
 
       if (type$$1 == "server") {
-        this.callEvent("onBeforeSort", [col_id, direction, type$$1]);
+        var parameters = [col.id, direction, type$$1];
+        if (this._last_order.length > 1) parameters = [this._last_order.map(function (id) {
+          return _this2._last_sorted[id];
+        })];
+        this.callEvent("onBeforeSort", parameters);
         this.loadNext(0, 0, 0, 0, 1).then(function (data) {
           _this2.clearAll(true);
 
           _this2.parse(data);
 
-          _this2.callEvent("onAfterSort", [col_id, direction, type$$1]);
+          _this2.callEvent("onAfterSort", parameters);
         });
       } else {
         if (type$$1 == "text") {
+          var new_id = "$text_" + col.id;
           this.data.each(function (obj) {
-            obj.$text = this.getText(obj.id, col_id);
+            obj[new_id] = this.getText(obj.id, col.id);
           }, this);
-          type$$1 = "string";
-          col_id = "$text";
+          config.as = "string";
+          config.by = new_id;
         }
 
-        if (typeof type$$1 == "function") this.data.sort(type$$1, direction);else this.data.sort(col_id, direction, type$$1 || "string");
+        if (this._last_order.length > 1) this.data.sort(this._last_order.map(function (id) {
+          return _this2._last_sorted[id];
+        }));else this.data.sort(config);
       }
+
+      this.markSorting(col.id, config.dir, preserve);
     },
     _mouseEventCall: function (css_call, e, id, trg) {
       var functor, i, res;
@@ -38582,7 +39045,7 @@
                 /*@attr*/
                 "column")) return;
                 index$$1 = index(trg);
-                if (index$$1 >= this._settings.topSplit && !this._settings.prerender) index$$1 += this._columns[column]._yr0;
+                if (index$$1 >= this._settings.topSplit && !this._settings.prerender && !this._settings.autoheight) index$$1 += this._columns[column]._yr0 - this._settings.topSplit;
               }
 
               this._item_clicked = id = {
@@ -38606,7 +39069,7 @@
               var isHeader = trg.parentNode.parentNode.getAttribute(
               /*@attr*/
               "section") == "header";
-              if (isHeader && this.callEvent("onHeaderClick", [id, e, trg])) this._on_header_click(id.column);
+              if (isHeader && this.callEvent("onHeaderClick", [id, e, trg])) this._on_header_click(id.column, e);
             }
 
             css_call = [];
@@ -39447,38 +39910,40 @@
       return viewport;
     },
     _renderPage: function (num) {
-      var viewer = this;
-      viewer._pageRendering = true; // Using promise to fetch the page
+      var _this3 = this;
+
+      this._pageRendering = true; // Using promise to fetch the page
 
       return this.$pdfDoc.getPage(num).then(function (page) {
         //Getting 'safe' scale value
-        var scale = isNaN(parseFloat(viewer._settings.scale)) ? viewer._init_scale_value : viewer._settings.scale;
+        var scale = isNaN(parseFloat(_this3._settings.scale)) ? _this3._init_scale_value : _this3._settings.scale;
 
-        var viewport = viewer._getViewPort(page, scale); //recalc viewport if "string" scale is set
+        var viewport = _this3._getViewPort(page, scale); //recalc viewport if "string" scale is set
 
 
-        if (scale !== viewer._settings.scale) {
-          scale = viewer._getScale(viewer._settings.scale);
-          viewport = viewer._getViewPort(page, scale);
-          viewer._settings.scale = scale;
+        if (scale !== _this3._settings.scale) {
+          scale = _this3._getScale(_this3._settings.scale);
+          viewport = _this3._getViewPort(page, scale);
+          _this3._settings.scale = scale;
         } // Render PDF page into canvas context
 
 
         var renderContext = {
-          canvasContext: viewer._ctx,
+          canvasContext: _this3._ctx,
           viewport: viewport
         };
         page.cleanupAfterRender = true; // Wait for rendering to finish
 
         return page.render(renderContext).promise.then(function () {
-          viewer.callEvent("onPageRender", [viewer.$pageNum]);
-          viewer._pageRendering = false;
+          _this3.callEvent("onPageRender", [_this3.$pageNum]);
 
-          if (viewer._pageNumPending !== null) {
+          _this3._pageRendering = false;
+
+          if (_this3._pageNumPending !== null) {
             // New page rendering is pending
-            viewer._renderPage(viewer._pageNumPending);
+            _this3._renderPage(_this3._pageNumPending);
 
-            viewer._pageNumPending = null;
+            _this3._pageNumPending = null;
           }
         });
       });
@@ -39487,7 +39952,7 @@
       if (this._pageRendering) this._pageNumPending = num;else this._renderPage(num);
     },
     renderPage: function (num) {
-      if (!this.$pdfDoc || num < 0 || num > this.$numPages) return;
+      if (!this.$pdfDoc || num <= 0 || num > this.$numPages) return;
       this.$pageNum = num;
 
       this._queueRenderPage(this.$pageNum);
@@ -39545,10 +40010,12 @@
           break;
 
         case "auto":
-          var isLandscape = this._currentPage.clientWidth > this._currentPage.clientHeight;
-          var horizontalScale = isLandscape ? Math.min(pageHeightScale, pageWidthScale) : pageWidthScale;
-          scale = Math.min(this._max_auto_scale, horizontalScale);
-          break;
+          {
+            var isLandscape = this._currentPage.clientWidth > this._currentPage.clientHeight;
+            var horizontalScale = isLandscape ? Math.min(pageHeightScale, pageWidthScale) : pageWidthScale;
+            scale = Math.min(this._max_auto_scale, horizontalScale);
+            break;
+          }
       }
 
       return scale;
@@ -39731,20 +40198,15 @@
       }
     },
     _setDefaultView: function () {
+      var animation = this.config.smoothFlow && env.svganimation && !env.isEdge;
       this.gradientLength = 0;
 
       this._setDash();
 
-      this.$view.innerHTML = "<div class=\"webix_gage_box\"><div>\n\t\t\t<div class=\"webix_gage_label\"><span>".concat(this.config.label || "", "</span></div>\n\t\t\t<svg class=\"webix_gage_body\" style=\"height:300px; position: relative;\">\n\t\t\t\t<circle class=\"webix_gage_curves\" r=\"0\" cx=\"50%\" cy=\"0\" stroke=\"#EEEEEE\" fill=\"none\"></circle>\n\t\t\t\t<circle class=\"webix_gage_gradient\" r=\"0\" stroke=").concat(this.defaultColor, " cx=\"50%\" cy=\"0\" fill=\"none\" style=\"stroke-dasharray: 0, 1900;\"></circle>\n\t\t\t\t<line class=\"webix_gage_gradient_point\" x1=\"0\" x2=\"0\" y1=\"0\" y2=\"0\" style=\"stroke:#B0B0B0; stroke-width:4;\"></line>\n\t\t\t</svg>\n\t\t\t<div class=\"webix_gage_info\">\n\t\t\t\t<div class=\"webix_gage_min_range\">").concat(this.config.minRange, "</div>\n\t\t\t\t<div class=\"webix_gage_max_range\">").concat(this.config.maxRange, "</div>\n\t\t\t\t<div class=\"webix_gage_placeholder\">\n\t\t\t\t\t<div class=\"webix_gage_value\">").concat(this.config.value, "</div>\n\t\t\t\t\t<div class=\"webix_gage_range_info\">").concat(this.config.placeholder || "", "</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</div></div>");
+      this.$view.innerHTML = "<div class=\"webix_gage_box\"><div>\n\t\t\t<div class=\"webix_gage_label\"><span>".concat(this.config.label || "", "</span></div>\n\t\t\t<svg class=\"webix_gage_body\" style=\"height:300px; position: relative;\">\n\t\t\t\t<circle class=\"webix_gage_curves\" r=\"0\" cx=\"50%\" cy=\"0\" stroke=\"#EEEEEE\" fill=\"none\"></circle>\n\t\t\t\t<circle class=\"webix_gage_gradient").concat(animation ? " webix_gage_animated" : "", "\" r=\"0\" stroke=").concat(this.defaultColor, " cx=\"50%\" cy=\"0\" fill=\"none\" style=\"stroke-dasharray: 0, 1900;\"></circle>\n\t\t\t\t<line class=\"webix_gage_gradient_point").concat(animation ? " webix_gage_gradient_point_animated" : "", "\" x1=\"0\" x2=\"0\" y1=\"0\" y2=\"0\" style=\"stroke:#B0B0B0; stroke-width:4;\"></line>\n\t\t\t</svg>\n\t\t\t<div class=\"webix_gage_info\">\n\t\t\t\t<div class=\"webix_gage_min_range\">").concat(this.config.minRange, "</div>\n\t\t\t\t<div class=\"webix_gage_max_range\">").concat(this.config.maxRange, "</div>\n\t\t\t\t<div class=\"webix_gage_placeholder\">\n\t\t\t\t\t<div class=\"webix_gage_value\">").concat(this.config.value, "</div>\n\t\t\t\t\t<div class=\"webix_gage_range_info\">").concat(this.config.placeholder || "", "</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</div></div>");
       this._circleGradient = this.$view.querySelector(".webix_gage_gradient");
       this._gageGradientPoint = this.$view.querySelector(".webix_gage_gradient_point");
       this._gage = this.$view.querySelector(".webix_gage_body");
-
-      if (this.isVisible() === true && this.config.smoothFlow === true && env.svganimation && !env.isEdge) {
-        this._circleGradient.setAttribute("class", "webix_gage_gradient webix_gage_animated");
-
-        this._gageGradientPoint.setAttribute("class", "webix_gage_gradient_point webix_gage_gradient_point_animated");
-      }
     },
     refresh: function () {
       //for animated gages, if value changes - repaint with old value first, then set new value for nice animation
@@ -47145,7 +47607,9 @@
       this._list = this.queryView("list");
       this._form = this.queryView("form");
       this._sendButton = this.queryView("button");
-      this._input = this.queryView(this._settings.highlight ? "texthighlight" : "textarea");
+      this._input = this.queryView({
+        localId: "textarea"
+      });
       if (this.config.mentions) this._initMentions(this.config.mentions); //provide data-like API
 
       this._list.data.provideApi(this, true);
@@ -47388,6 +47852,7 @@
       var locale = i18n.comments;
       var textarea = {
         view: "textarea",
+        localId: "textarea",
         css: "webix_comments_textarea",
         height: this._inputHeight,
         name: "text",
@@ -47595,6 +48060,8 @@
       return listConfig;
     },
     _initUsers: function (value) {
+      var _this7 = this;
+
       if (value && value.getItem) {
         this._users = value;
       } else {
@@ -47604,9 +48071,13 @@
 
         if (value && typeof value === "string") this._users.load(value);else this._users.parse(value || []);
       }
+
+      this._users.data.attachEvent("onStoreUpdated", function () {
+        return _this7._list.refresh();
+      });
     },
     _initMentions: function (value) {
-      var _this7 = this;
+      var _this8 = this;
 
       var readonly = this.config.readonly;
       if (!readonly) this._initUserList(value);
@@ -47617,12 +48088,12 @@
       }
 
       Deferred.all([this._list.waitData, this._users.waitData]).then(function () {
-        _this7._list.refresh();
+        _this8._list.refresh();
       });
 
       this._list.data.attachEvent("onStoreUpdated", function (id, obj, mode) {
         if (id && (mode === "add" || mode === "update")) {
-          _this7._findMentioned(obj);
+          _this8._findMentioned(obj);
         }
       });
     },
@@ -47645,7 +48116,7 @@
       this._userList = $$(suggest);
     },
     _findMentioned: function (obj) {
-      var _this8 = this;
+      var _this9 = this;
 
       if (obj.text.indexOf("@") != -1) {
         var field = this._userList ? this._userList._settings.textValue || "value" : "value";
@@ -47654,12 +48125,12 @@
         obj.text.replace(this._markedHTML, function (text$$1, name1, _b, name2) {
           var name = name2 || name1;
 
-          var user = _this8._users.find(function (user) {
+          var user = _this9._users.find(function (user) {
             return user[field] == name;
           }, true);
 
           if (user && !mentioned[name]) {
-            _this8.callEvent("onUserMentioned", [user.id, obj.id]);
+            _this9.callEvent("onUserMentioned", [user.id, obj.id]);
 
             mentioned[name] = true;
           } // return original text to minimize extra work
@@ -48812,8 +49283,10 @@
   var api$1G = {
     name: "filter",
     $init: function (config) {
-      if (!config.type) config.type = "number";
-      this._conditions = config.conditions || this._getConditions(config.type);
+      config.mode = config.mode || "number";
+      this._settings.conditions = config.conditions;
+      this._settings.mode = this.mode_setter(config.mode);
+      delete config.mode;
       config.rows = this._configFilter(config);
       this.$ready.push(this._afterInit);
     },
@@ -48823,9 +49296,7 @@
     _fillList: function (data, driver) {
       var _this = this;
 
-      this._initViews();
-
-      var list = this._list;
+      var list = this._list || this.queryView("list");
       list.data.driver = driver;
       var listData = [];
       var unique = {}; //check if datacollection
@@ -48836,35 +49307,33 @@
         return _this._checkItem(item, listData, unique);
       });
       list.clearAll();
-      list.parse(listData);
+      list.parse(listData); //on first init widget is not ready, parsing is enough
 
-      this._filterList();
+      if (this._list) {
+        var includes = this._settings.value.includes;
 
-      this._checkListData();
+        this._filterList();
+
+        this._checkListData(includes);
+      }
     },
     _checkItem: function (item, listData, unique) {
       var value = item[this._settings.field];
 
       if (!unique[value]) {
         unique[value] = true;
-        listData.push(item);
-      }
-    },
-    _initViews: function () {
-      if (!this._list) {
-        this._list = this.queryView("list");
-        this._toggle = this.queryView("toggle");
-        if (this._settings.type == "date") this._input = this.queryView("daterangepicker");else {
-          this._input = this.queryView("text");
-          this._select = this.queryView("richselect");
-        }
+        listData.push(copy(item));
       }
     },
     _afterInit: function () {
       var _this2 = this;
 
-      this._initViews(); //provide data-like API
-
+      this._list = this.queryView("list");
+      this._toggle = this.queryView("toggle");
+      this._select = this.queryView("richselect");
+      this._input = this.queryView({
+        batch: this._visibleBatch
+      }); //provide data-like API
 
       this._list.data.provideApi(this, true);
 
@@ -48872,39 +49341,47 @@
         return _this2._fillList(_this2._list);
       });
 
-      if (this._settings.type != "date") _event(this._input.$view, "input", function () {
-        return _this2._updateFilter();
-      });
       this.setValue(this._settings.value, true);
     },
-    _configFilter: function (config) {
-      var master = this;
-      var filter;
-      if (config.type == "date") filter = {
-        view: "daterangepicker",
-        on: {
-          onChange: function () {
-            master._updateFilter();
-          }
-        }
-      };else {
-        var data = this._conditions;
-        filter = {
-          cols: [{
-            view: "richselect",
-            value: data[0].id,
-            width: 160,
-            options: data,
-            on: {
-              onChange: function () {
-                master._updateFilter();
-              }
-            }
-          }, {
-            view: "text"
-          }]
-        };
+    mode_setter: function (value) {
+      assert(this._content[value], "Unknown filter mode");
+      this._conditions = this._getConditions(this._settings.conditions, value); // initialization of widget
+
+      if (!this._input) {
+        this._visibleBatch = this._conditions[0].batch;
+      } else {
+        var list = this._select.getList();
+
+        list.clearAll();
+        list.parse(this._conditions);
+        this._select.config.value = "";
+
+        this._select.setValue(this._conditions[0].id);
       }
+
+      return value;
+    },
+    _configFilter: function (config) {
+      var _this3 = this;
+
+      var inputs = this._getInputs(config.inputs);
+
+      var filter = {
+        visibleBatch: this._visibleBatch,
+        cols: [{
+          view: "richselect",
+          value: this._conditions[0].id,
+          width: 160,
+          options: this._conditions,
+          on: {
+            onChange: function (id) {
+              _this3._changeInput(id);
+
+              _this3.applyFilter();
+            }
+          }
+        }].concat(_toConsumableArray(inputs))
+      };
       var selectAll = {
         view: "toggle",
         batch: "includes",
@@ -48913,9 +49390,9 @@
         value: true,
         on: {
           onItemClick: function () {
-            master._selectAll(this.getValue());
+            _this3._selectAll(_this3._toggle.getValue());
 
-            master.callEvent("onChange", []);
+            _this3.callEvent("onChange", []);
           }
         }
       };
@@ -48930,139 +49407,269 @@
         template: config.template || "#".concat(config.field, "#"),
         on: {
           onItemClick: function (id) {
-            var item = this.getItem(id);
-            item.$checked = !item.$checked;
-            this.refresh(id);
-            master.callEvent("onChange", []);
+            var item = _this3._list.getItem(id);
 
-            master._toggle.setValue(master._is_all_selected());
+            _this3._list.updateItem(id, {
+              $checked: !item.$checked
+            });
+
+            _this3._settings.value.includes = _this3._getIncludes();
+
+            _this3._setSubviewValue(_this3._toggle, _this3._is_all_selected());
+
+            _this3.callEvent("onChange", []);
           }
         }
       };
       return [filter, selectAll, list];
     },
-    _getConditions: function (type) {
-      var locale = i18n.filter;
+    _getInputs: function (inputs) {
+      var _this4 = this;
 
-      if (type == "number") {
-        return [{
-          id: ">",
-          value: locale["greater"],
+      inputs = inputs || Object.keys(this._inputs);
+
+      for (var i = 0; i < inputs.length; i++) {
+        if (this._inputs[inputs[i]]) {
+          inputs[i] = copy(this._inputs[inputs[i]]);
+
+          if (inputs[i].on) {
+            var on = inputs[i].on;
+
+            for (var handler in on) {
+              on[handler] = function () {
+                return _this4.applyFilter();
+              };
+            }
+          }
+        } else assert(inputs[i] && inputs[i].batch, "Filter: incorrect input configuration");
+      }
+
+      return inputs;
+    },
+    _inputs: {
+      text: {
+        view: "text",
+        batch: "text",
+        on: {
+          onTimedKeyPress: true
+        }
+      },
+      datepicker: {
+        view: "datepicker",
+        batch: "datepicker",
+        on: {
+          onChange: true
+        }
+      },
+      daterangepicker: {
+        view: "daterangepicker",
+        batch: "daterangepicker",
+        on: {
+          onChange: true
+        }
+      },
+      none: {
+        view: "spacer",
+        batch: "none"
+      }
+    },
+    _options: {
+      number: {
+        greater: function (a, b) {
+          return a > b;
+        },
+        less: function (a, b) {
+          return a < b;
+        },
+        greaterOrEqual: function (a, b) {
+          return a >= b;
+        },
+        lessOrEqual: function (a, b) {
+          return a <= b;
+        },
+        equal: function (a, b) {
+          return a == b;
+        },
+        notEqual: function (a, b) {
+          return a != b;
+        },
+        contains: function (a, b) {
+          return a.toString().toLowerCase().indexOf(b.toString().toLowerCase()) !== -1;
+        },
+        notContains: function (a, b) {
+          return a.toString().toLowerCase().indexOf(b.toString().toLowerCase()) === -1;
+        }
+      },
+      text: {
+        equal: function (a, b) {
+          return a.toLowerCase() === b.toLowerCase();
+        },
+        notEqual: function (a, b) {
+          return a.toLowerCase() !== b.toLowerCase();
+        },
+        contains: function (a, b) {
+          return a.toLowerCase().indexOf(b.toLowerCase()) !== -1;
+        },
+        notContains: function (a, b) {
+          return a.toLowerCase().indexOf(b.toLowerCase()) === -1;
+        },
+        beginsWith: function (a, b) {
+          return a.toLowerCase().lastIndexOf(b.toLowerCase(), 0) === 0;
+        },
+        notBeginsWith: function (a, b) {
+          return a.toLowerCase().lastIndexOf(b.toLowerCase(), 0) !== 0;
+        },
+        endsWith: function (a, b) {
+          return a.toLowerCase().indexOf(b.toLowerCase(), a.length - b.length) !== -1;
+        },
+        notEndsWith: function (a, b) {
+          return a.toLowerCase().indexOf(b.toLowerCase(), a.length - b.length) === -1;
+        }
+      },
+      date: {
+        greater: {
+          batch: "datepicker",
           handler: function (a, b) {
             return a > b;
           }
-        }, {
-          id: "<",
-          value: locale["less"],
+        },
+        less: {
+          batch: "datepicker",
           handler: function (a, b) {
             return a < b;
           }
-        }, {
-          id: ">=",
-          value: locale["greaterOrEqual"],
+        },
+        greaterOrEqual: {
+          batch: "datepicker",
           handler: function (a, b) {
             return a >= b;
           }
-        }, {
-          id: "<=",
-          value: locale["lessOrEqual"],
+        },
+        lessOrEqual: {
+          batch: "datepicker",
           handler: function (a, b) {
             return a <= b;
           }
-        }, {
-          id: "=",
-          value: locale["equal"],
+        },
+        equal: {
+          batch: "datepicker",
           handler: function (a, b) {
-            return a == b;
+            if (!a || !b) return false;
+            return a.valueOf() === b.valueOf();
           }
-        }, {
-          id: "<>",
-          value: locale["notEqual"],
+        },
+        notEqual: {
+          batch: "datepicker",
           handler: function (a, b) {
-            return a != b;
+            if (!a || !b) return true;
+            return a.valueOf() !== b.valueOf();
           }
-        }];
-      } else {
-        return [{
-          id: "equal",
-          value: locale["equal"],
+        },
+        between: {
+          batch: "daterangepicker",
           handler: function (a, b) {
-            return a.toLowerCase() == b.toLowerCase();
+            return (!b.start || a > b.start) && (!b.end || a < b.end);
           }
-        }, {
-          id: "not equal",
-          value: locale["notEqual"],
+        },
+        notBetween: {
+          batch: "daterangepicker",
           handler: function (a, b) {
-            return a.toLowerCase() != b.toLowerCase();
+            return !b.start || a <= b.start || !b.end || a >= b.end;
           }
-        }, {
-          id: "contains",
-          value: locale["contains"],
-          handler: function (a, b) {
-            return a.toLowerCase().indexOf(b.toLowerCase()) != -1;
-          }
-        }, {
-          id: "not contains",
-          value: locale["notContains"],
-          handler: function (a, b) {
-            return a.toLowerCase().indexOf(b.toLowerCase()) == -1;
-          }
-        }];
+        }
       }
     },
-    _getFilterHandler: function (type) {
-      var filterType = this._settings.type;
-      if (filterType == "date") return function (a, b) {
-        return (!b.start || a >= Date.parse(b.start)) && (!b.end || a <= Date.parse(b.end) + 1000 * 60 * 60 * 24);
-      };else return this._conditions.find(function (obj) {
-        return obj.id == type;
-      }).handler;
+    _content: {
+      number: ["greater", "less", "greaterOrEqual", "lessOrEqual", "equal", "notEqual", "contains", "notContains"],
+      text: ["contains", "notContains", "equal", "notEqual", "beginsWith", "notBeginsWith", "endsWith", "notEndsWith"],
+      date: ["greater", "less", "greaterOrEqual", "lessOrEqual", "equal", "notEqual", "between", "notBetween"]
     },
-    getValue: function () {
-      var _this3 = this;
+    _getConditions: function (conditions, mode) {
+      conditions = conditions || this._content[mode];
+      var result = [];
+
+      for (var i = 0; i < conditions.length; i++) {
+        var option = this._getSingleOption(conditions[i], mode);
+
+        assert(option, "Filter: unknown option id");
+        result.push(option);
+      }
+
+      return result;
+    },
+    _getSingleOption: function (option, mode) {
+      if (option && typeof option.handler === "function") return option;
+
+      if (this._options[mode][option]) {
+        var config = {
+          id: option,
+          value: i18n.filter[option]
+        };
+        var extra = typeof this._options[mode][option] === "function" ? {
+          batch: "text",
+          handler: this._options[mode][option]
+        } : this._options[mode][option];
+        return exports.extend(config, extra, true);
+      }
+
+      return null;
+    },
+    _getFilterConfig: function (type) {
+      return this._conditions.find(function (obj) {
+        return obj.id == type;
+      });
+    },
+    _getIncludes: function () {
+      var _this5 = this;
 
       var includes = [];
-      var value = {
-        condition: {
-          filter: this._input.getValue()
-        }
-      };
 
       this._list.data.each(function (obj) {
-        if (obj.$checked) includes.push(obj[_this3._settings.field]);
+        if (obj.$checked) includes.push(obj[_this5._settings.field]);
       });
 
-      if (includes.length != this._list.count()) value.includes = includes;
-      if (this._settings.type != "date") value.condition.type = this._select.getValue();
-      return value;
+      return includes.length == this._list.count() ? null : includes;
+    },
+    getValue: function () {
+      return {
+        condition: {
+          filter: this._input.getValue ? this._input.getValue() : null,
+          type: this._select.getValue()
+        },
+        includes: this._getIncludes()
+      };
     },
     _is_all_selected: function () {
-      return !this._list.find(function (i) {
-        return !i.$checked;
-      }, true);
+      //find method searchs through all data
+      var order = this._list.data.order;
+
+      for (var i = 0; i < order.length; i++) {
+        if (!this.getItem(order[i]).$checked) return false;
+      }
+
+      return true;
     },
     setValue: function (value, silent) {
       value = this.$prepareValue(value);
-      var type = this._settings.type;
       var condition = value.condition;
       var includes = value.includes;
 
+      this._changeInput(condition.type);
+
       this._setSubviewValue(this._input, condition.filter);
 
-      this._setSubviewValue(this._toggle, !!includes);
-
-      if (type != "date") this._setSubviewValue(this._select, condition.type);
+      this._setSubviewValue(this._select, condition.type);
 
       this._filterList();
 
-      this._includes = includes;
+      this._checkListData(includes);
 
-      this._checkListData();
+      this._setSubviewValue(this._toggle, this._is_all_selected());
 
+      this._settings.value = value;
       if (!silent) this.callEvent("onChange");
     },
-    _checkListData: function () {
-      var includes = this._includes;
+    _checkListData: function (includes) {
       var field = this._settings.field;
 
       this._list.data.each(function (obj) {
@@ -49078,57 +49685,80 @@
     },
     $prepareValue: function (value) {
       value = value || {};
-
-      if (!value.condition) {
-        var type = this._settings.type;
-        value.condition = {
-          filter: ""
-        };
-        if (type != "date") value.condition.type = this._conditions[0].id;
-      }
-
+      value.condition = value.condition || {
+        filter: "",
+        type: this._conditions[0].id
+      };
       return value;
     },
     _filterList: function () {
-      var _this4 = this;
+      var filter = this._input.getValue ? this._input.getValue() : null;
+      if (filter === "") this._list.filter();else {
+        var field = this._settings.field;
 
-      var condition = {
-        filter: this._input.getValue(),
-        type: this._select ? this._select.getValue() : ""
-      };
+        var handler = this._getFilterConfig(this._select.getValue()).handler;
 
-      this._list.filter(function (item) {
-        var field = item[_this4._settings.field];
-
-        var handler = _this4._getFilterHandler(condition.type);
-
-        return condition.filter ? handler(field, condition.filter) : true;
-      });
+        this._list.filter(function (item) {
+          return handler(item[field], filter);
+        });
+      }
+      this.showBatch("includes", !!this._list.count());
     },
-    _updateFilter: function () {
+    _changeInput: function (type) {
+      var config = this._getFilterConfig(type);
+
+      var batch = config.batch;
+
+      if (batch != this._visibleBatch) {
+        this._visibleBatch = batch;
+        this._input = this.queryView({
+          batch: batch
+        });
+        if (this._input.setValue) this._input.setValue("");
+
+        this._input.getParentView().showBatch(batch);
+      }
+    },
+    applyFilter: function () {
       this._filterList();
 
-      this.showBatch("includes", !!this._list.count());
-
-      this._toggle.setValue(true);
+      this._setSubviewValue(this._toggle, true);
 
       this._selectAll(true);
 
       this.callEvent("onChange");
     },
-    _selectAll: function (type) {
+    _selectAll: function (v) {
       this._list.data.each(function (obj) {
-        obj.$checked = type;
+        obj.$checked = v;
       });
 
       this._list.refresh();
+
+      this._settings.value = this.getValue();
     },
     getFilterFunction: function () {
-      var value = this.getValue();
-      var condition = value.condition;
       var field = this._settings.field;
-      var code = "\n\t\t\tvar includes = ".concat(JSON.stringify(value.includes), ";\n\t\t\tvar text = value[\"").concat(field, "\"];\n\t\t\tif(includes)\n\t\t\t\treturn includes.indexOf(text instanceof Date ? text.toISOString() : text) != -1;\n\t\t\telse{\n\t\t\t\tvar handler = ").concat(this._getFilterHandler(condition.type), ";\n\t\t\t\tvar filter = ").concat(JSON.stringify(condition.filter), ";\n\t\t\t\treturn !filter || handler(text, filter);\n\t\t\t}");
-      return new Function("value", code);
+      var isDate$$1 = this._settings.mode == "date";
+
+      var _this$getValue = this.getValue(),
+          includes = _this$getValue.includes,
+          condition = _this$getValue.condition;
+
+      var handler = this._getFilterConfig(condition.type).handler;
+
+      if (includes && isDate$$1) includes = includes.map(function (a) {
+        return a.valueOf();
+      });
+      return function (obj) {
+        var value = obj[field];
+
+        if (includes) {
+          return includes.indexOf(isDate$$1 ? value.valueOf() : value) != -1;
+        } else {
+          return condition.filter === "" || handler(value, condition.filter);
+        }
+      };
     }
   };
   var view$1G = exports.protoUI(api$1G, AtomDataLoader, layout.view);

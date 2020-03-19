@@ -96,11 +96,10 @@ class PBXOldContactCdr {
   };
   $cdr_report[$j]['agent'] = $cdr_report[$j]['fullname_agent']!="" ? $cdr_report[$j]['fullname_agent'] : $cdr_report[$j]['agent'];
   $cdr_report[$j]['queue'] = $cdr_report[$j]['fullname_queue']!="" ? $cdr_report[$j]['fullname_queue'] : $cdr_report[$j]['queue'];
-  $cdr_report[$j]['holdtime'] = $this->utils->time_format($cdr_report[$j]['holdtime']);
-  //$cdr_report[$j]['holdtime'] = sprintf("%02d:%02d",intval($cdr_report[$j]['holdtime']/60),intval($cdr_report[$j]['holdtime']%60));
-  $cdr_report[$j]['talktime'] = $this->utils->time_format($cdr_report[$j]['talktime']);
-  $cdr_report[$j]['ringtime'] = $this->utils->time_format($cdr_report[$j]['ringtime']);
-  //$cdr_report[$j]['talktime'] = sprintf("%02d:%02d",intval($cdr_report[$j]['talktime']/60),intval($cdr_report[$j]['talktime']%60));
+  //$cdr_report[$j]['holdtime'] = $this->utils->time_format($cdr_report[$j]['holdtime']);
+  $cdr_report[$j]['holdtime'] = intval($cdr_report[$j]['holdtime']);  
+  $cdr_report[$j]['talktime'] = intval($cdr_report[$j]['talktime']);
+  $cdr_report[$j]['ringtime'] = intval($cdr_report[$j]['ringtime']);  
   $cdr_report[$j]['position'] = $cdr_report[$j]['origposition']."/".$cdr_report[$j]['position'];
   $cdr_report[$j]['status'] = $this->translate($cdr_report[$j]['reason']);
   $cdr_report[$j]['calldate2'] = date('d.m.Y H:i:s',strtotime($cdr_report[$j]['calldate']));

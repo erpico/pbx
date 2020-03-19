@@ -1551,11 +1551,66 @@ button,
 .webix_ss_sort_asc,
 .webix_ss_sort_desc {
   position: absolute;
-  right: 3px;
+  top: 50%;
+  right: 2px;
+  width: 20px;
+  height: 24px;
+  line-height: 24px;
+  margin-top: -12px;
+  float: none;
   -moz-user-select: none;
   -webkit-user-select: none;
   -ms-user-select: none;
   user-select: none;
+}
+.webix_ss_sort_asc.webix_ss_sort_single,
+.webix_ss_sort_desc.webix_ss_sort_single {
+  width: 20px;
+  text-align: center;
+}
+.webix_ss_sort_num {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 12px;
+  line-height: 12px;
+  font-family: Roboto, sans-serif;
+  font-size: 10px;
+  text-align: right;
+  color: #1CA1C1;
+}
+.webix_ss_sort_single .webix_ss_sort_num {
+  display: none;
+}
+.webix_hcell .webix_excel_filter {
+  position: absolute;
+  top: 50%;
+  right: 2px;
+  width: 20px;
+  height: 20px;
+  line-height: 20px;
+  margin-top: -10px;
+  vertical-align: middle;
+  text-align: center;
+  cursor: pointer;
+  color: #94A1B3;
+  font-size: 14px;
+}
+.webix_hcell .webix_excel_filter:hover {
+  color: #1CA1C1;
+}
+.webix_excel_filter + .webix_ss_sort_asc,
+.webix_excel_filter + .webix_ss_sort_desc {
+  right: 24px;
+}
+.webix_hcell.webix_ss_excel_filter {
+  position: relative;
+}
+.webix_hcell.webix_ss_filter_active .webix_excel_filter {
+  color: #1CA1C1;
+}
+.webix_hcell.webix_ss_filter_active .webix_excel_filter:hover {
+  color: #17839d;
 }
 .webix_hcell.webix_ss_filter {
   padding: 3px 5px 3px 5px;
@@ -1691,6 +1746,15 @@ button,
 .webix_column > .webix_drag_over.webix_cell {
   background-color: #e6e6e6;
   color: #475466;
+}
+.webix_column > .webix_drag_over.webix_cell.webix_row_select,
+.webix_column > .webix_drag_over.webix_cell.webix_cell_select {
+  color: #475466;
+  background: #F4F5F9;
+}
+.webix_column > .webix_drag_over.webix_cell.webix_row_select:focus,
+.webix_column > .webix_drag_over.webix_cell.webix_cell_select:focus {
+  background: #edeff5;
 }
 .webix_ss_header td,
 .webix_ss_header table {
@@ -3469,21 +3533,20 @@ div.webix_modal_cover {
   color: #1CA1C1;
   margin-right: 4px;
 }
-.webix_img_btn_top .webix_icon {
+.webix_img_btn_top .webix_icon,
+.webix_img_btn_top .webix_image {
   font-size: 20px;
   position: absolute;
   top: 8px;
+  display: inline-block;
   left: 50%;
-  margin-left: -10px;
+  -webkit-transform: translateX(-50%);
+  transform: translateX(-50%);
 }
 .webix_img_btn .webix_image {
   display: inline-block;
   margin-right: 4px;
   vertical-align: middle;
-}
-.webix_img_btn_top .webix_image {
-  background-repeat: no-repeat;
-  background-position: center 4px;
 }
 .webix_img_btn_text {
   position: absolute;
@@ -5204,11 +5267,6 @@ legend.webix_forminput_label_top {
   animation: gage_dash 1.3s linear forwards;
   transition: stroke 1.3s linear, stroke-dasharray 1.3s linear;
 }
-.webix_gage_animated_first_load {
-  stroke: hsl(120, 100%, 50%);
-  animation: gage_dash 1.3s linear forwards;
-  transition: stroke 1.3s linear;
-}
 @keyframes gage_dash {
   to {
     stroke-dashoffset: 0;
@@ -5917,6 +5975,9 @@ body.webix_print {
   margin-right: 4px;
   color: #94A1B3;
 }
+.webix_icon {
+  text-align: center;
+}
 .webix_badge {
   background-color: #ff8839;
   color: #FFFFFF;
@@ -5943,15 +6004,13 @@ body.webix_print {
 }
 @font-face {
   font-family: Roboto;
-  src: url('../fonts/Roboto-Regular-webfont.eot');
-  src: url('../fonts/Roboto-Regular-webfont.eot?#iefix') format('embedded-opentype'), url('../fonts/Roboto-Regular-webfont.woff2') format('woff2'), url('../fonts/Roboto-Regular-webfont.woff') format('woff'), url('../fonts/Roboto-Regular-webfont.ttf') format('truetype');
+  src: url('../fonts/Roboto-Regular-webfont.woff2') format('woff2'), url('../fonts/Roboto-Regular-webfont.woff') format('woff');
   font-weight: normal;
   font-style: normal;
 }
 @font-face {
   font-family: Roboto;
-  src: url('../fonts/Roboto-Medium-webfont.eot');
-  src: url('../fonts/Roboto-Medium-webfont.eot?#iefix') format('embedded-opentype'), url('../fonts/Roboto-Medium-webfont.woff2') format('woff2'), url('../fonts/Roboto-Medium-webfont.woff') format('woff'), url('../fonts/Roboto-Medium-webfont.ttf') format('truetype');
+  src: url('../fonts/Roboto-Medium-webfont.woff2') format('woff2'), url('../fonts/Roboto-Medium-webfont.woff') format('woff');
   font-style: normal;
   font-weight: 500;
 }
@@ -6742,6 +6801,9 @@ body.webix_print {
 .webix_dtable .webix_column > .webix_drag_over.webix_cell {
   background-color: #F4F5F9;
 }
+.webix_dtable .webix_excel_filter {
+  font-size: 20px;
+}
 .webix_block_selection {
   border: none;
   background: #1CA1C1;
@@ -6757,14 +6819,9 @@ body.webix_print {
 }
 .webix_ss_sort_asc,
 .webix_ss_sort_desc {
+  width: 24px;
   font-size: 20px;
   font-family: "Webix Material Icons";
-  top: 50%;
-  line-height: 1px;
-  bottom: auto;
-  right: 2px;
-  float: none;
-  width: 20px;
 }
 .webix_ss_sort_asc:before {
   content: '\F004';
@@ -7270,7 +7327,9 @@ div.webix_inp_static,
   padding-bottom: 2px;
 }
 .webix_el_tabbar .webixtype_iconTop .webix_img_btn_top .webix_icon,
-.webix_el_tabbar .webixtype_image .webix_img_btn_top .webix_icon {
+.webix_el_tabbar .webixtype_image .webix_img_btn_top .webix_icon,
+.webix_el_tabbar .webixtype_iconTop .webix_img_btn_top .webix_image,
+.webix_el_tabbar .webixtype_image .webix_img_btn_top .webix_image {
   top: 0;
 }
 .webix_el_tabbar .webixtype_iconTop .webix_img_btn_text,
@@ -7975,9 +8034,6 @@ div.webix_inp_static,
   opacity: 1;
   transform: scale(1);
 }
-.webix_icon {
-  text-align: center;
-}
 .webix_icon_btn,
 .webix_input_icon {
   font-size: 20px;
@@ -8227,16 +8283,14 @@ textarea.webix_invalid {
 /* based on MaterialDesignIcons.com */
 @font-face {
   font-family: "Webix Material Icons";
-  src: url('../fonts/webixmdi-webfont.eot');
-  src: url('../fonts/webixmdi-webfont.eot?#iefix') format('embedded-opentype'), url('../fonts/webixmdi-webfont.woff2') format('woff2'), url('../fonts/webixmdi-webfont.woff') format('woff'), url('../fonts/webixmdi-webfont.ttf') format('truetype'), url('../fonts/webixmdi-webfont.svg') format('svg');
+  src: url('../fonts/webixmdi-webfont.woff2') format('woff2'), url('../fonts/webixmdi-webfont.woff') format('woff');
   font-weight: normal;
   font-style: normal;
 }
 /* based on FontAwesome */
 @font-face {
   font-family: 'Webix Awesome Icons';
-  src: url('../fonts/webixfa-webfont.eot');
-  src: url('../fonts/webixfa-webfont.eot?#iefix') format("embedded-opentype"), url('../fonts/webixfa-webfont.woff2') format('woff2'), url('../fonts/webixfa-webfont.woff') format('woff'), url('../fonts/webixfa-webfont.ttf') format('truetype'), url('../fonts/webixfa-webfont.svg') format('svg');
+  src: url('../fonts/webixfa-webfont.woff2') format('woff2'), url('../fonts/webixfa-webfont.woff') format('woff');
   font-weight: normal;
   font-style: normal;
 }
@@ -8372,6 +8426,12 @@ textarea.webix_invalid {
 }
 .wxi-user:before {
   content: "\F044";
+}
+.wxi-filter:before {
+  content: "\F045";
+}
+.wxi-menu-up:before {
+  content: "\F046";
 }
 /*predefined styles for text lables inside a item*/
 .webix_strong {
