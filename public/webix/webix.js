@@ -1,6 +1,6 @@
 /**
  * @license
- * Webix UI v.7.2.2
+ * Webix UI v.7.2.3
  * This software is covered by Webix Commercial License.
  * Usage without proper license is prohibited.
  * (c) XB Software Ltd.
@@ -11298,15 +11298,8 @@
         var node = this._init_editor(id, type, show);
 
         if (type.config.liveEdit) this._live_edits_handler = this.attachEvent("onKeyPress", this._handle_live_edits);
-        var area = [node];
-        if (type.getEditorArea) area = type.getEditorArea();else if (type.getPopup) area = [type.getPopup()._viewobj];
-
-        if (area) {
-          for (var i = 0; i < area.length; i++) {
-            _event(area[i], "click", this._reset_active_editor);
-          }
-        }
-
+        var area = type.getPopup ? type.getPopup(node)._viewobj : node;
+        if (area) _event(area, "click", this._reset_active_editor);
         if (node) _event(node, "change", this._on_editor_change, {
           bind: {
             view: this,
@@ -16920,7 +16913,7 @@
     }
   };
 
-  var version$1 = "7.2.2";
+  var version$1 = "7.2.3";
   var name$1 = "core";
 
   var errorMessage = "non-existing view for export";
