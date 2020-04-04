@@ -47,6 +47,8 @@ class User
   private $token;
   private $token_id = 0;
   private $id = 0;
+  
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to'];
 
   public function __construct($db = null, $_id = 0) {
     if (isset($db)) {
@@ -241,8 +243,7 @@ class User
     };
     return $user_extens;
   }
-
-
+  
   public function allowed_queues()
   {
     if(isset($_COOKIE['token'])) {
@@ -306,8 +307,7 @@ class User
     };
     return $user_queues;
   }
-
-
+  
   public function getUsersList() {
     $sql = "SELECT A.name, A.fullname, B.val, A.description, C.ip, C.issued, C.updated, C.version 
             FROM acl_user AS A LEFT JOIN cfg_user_setting AS B ON A.id = B.acl_user_id LEFT JOIN acl_auth_token AS C ON C.acl_user_id = A.id 
@@ -486,8 +486,9 @@ class User
           $result[] = ["id"=>$row["id"], "value"=>$row["name"], "phone"=>$row["phone"], "fullname" => $row["fullname"]];
         }
       } else {
-      $row['rules'] = $rules->getUserRules($row['id']);
-      $result[] = $row;
+        $row['config'] = $this->getUserConfig($row['id']);
+        $row['rules'] = $rules->getUserRules($row['id']);
+        $result[] = $row;
       }
     }
 
@@ -612,6 +613,9 @@ class User
           $sql .= $end_sql;
         }
         $res = $this->db->query($sql);
+        if (isset($params['config'])) {
+          $this->saveUserConfig($id, json_decode($params['config'], true));
+        }
         if (isset($params['user_groups_ids'])) {
           $groups = explode(",",$params['user_groups_ids']);
           $groups_int = [];
@@ -629,7 +633,69 @@ class User
     }
 
     return ["result" => true, "message" => "Операция прошла успешно"];
-
+  }
+  
+  private function getUserConfig($userId)
+  {
+    $sql = "SELECT handle, val FROM cfg_user_setting WHERE acl_user_id = $userId";
+    $res = $this->db->query($sql);
+    $result = [];
+    while ($res && $row = $res->fetch()) {
+      $result[] = ['key' => $row['handle'], 'value' => $row['val']];
+    }
+    
+    return $result;
+  }
+  
+  private function saveUserConfig($userId, $params)
+  {
+    $paramsKeys = array_column($params, 'key');
+    $paramsValues = array_column($params, 'value');
+    foreach (self::ALLOWED_CONFIG_HANDLES  as $handle) {
+      $key = array_search($handle, $paramsKeys);
+      if ($key !== FALSE && strlen($paramsValues[$key])) {
+        $this->addUpdateUserConfigByHandle($userId, $paramsKeys[$key], $paramsValues[$key]);
+      } else $this->deleteUserConfigByHandle($userId, $handle);
+    }
+  }
+  private function deleteUserConfigByHandle($userId, $handle)
+  {
+    $result = false;
+    $config = $this->getUserConfigByHandle($userId, $handle);
+    if ($config) {
+      $sql = "DELETE FROM cfg_user_setting WHERE id = {$config[id]}";
+      $res = $this->db->query($sql);
+      $result = $res ? true : false;
+    }
+    
+    return $result;
+  }
+  
+  private function addUpdateUserConfigByHandle($userId, $handle, $value)
+  {
+    $config = $this->getUserConfigByHandle($userId, $handle);
+    $sql = 'INSERT INTO cfg_user_setting';
+    if ($config) {
+      $sql = 'UPDATE cfg_user_setting';
+      $endSql ="WHERE id = {$config[id]}";
+    }
+    $sql .= " SET val = '".trim(addslashes($value))."', handle = '".trim(addslashes($handle))."', updated = NOW(), acl_user_id = '{$userId}'";
+    if (isset($endSql)) $sql .= ' '.$endSql;
+    $res = $this->db->query($sql);
+    
+    return $res ? true : false;
+  }
+  
+  private function getUserConfigByHandle($userId, $handle)
+  {
+    $result = [];
+    $res = $this->db->query("SELECT id, val FROM cfg_user_setting WHERE acl_user_id = '{$userId}' AND handle = '{$handle}' LIMIT 1");
+    $row = $res->fetch();
+    if ($row) {
+      $result = ['id' => $row['id'], 'value' => $row['val'], 'handle' => $handle];
+    }
+    
+    return $result;
   }
 
   public function remove($id) {
