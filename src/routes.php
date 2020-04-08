@@ -740,3 +740,31 @@ $app->post('/phones/provisioning/start', function (Request $request, Response $r
           ->write("Something happen: $url");
 
 });
+
+$app->get('/aliases/list', function (Request $request, Response $response, array $args) use($app) {
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+
+  $aliases = new PBXAliases();
+
+  return $response->withJson([
+      "data" => $aliases->fetchList($filter, $start, $count, 0),        
+      "pos" => (int)$start,
+      "total_count" => $aliases->fetchList($filter, $start, $count, 1)
+  ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/aliases/type/short', function (Request $request, Response $response, array $args) use($app) {
+  $aliases = new PBXAliases();    
+  
+  return $response->withJson($aliases->getType());
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/aliases/{alias_id}/save', function (Request $request, Response $response, array $args) use($app) {
+  $aliases = new PBXAliases();
+
+  $values = $request->getParams();
+  $res = $aliases->addUpdate($values);
+  return $response->withJson($res);
+})->add('\App\Middleware\OnlyAuthUser');
