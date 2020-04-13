@@ -48,7 +48,7 @@ class User
   private $token_id = 0;
   private $id = 0;
   
-  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to'];
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days'];
 
   public function __construct($db = null, $_id = 0) {
     if (isset($db)) {
@@ -560,11 +560,11 @@ class User
       }
 
       if (isset($params['fullname']) && strlen(trim($params['fullname']))) {
-        if (!$this->isUniqueColumn("fullname", $params['fullname'], $params['id'])) {
+        /*if (!$this->isUniqueColumn("fullname", $params['fullname'], $params['id'])) {
           return [ "result" => false, "message" => "Ф.И.О. занято другим пользователем"];
-        } else {
+        } else {*/
           $sql .= "`fullname` = '".trim(addslashes($params['fullname']))."',";
-        }
+        //}
       } else {
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
       }
@@ -794,13 +794,16 @@ class User
   public function isUniqueColumn($column, $value, $id = 0)
   {    
     try {
-      $data = $this->fetchList([$column => $value], 0, 3, 0, 0, 0, 0);
+      //$data = $this->fetchList([$column => $value], 0, 3, 0, 0, 0, 0);      
+      $sql = " SELECT id FROM acl_user WHERE $column = '".addslashes($value)."'";
+      $res = $this->db->query($sql, \PDO::FETCH_NUM);
+      $data = $res->fetchAll();
       if (is_array($data)) {
         if (COUNT($data) > 1) {
           return false;
         } else if (COUNT($data) == 1){
           if (intval($id)) {
-            return $data[0]["id"] == intval($id);
+            return $data[0][0] == intval($id);
           } else {
             return false;
           }        
