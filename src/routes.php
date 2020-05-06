@@ -768,3 +768,16 @@ $app->post('/aliases/{alias_id}/save', function (Request $request, Response $res
   $res = $aliases->addUpdate($values);
   return $response->withJson($res);
 })->add('\App\Middleware\OnlyAuthUser');
+
+$app->any('/user/exten/save', function (Request $request, Response $response, array $args) use($app) {
+  $user = $app->getContainer()['auth'];
+
+  $ext = $request->getParam('ext', '');
+  if (strlen($ext) == 0) {
+    return $response->withJson([ "error" => 1, "message" => "No extension provided" ]);
+  }
+
+  $result = $user->saveExt($ext);
+
+  return $response->withJson( [ "error" => $result ]);
+})->add('\App\Middleware\OnlyAuthUser');

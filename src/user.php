@@ -174,6 +174,18 @@ class User
     return $myrow_queue['val']!="" ? $myrow_queue['val'] : $x;
   }
 
+  public function saveExt($ext){
+    $this->db->query("DELETE FROM cfg_user_setting  WHERE acl_user_id != '{$this->id}' AND handle = 'cti.ext' AND val = '".addslashes($ext)."'");
+    $res = $this->db->query("SELECT id, val FROM cfg_user_setting WHERE acl_user_id = '{$this->id}' AND handle = 'cti.ext' LIMIT 1 ");
+    $row = $res->fetch(\PDO::FETCH_ASSOC);
+    if ($row && $row['val'] != $ext) {      
+      $this->db->query("UPDATE cfg_user_setting SET val = '".addslashes($ext)."' WHERE id = '{$row['id']}' LIMIT 1");  
+    } else if (!$row) {
+      $this->db->query("INSERT INTO cfg_user_setting SET acl_user_id = '{$this->id}', handle = 'cti.ext', val = '".addslashes($ext)."'");  
+    }
+    return 0;
+  }
+
   public function allow_extens() {
     if(isset($_COOKIE['token'])) {
         $token = $_COOKIE['token'];
