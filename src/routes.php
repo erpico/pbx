@@ -235,6 +235,22 @@ $app->get('/settings/user/{user_id}/default/{handle}', function (Request $reques
   return $response->withJson($settings->deleteUserSettingByHandle(trim($args['handle']), (int)$args['user_id']));  
 });
 
+$app->get('/settings/default', function (Request $request, Response $response, array $args) use($app) {
+  $settings = new PBXSettings();  
+  
+  return $response->withJson($settings->getDefaultSettings());
+});
+
+$app->post('/settings/default/save', function (Request $request, Response $response, array $args) use($app) {
+  $params = $request->getParam("settings", "");
+  $set = new PBXSettings();  
+
+  if (isset($params)) {
+    return $response->withJson(["result"=>$set->setDefaultSettings($params)]);
+  }
+  return $response->withJson(["result"=> FALSE]);
+});
+
 $app->get('/groups/list', function (Request $request, Response $response, array $args) use($app) {
     $user = new User();
 

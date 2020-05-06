@@ -34,7 +34,7 @@ class PBXSettings {
     return ['result' => $res, 'value' => $row['val']];
   }
 
-  private function getDefaultSettings() {
+  public function getDefaultSettings() {
     $sql = "SELECT  id, handle, val, updated FROM cfg_setting";
     $result = [];
     $res = $this->db->query($sql);
@@ -143,6 +143,41 @@ class PBXSettings {
       }
     }
     return false;
+  }
+
+  public function setDefaultSettings ($settings) {
+    if (is_string($settings)) {
+      if (strlen($settings)) {
+        $settings = json_decode($settings);
+        foreach($settings as $setting) {
+          $s = $this->getSettingByHandle($setting->handle);
+          if (isset($s['id']) && intval($s['id']) && $s['handle'] == $setting->handle) {
+              $sql = "UPDATE cfg_setting
+              SET updated = NOW(), val = '".trim(addslashes($setting->val))."' 
+              WHERE id = '".intval($s['id'])."'";
+              $this->db->query($sql);
+          } else {
+            $sql = "INSERT INTO cfg_setting 
+            SET updated = NOW(), handle = '".trim(addslashes($setting->handle))."', val = '".trim(addslashes($setting->val))."'";
+            // die($sql);
+            $this->db->query($sql);
+          }
+        }
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private function getSettingByHandle($handle) {
+    $sql = "SELECT id, handle, val FROM cfg_setting WHERE handle ='".trim(addslashes($handle))."'";
+    // die($sql);
+    $res = $this->db->query($sql);
+    if ($row = $res->fetch()) {
+      return $row;
+    } else {
+      return 0;
+    }
   }
 
   public function insertOrUpdateUserSetting($user_id, $handle, $val, $update = true) {
