@@ -369,7 +369,6 @@ class Ext_checklist {
               ];
           }
     }
-
     if (strlen($parent)) {
       $ant = [ "parent" => $parent,
                "data" => $arr];
