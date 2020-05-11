@@ -16,7 +16,7 @@ class Ext_incoming_internal {
   public function getExt_incoming_internal($filter, $pos, $count = 20, $onlycount = 0) {
     
     $users = $this->auth->getUsersList();
-    $utils = new Utils();
+    $utils = new Utils($this->container);
 
     $sql = "SELECT 
                 count(*) AS total,
@@ -36,7 +36,14 @@ class Ext_incoming_internal {
                 acl_user.fullname 
                 FROM cdr 
                 LEFT JOIN acl_user ON (acl_user.name = cdr.dst)
-                WHERE LENGTH(dst) > 1 AND LENGTH(dst) < 5  ";
+                WHERE ";
+
+    $intPhones = $utils->getIntPhones();
+    if (count($intPhones)) {
+      $sql .= " dst IN ('".trim(implode("','", $intPhones), "'")."') ";          
+    } else {
+      $sql .= " LENGTH(dst) > 1 AND LENGTH(dst) < 4 ";          
+    }
 
     if(isset($filter['t1']) && isset($filter['t2'])) {
       $sql = $sql." AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";

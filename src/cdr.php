@@ -92,7 +92,7 @@ class PBXCdr {
         $qwsql .= "	AND a.agentdev LIKE '%".addslashes($filter['dst'])."%' ";
       }
       if(isset($filter['agent']) && strlen($filter['agent'])) {
-        $cwsql .= "	AND 1 = 0 "; //Ignore CDR
+        $cwsql .= "	AND acl_user.name=  '".addslashes($filter['agent'])."' ";
         $qwsql .= "	AND a.agentname = '".addslashes($filter['agent'])."' ";
       }
       if(isset($filter['queue']) && strlen($filter['queue'])) {
@@ -140,7 +140,13 @@ class PBXCdr {
 
     if (intval($onlyCount)) {
       if ($timeisset != 2) return 4000000; // Return infinite for scrolling
-      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(*) AS n FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  $queues $qwsql) as u UNION SELECT COUNT(uniqueid) AS n FROM cdr WHERE 1=1 $extens $cwsql) as c";                              
+      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(*) AS n FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  $queues $qwsql) as u 
+              UNION 
+              SELECT COUNT(uniqueid) AS n FROM cdr 
+              LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+              LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)     
+              WHERE 1=1 $extens $cwsql) as c";                              
+              
       $res = $this->db->query($sql);      
       $row = $res->fetch(PDO::FETCH_NUM);      
       return $row[0]; 
@@ -168,7 +174,10 @@ class PBXCdr {
               SUM(IF(disposition = 'ANSWERED',billsec,0)) AS sum_duration,
               COUNT(IF(disposition = 'ANSWERED',1,NULL)) AS count_answered,
               SUM(IF(disposition = 'ANSWERED', billsec,0)) AS sum_answered
-              FROM cdr WHERE 1=1 $extens $cwsql
+              FROM cdr 
+              LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+              LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
+              WHERE 1=1 $extens $cwsql
           ) as c      
       ";            
       $result_cdr = $this->db->query($sql);      
@@ -202,8 +211,11 @@ class PBXCdr {
         FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql 
         ".($limit != 1000000 ? "AND a.calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND a.calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
         UNION
-        SELECT calldate, src, dst, name, disposition, duration - billsec, billsec, uniqueid AS uniqid, '', userfield
-        FROM cdr WHERE 1=1 $extens $cwsql 
+        SELECT calldate, src, dst, cdr.name, disposition, duration - billsec, billsec, uniqueid AS uniqid, acl_user.name, userfield        
+        FROM cdr 
+        LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+        LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
+        WHERE 1=1 $extens $cwsql 
         ".($limit != 1000000 ? "AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
         ) AS c ORDER BY calldate DESC ";        
       
