@@ -610,21 +610,31 @@ class User
       }
       $res = $this->db->query($sql);
       if ($res) {
+        $sql = "";
         if (intval($params['id'])) {
           $id = intval($params['id']);
-          $sql = "UPDATE cfg_user_setting SET ";
+          $start_sql = "UPDATE cfg_user_setting SET ";
           $end_sql = " WHERE acl_user_id = {$id} AND handle = 'cti.ext' LIMIT 1";
         } else {
           $id = $this->db->lastInsertId();
-          $sql = "INSERT INTO cfg_user_setting SET ";
+          $start_sql = "INSERT INTO cfg_user_setting SET ";
         }
         $rules = new PBXRules();
         $rules->saveUser($params['rules'], $id);
-        $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
-        if(isset($end_sql)) {
-          $sql .= $end_sql;
+        $user_cti_ext = $this->getUserConfigByHandle(intval($params['id']), "cti.ext");
+        if (intval($params['id']) && count($user_cti_ext) == 0) {
+          $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+        } else {
+          $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
         }
-        $res = $this->db->query($sql);
+        if(isset($end_sql) && strlen($sql)) {
+          $start_sql .= $sql;
+          $start_sql .= $end_sql;
+          $res = $this->db->query($start_sql);
+        }
+        if (isset($ext_sql)) {
+          $res_ext = $this->db->query($ext_sql);
+        }
         if (isset($params['config'])) {
           $this->saveUserConfig($id, json_decode($params['config'], true));
         }
@@ -635,7 +645,7 @@ class User
             if (intval($group)) $groups_int[] = intval($group);
           }
           if (is_array($groups_int) && COUNT($groups_int)) {
-            
+            // $this->deleteUserGroups($groups_int,$id);
             $this->saveUserGroups($groups_int,$id);
           }
         }
@@ -731,6 +741,13 @@ class User
     $this->db->query($sql);
     }
   }
+
+  // public function deleteUserGroups($group_ids, $user_id) {
+  //   if (is_array($group_ids)) {
+  //     $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_group_id IN (".implode(",",$group_ids).") AND acl_user_id = {$user_id}";
+  //     $this->db->query($sql);
+  //   }
+  // }
 
   public function saveUserGroups($group_ids, $user_id) {
     if (is_array($group_ids)) {
