@@ -76,6 +76,10 @@ class PBXCdr {
           $qwsql .= "AND a.calldate <= '".date("Y-m-d H:i:59", $d)."' ";
           $cwsql .= "AND calldate <= '".date("Y-m-d H:i:59", $d)."' ";
           $timeisset++;
+        } else {
+          $qwsql .= "AND a.calldate <= '".date("Y-m-d 23:59:59", $d)."'";
+          $cwsql .= "AND calldate <= '".date("Y-m-d 23:59:59", $d)."'";
+          $timeisset++;
         }
       }
       if(isset($filter['userfield']) && strlen($filter['userfield'])) {
