@@ -621,16 +621,22 @@ class Grouped_reports {
     $sql.= "	FROM queue_cdr WHERE reason != 'RINGNOANSWER' AND !outgoing ";
 
 //  Time settings
-    if(isset($filter['t1']) && isset($filter['t2'])) $sql = $sql."
-				AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
-    else $sql = $sql."
+    if (intval($filter['t1']) && isset($filter['t2']) && strval($filter['t1']) && strval($filter['t2'])) {
+      $sql = $sql."
+        AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
+    } else if (isset($filter['t1'])) {
+      $sql = $sql."
+        AND calldate>'".$filter['t1']." 00:00:00' AND calldate<'".$filter['t1']." 23:59:59'";
+    } 
+    else {
+      $sql = $sql."
 				AND calldate>'".date("Y-m-d H:i:s",time()-86400)."' AND calldate<'".date("Y-m-d H:i:s")."' ";//UNIX_TIMESTAMP(Now())-UNIX_TIMESTAMP(calldate) < 86400 ";
-
-    if($filter['filter'] == 2) $sql.= "
+    }
+    if ($filter['filter'] == 2) $sql.= "
 				AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') ";
     else if($filter['filter'] == 3) $sql.= "
 				AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') ";
-    if(isset($filter['queue']) && $filter['queue']!=0) $sql.= " AND queue=(SELECT name FROM queue WHERE id=".$filter['queue'].") ";
+    if (isset($filter['queue']) && $filter['queue']!=0) $sql.= " AND queue=(SELECT name FROM queue WHERE id=".$filter['queue'].") ";
     
     $que = $this->auth->allowed_queues();
     $queues = $utils->sql_allowed_queues($que);
