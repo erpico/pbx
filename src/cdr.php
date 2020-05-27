@@ -2,7 +2,9 @@
 
 class PBXCdr {
   protected $db;
-
+  /** @var \Erpico\User $user */
+  private $user;
+  
   public function __construct() {
     global $app;    
     $container = $app->getContainer();
@@ -60,7 +62,10 @@ class PBXCdr {
     $cwsql = "";
 
     $timeisset = 0;
-        
+    if ($this->user->getUserRoles() == ['user']) {
+      $cwsql .= "	AND 1 = 0 "; //Ignore CDR
+      $qwsql .= "	AND a.agentname = '".addslashes($this->user->getInfo()['name'])."' ";
+    }
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
@@ -131,16 +136,6 @@ class PBXCdr {
         }
       }      
     }
-    /*$sql = "(SELECT id, calldate, src, agentdev AS dst, queue, reason, holdtime, talktime, uniqid, agentname 
-      FROM queue_cdr WHERE 1=1 ";
-      $sql .= $queues."
-      UNION
-      SELECT id, calldate, src, dst, name, disposition, duration - billsec, billsec, uniqueid AS uniqid, '' 
-      FROM cdr WHERE 1=1 ";
-    $sql .= $extens.") as a";
-    if (strlen($wsql)) {
-      $sql .= " WHERE 1=1 $wsql";
-    }*/
 
     if (intval($onlyCount)) {
       if ($timeisset != 2) return 4000000; // Return infinite for scrolling

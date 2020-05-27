@@ -59,7 +59,9 @@ class User
       $this->db = $container['db'];
     }
     if (!intval($_id)) {
-      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ? self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken($_COOKIE['pbx_token']) : 0)));
+      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
+        self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
+          ($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
       if (is_array($token_data)) {
         $this->id = $token_data['acl_user_id'];
         $this->token_id = $token_data['id'];
@@ -156,7 +158,8 @@ class User
     $res = $this->db->query($sql);
     if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {    
       return [
-        'error' => 0,    
+        'error' => 0,
+        'roles' => $this->getUserRoles() ? $this->getUserRoles()  : ['user'],
         'name' => $row['name'],
         'fullname' => $row['fullname'],    
       ];
@@ -333,7 +336,7 @@ class User
     }
     return $result;
   }
-
+  
   public function deny_numbers()
   {
     if(isset($_COOKIE['token'])) {
@@ -655,6 +658,31 @@ class User
     }
 
     return ["result" => true, "message" => "Операция прошла успешно"];
+
+  }
+  
+  public function getId()
+  {
+    return $this->id;
+  }
+  
+  /**
+   * @return array
+   */
+  public function getUserRoles()
+  {
+    $result = [];
+    $sql = 'SELECT DISTINCT  R.handle
+      FROM acl_user_has_rules AS H
+      LEFT JOIN acl_rule AS R ON (R.id = H.acl_rule_id)
+      WHERE acl_user_id = '.$this->getId();
+    $res = $this->db->query($sql);
+    
+    while ($res && $row = $res->fetch()) {
+      $result[] = $row['handle'];
+    }
+    
+    return $result ? $result : ['user'];
   }
   
   private function getUserConfig($userId)
