@@ -184,12 +184,12 @@ $app->get('/users/list', function (Request $request, Response $response, array $
     ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->post('/users/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/users/{id}/save[/{disable_rules}]', function (Request $request, Response $response, array $args) use($app) {
     $params = $request->getParams();
     $id = intval($args['id']);
     $user = new User();
-
-    return $response->withJson($user->addUpdate($params));
+    $result = $args['disable_rules'] ? $response->withJson($user->addUpdate($params, true)) : $response->withJson($user->addUpdate($params));
+    return $result;
 });
   
 $app->post('/users/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
@@ -340,6 +340,10 @@ $app->get('/auth/info', function (Request $request, Response $response, array $a
 
 $app->get('/auth/logout', function (Request $request, Response $response, array $args) use($app) {    
     return $response->withJson([ "error" => !$app->getContainer()['auth']->logout() ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/auth/settings', function (Request $request, Response $response, array $args) use($app) { 
+  return $response->withJson(["data"=>$app->getContainer()['auth']->getAuthUserSettings()]);   
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/[{name}]', function (Request $request, Response $response, array $args) {

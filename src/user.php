@@ -429,6 +429,25 @@ class User
     return $myrow_queue['val']!="" ? $myrow_queue['val'] : $x;
   }
 
+  public function getAuthUserSettings() {
+    if (!$this->id) return 0;
+    $sql = "SELECT 
+      U.id, U.name, U.fullname, U.description, C.val as phone, U.state
+      FROM acl_user as U
+      LEFT JOIN cfg_user_setting AS C ON (C.acl_user_id = U.id AND C.handle = 'cti.ext')
+      WHERE U.id = {$this->id}
+    ";
+     $res = $this->db->query($sql);        
+     $row = $res->fetch();
+     if (isset($row['id']) && intval($row['id'])) {
+      $groups =  $this->getUserGroups(intval($row['id']));
+      $row['user_groups'] = $groups['names'];
+      $row['user_groups_ids'] = $groups['ids'];
+      $row['config'] = $this->getUserConfig($row['id']);
+    }    
+     return $row;
+  }
+
   public function fetchList($filter = "", $start = 0, $end = 20, $onlycount = 0, $shortlist = 0, $fullnameAsValue = 0, $likeStringValues = true)
   {
     if ($onlycount) {
@@ -555,7 +574,7 @@ class User
 
   }
 
-  public function addUpdate($params)
+  public function addUpdate($params, $disable_rules = false)
   {
     try {          
       if (intval($params['id'])) {
@@ -584,10 +603,12 @@ class User
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
       }
 
-      if (isset($params['state']) && intval($params['state'])) {
-        $sql .= "`state` = '".intval($params['state'])."',";
-      } else {
-        return ["result" => false, "message" => "state can`t be empty"];
+      if (!$disable_rules) {
+        if (isset($params['state']) && intval($params['state'])) {
+          $sql .= "`state` = '".intval($params['state'])."',";
+        } else {
+          return ["result" => false, "message" => "state can`t be empty"];
+        }
       }
       
       if (!intval($params['id'])) {
@@ -622,13 +643,15 @@ class User
           $id = $this->db->lastInsertId();
           $start_sql = "INSERT INTO cfg_user_setting SET ";
         }
-        $rules = new PBXRules();
-        $rules->saveUser($params['rules'], $id);
-        $user_cti_ext = $this->getUserConfigByHandle(intval($params['id']), "cti.ext");
-        if (intval($params['id']) && count($user_cti_ext) == 0) {
-          $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
-        } else {
-          $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+        if (!$disable_rules) {
+          $rules = new PBXRules();
+          $rules->saveUser($params['rules'], $id);
+          $user_cti_ext = $this->getUserConfigByHandle(intval($params['id']), "cti.ext");
+          if (intval($params['id']) && count($user_cti_ext) == 0) {
+            $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+          } else {
+            $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+          }
         }
         if(isset($end_sql) && strlen($sql)) {
           $start_sql .= $sql;
@@ -641,15 +664,17 @@ class User
         if (isset($params['config'])) {
           $this->saveUserConfig($id, json_decode($params['config'], true));
         }
-        if (isset($params['user_groups_ids'])) {
-          $groups = explode(",",$params['user_groups_ids']);
-          $groups_int = [];
-          foreach ($groups as $group) {
-            if (intval($group)) $groups_int[] = intval($group);
-          }
-          if (is_array($groups_int) && COUNT($groups_int)) {
-            // $this->deleteUserGroups($groups_int,$id);
-            $this->saveUserGroups($groups_int,$id);
+        if (!$disable_rules) {
+          if (isset($params['user_groups_ids'])) {
+            $groups = explode(",",$params['user_groups_ids']);
+            $groups_int = [];
+            foreach ($groups as $group) {
+              if (intval($group)) $groups_int[] = intval($group);
+            }
+            if (is_array($groups_int) && COUNT($groups_int)) {
+              // $this->deleteUserGroups($groups_int,$id);
+              $this->saveUserGroups($groups_int,$id);
+            }
           }
         }
       }

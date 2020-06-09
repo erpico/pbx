@@ -3,7 +3,11 @@
 }*/
 
 /***menu***/
-
+.webix_view.webix_popup.webix_menu{
+    right: 0;
+    left: auto !important;
+    top: 49px;
+}
 /*bars*/
 .app_button .webix_el_box{
     border-radius: 0;
