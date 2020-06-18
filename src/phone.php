@@ -186,7 +186,7 @@ class PBXPhone {
       foreach (self::FIELDS as $field => $isInt) {
         if ((isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]))) || !strlen($values[$field])) {
           if (strlen($ssql)) $ssql .= ",";
-            $ssql .= "`".$field."`=".(strlen($values[$field]) ? "'".($isInt ? intval($values[$field]) : trim(addslashes($values[$field]))."'") : 'NULL')."";
+            $ssql .= "`".$field."`=".(strlen($values[$field]) ? "'".($isInt ? intval($values[$field])."'" : trim(addslashes($values[$field]))."'") : 'NULL')."";
         }
       }
       
@@ -204,6 +204,7 @@ class PBXPhone {
             }
           }
         }
+        
         $this->db->query($sql);
         if (isset($values['user_id']) && intval($values['user_id'])) {
           $new_user_id = intval($values["user_id"]);
