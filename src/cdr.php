@@ -64,12 +64,13 @@ class PBXCdr {
     $timeisset = 0;
     $userPhone = addslashes($this->user->getPhone($this->user->getId()));
     $userName = addslashes($this->user->getInfo()['name']);
-    $isCanSeeOthers = !in_array('phc.reports',$this->user->getUserRoles()) || !in_array('erpico.admin',$this->user->getUserRoles());
-  
-    if ($isCanSeeOthers) {
+    $isCanSeeOthers = in_array('phc.reports',$this->user->getUserRoles()) || in_array('erpico.admin',$this->user->getUserRoles());
+
+    if (!$isCanSeeOthers) {
       $cwsql .= "	AND (cdr.src = '".$userPhone."' OR cdr.dst = '".$userPhone."') "; //Ignore CDR
       $qwsql .= "	AND ( a.agentname = '".$userName."' OR a.src = '".$userPhone."' OR a.agentdev  = '".$userPhone."')";
     }
+
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
@@ -97,26 +98,26 @@ class PBXCdr {
         $cwsql .= "	AND userfield LIKE '%".addslashes($filter['userfield'])."%' ";
       }
       if(isset($filter['src']) && strlen($filter['src'])) {
-        if ($isCanSeeOthers) {
+        /*if ($isCanSeeOthers) {
           $qwsql .= "	AND (a.src = '".$userPhone."' OR a.agentdev LIKE '".$userPhone."')";
           $cwsql .= "	AND (src = '".$userPhone."' OR dst = '".$userPhone."' )";
-        } else {
+        } else {*/
           $qwsql .= "	AND (a.src LIKE '%".addslashes($filter['src'])."%' OR a.agentdev LIKE '%".addslashes($filter['src'])."%')";
           $cwsql .= "	AND (src LIKE '%".addslashes($filter['src'])."%' OR dst LIKE '%".addslashes($filter['src'])."%' )";
-        }
+        //}
       }
       if(isset($filter['dst']) && strlen($filter['dst'])) {
         $cwsql .= "	AND dst LIKE '%".addslashes($filter['dst'])."%' ";
         $qwsql .= "	AND a.agentdev LIKE '%".addslashes($filter['dst'])."%' ";
       }
       if(isset($filter['agent']) && strlen($filter['agent'])) {
-        if ($isCanSeeOthers) {
+        /*if ($isCanSeeOthers) {
           $cwsql .= "	AND (acl_user.name =  '".addslashes($filter['agent'])."'  OR acl_use.name = '".$userName."')";
           $qwsql .= "	AND (a.agentname = '".addslashes($filter['agent'])."' OR a.agentname = '".$userName."' )";
-        } else {
+        } else {*/
           $cwsql .= "	AND acl_user.name=  '".addslashes($filter['agent'])."' ";
           $qwsql .= "	AND a.agentname = '".addslashes($filter['agent'])."' ";
-        }
+        //}
       }
       if(isset($filter['queue']) && strlen($filter['queue'])) {
         $cwsql .= "	AND 1 = 0 "; //Ignore CDR
@@ -237,7 +238,7 @@ class PBXCdr {
       }*/
       //$sql .= " LIMIT 100"; // No more for now
       $cdr = [];                
-
+      //die($sql);
       $res = $this->db->query($sql);
       //die(var_dump($res));
       $lcd -= 3600*24;
