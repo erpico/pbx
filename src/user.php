@@ -48,7 +48,7 @@ class User
   private $token_id = 0;
   private $id = 0;
   
-  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days'];
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules', 'cfwd.duration.of.redirection'];
 
   public function __construct($db = null, $_id = 0) {
     if (isset($db)) {
@@ -109,7 +109,7 @@ class User
     $sql = "SELECT id, name, fullname
 	          FROM acl_user
 	          WHERE name='".addslashes($login)."' 
-            AND password = sha1(md5(concat(md5(md5('".addslashes($password)."')), ';Ej>]sjkip')))";            
+              AND password = sha1(md5(concat(md5(md5('".addslashes($password)."')), ';Ej>]sjkip')))";
     $res = $this->db->query($sql);
     if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {
       $token = substr(sha1(sprintf("%s%d", $row['name'], round(microtime(1) * 1000))), 0, 32); 

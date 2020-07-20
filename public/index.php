@@ -1,8 +1,8 @@
 <?php
-  
-  use Tkhamez\Slim\RoleAuth\RoleMiddleware;
-  use Tkhamez\Slim\RoleAuth\SecureRouteMiddleware;
-  
+
+use Tkhamez\Slim\RoleAuth\RoleMiddleware;
+use Tkhamez\Slim\RoleAuth\SecureRouteMiddleware;
+
   if (PHP_SAPI == 'cli-server') {
     // To help the built-in PHP dev server, check if the request was actually for
     // something which should probably be served as a static file
@@ -34,4 +34,5 @@ require __DIR__ . '/../src/legacyroutes.php';
 // https://stackoverflow.com/questions/1430883/simultaneous-requests-to-php-script
 session_write_close();
 // Run app
+$app->add(\App\Middleware\CheckDBMiddleware::class);
 $app->run();

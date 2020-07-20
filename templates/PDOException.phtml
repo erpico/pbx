@@ -1,0 +1,578 @@
+<html>
+<head></head>
+<body style="overflow: hidden;">
+
+
+<meta charset="utf-8">
+<title>ErpicoPBX 3.0</title>
+
+<!-- Webix files-->
+<link rel="stylesheet" href="./webix/webix.min.css" type="text/css">
+<script src="./webix/webix.min.js" type="text/javascript"></script>
+
+<link rel="stylesheet" href="./webix/skins/flat.css">
+<link rel="stylesheet" href="./webix/skins/custom_style.css">
+
+<link rel="stylesheet" href="./webix/fonts/fontawesome-all.css">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.1/css/all.css"
+      integrity="sha384-50oBUHEmvpQ+1lW4y57PTFmhCaXp0ML5d60M1M7uH2+nqUivzIebhndOJK28anvf" crossorigin="anonymous">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<script type="text/javascript" src="./helpers/nicedit.js"></script>
+<script type="text/javascript" src="./helpers/language.js"></script>
+<script type="text/javascript" src="./helpers/i18n/ru.js"></script>
+
+<!-- Error tracking -->
+<script src="https://cdn.ravenjs.com/3.10.0/raven.min.js"></script>
+
+<!-- The App -->
+
+<link rel="stylesheet" href="./codebase/admin.css">
+<link rel="stylesheet" href="./assets/erpico.css">
+<!--<script type="text/javascript" src="./codebase/admin.js"></script>-->
+
+<!-- Data and additional
+<script src="" type="text/javascript"></script>
+-->
+
+
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$checksuggest1"
+     style="border-width: 1px; display: none; width: 318px; height: 51px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$checksuggest1_layout"
+                 style="width: 302px; height: 35px;">
+                <div class="webix_view webix_list webix_multilist" role="listbox" view_id="$list1"
+                     style="border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: 0px; width: 301px; height: 34px;">
+                    <div class="webix_scroll_cont"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$checksuggest2"
+     style="border-width: 1px; display: none; width: 318px; height: 51px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$checksuggest2_layout"
+                 style="width: 302px; height: 35px;">
+                <div class="webix_view webix_list webix_multilist" role="listbox" view_id="$list2"
+                     style="border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: 0px; width: 301px; height: 34px;">
+                    <div class="webix_scroll_cont"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$suggest1"
+     style="border-width: 1px; display: none; width: 318px; height: 152px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_list" role="listbox" view_id="$suggest1_list"
+                 style="width: 302px; height: 136px;">
+                <div class="webix_scroll_cont">
+                    <div webix_l_id="5" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="0">5
+                    </div>
+                    <div webix_l_id="10" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="-1">10
+                    </div>
+                    <div webix_l_id="20" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="-1">20
+                    </div>
+                    <div webix_l_id="30" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="-1">30
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$checksuggest3"
+     style="border-width: 1px; display: none; width: 318px; height: 187px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$checksuggest3_layout"
+                 style="width: 302px; height: 171px;">
+                <div class="webix_view webix_list webix_multilist" role="listbox" view_id="$list3"
+                     style="border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: 0px; width: 301px; height: 170px;">
+                    <div class="webix_scroll_cont"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$suggest2"
+     style="border-width: 1px; display: none; width: 250px; height: 270px;">
+    <div class="webix_win_content" style="padding: 0px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_calendar" role="region" aria-label="Calendar" view_id="$suggest2_calendar"
+                 style="width: 250px; height: 270px;"></div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$suggest3"
+     style="border-width: 1px; display: none; width: 250px; height: 270px;">
+    <div class="webix_win_content" style="padding: 0px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_calendar" role="region" aria-label="Calendar" view_id="$suggest3_calendar"
+                 style="width: 250px; height: 270px;"></div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window" role="dialog" tabindex="0" view_id="option-add-win"
+     style="border-width: 1px; display: none; width: 600px; height: 450px;">
+    <div class="webix_win_content" style="position: relative;">
+        <div class="webix_win_head">
+            <div class="webix_view webix_toolbar webix_layout_toolbar" role="toolbar" view_id="$toolbar1"
+                 style="white-space: nowrap; width: 600px; height: 40px;">
+                <div class="webix_scroll_cont">
+                    <div class="webix_view webix_control webix_el_label" view_id="$label1"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 1px; margin-left: 3px; width: 552px; height: 38px;"></div>
+                    <div class="webix_view webix_control webix_el_icon" view_id="$icon1"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 1px; margin-left: 4px; width: 38px; height: 38px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$layout1" style="width: 600px; height: 410px;">
+                <div class="webix_view webix_form webix_layout_form" role="form" view_id="option-form"
+                     style="border-width: 0px 0px 1px; margin-left: 0px; margin-top: 0px; width: 600px; height: 372px;">
+                    <div class="webix_scroll_cont">
+                        <div class="webix_view webix_layout_line" view_id="$tabview1"
+                             style="margin-left: 17px; margin-top: 17px; width: 566px; height: 338px;">
+                            <div class="webix_view webix_control webix_el_tabbar" view_id="$tabbar1"
+                                 style="border-width: 0px; margin-left: 0px; margin-top: 0px; width: 566px; height: 46px;"></div>
+                            <div class="webix_view webix_multiview" view_id="$multiview1"
+                                 style="position: relative; margin-left: 0px; margin-top: -1px; width: 566px; height: 293px;">
+                                <div class="webix_view webix_scrollview" view_id="view1592945678129" role="tabpanel"
+                                     style="border-width: 0px; width: 566px; height: 293px;">
+                                    <div class="webix_scroll_cont">
+                                        <div class="webix_view webix_layout_line" view_id="$layout2"
+                                             style="width: 566px; height: 345px;">
+                                            <div class="webix_view webix_layout_line" view_id="$layout3"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: 0px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text" view_id="$text2"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;"></div>
+                                                <div class="webix_view webix_control webix_el_text" view_id="$text3"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;"></div>
+                                            </div>
+                                            <div class="webix_view webix_layout_line" view_id="$layout4"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text"
+                                                     view_id="user-password"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;"></div>
+                                                <div class="webix_view webix_control webix_el_text"
+                                                     view_id="user-password-confirm"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;"></div>
+                                            </div>
+                                            <div class="webix_view webix_layout_line" view_id="$layout5"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text" view_id="$text4"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;"></div>
+                                                <div class="webix_view webix_control webix_el_select webix_disabled_view"
+                                                     aria-disabled="true" view_id="$select1"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;">
+                                                    <div class="webix_disabled"></div>
+                                                </div>
+                                            </div>
+                                            <div class="webix_view webix_layout_line" view_id="$layout6"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text webix_multicombo webix_disabled_view"
+                                                     aria-disabled="true" view_id="$multicombo1"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;">
+                                                    <div class="webix_disabled"></div>
+                                                </div>
+                                                <div class="webix_view webix_control webix_el_text webix_multicombo webix_disabled_view"
+                                                     aria-disabled="true" view_id="$multicombo2"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;">
+                                                    <div class="webix_disabled"></div>
+                                                </div>
+                                            </div>
+                                            <div class="webix_view webix_control webix_el_textarea" view_id="$textarea1"
+                                                 style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 100px;"></div>
+                                            <div class="webix_view webix_spacer" view_id="$spacer1"
+                                                 style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 10px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="webix_view webix_layout_line" view_id="$layout10"
+                     style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: -1px; width: 600px; height: 38px;">
+                    <div class="webix_view webix_spacer" view_id="$spacer3"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 340px; height: 38px;"></div>
+                    <div class="webix_view webix_control webix_el_button webix_secondary" view_id="$button5"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 10px; width: 120px; height: 38px;"></div>
+                    <div class="webix_view webix_control webix_el_button webix_secondary" view_id="$button6"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 10px; width: 120px; height: 38px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="webix_resize_handle" webix_disable_drag="true"></div>
+    </div>
+</div>
+<div class="webix_view webix_window login_window" role="dialog" tabindex="0" view_id="loginWindow"
+     style="border-width: 1px; display: block; width: 1918px; height: 100%; z-index: 101; top: 0px; left: 0px;">
+    <div class="webix_win_content">
+        <div class="webix_win_head">
+            <div class="webix_view webix_spacer" view_id="$spacer24" style="width: 1918px; height: 46px;"></div>
+        </div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_form webix_layout_form" role="form" view_id="loginForm"
+                 style="width: 1918px; height: 102px;">
+                <div class="webix_scroll_cont">
+                    <div class="webix_view webix_layout_line" view_id="$layout11"
+                         style="border-width: 0px; margin-left: 17px; margin-top: 17px; width: 1884px; height: 488px;">
+                        <div class="webix_view webix_spacer" view_id="$spacer4"
+                             style="border-width: 0px; margin-left: 0px; margin-top: 0px; width: 1884px; height: 0px;"></div>
+                        <div class="webix_view webix_spacer" view_id="$spacer5"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 0px;"></div>
+                        <div class="webix_view webix_layout_line" view_id="$layout12"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 162px;">
+                            <div class="webix_view webix_spacer" view_id="$spacer6"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 727px; height: 162px;"></div>
+                            <div class="webix_view" view_id="logobox"
+                                 style="border-width: 1px; display: inline-block; vertical-align: top; margin-top: 0px; margin-left: -1px; width: 430px; height: 160px;">
+                                <div class=" webix_template"><img src="../assets/imgs/erpico-logo-pbx.png"
+                                                                  valign="middle" style="width: 100%"></div>
+                            </div>
+                            <div class="webix_view webix_spacer" view_id="$spacer7"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 727px; height: 162px;"></div>
+                        </div>
+                        <div class="webix_view webix_spacer" view_id="$spacer8"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 0px;"></div>
+                        <div class="webix_view webix_layout_line" view_id="$layout13"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 90px;">
+                            <div class="webix_view webix_spacer" view_id="$spacer9"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 375px; height: 90px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer10"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 90px;"></div>
+                            <div class="webix_view webix_control webix_el_text" view_id="auth_login"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 390px; height: 90px;">
+                                <div class="webix_el_box" style="width:390px; height:60px"><label
+                                            style="text-align:left; line-height:54px; width:80px;" onclick=""
+                                            for="1592945678391" class="webix_inp_label ">Произошла ошибка соединения
+                                        с сервером</label><input
+                                            id="1592945678391" type="text" value=""
+                                            style="width: 306px; text-align: left;"></div>
+                            </div>
+                            <div class="webix_view webix_spacer" view_id="$spacer11"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 375px; height: 90px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer12"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 90px;"></div>
+                        </div>
+                        <div class="webix_view webix_layout_line" view_id="$layout15"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 70px;">
+                            <div class="webix_view webix_control webix_el_label login_message" view_id="message"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 1884px; height: 70px; text-align: center;">
+                                <div class="webix_el_box"
+                                     style="width: 390px; height: 70px; line-height: 64px; display: inline-block;"></div>
+                            </div>
+                        </div>
+                        <div class="webix_view webix_layout_line" view_id="$layout16"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 86px;">
+                            <div class="webix_view webix_spacer" view_id="$spacer17"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 375px; height: 86px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer18"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 86px;"></div>
+                            <div class="webix_view webix_control webix_el_button webix_secondary" view_id="auth_enter"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 390px; height: 86px;">
+                                <div class="webix_el_box" style="width:390px; height:86px">
+                                    <button type="button" class="webix_button">Войти</button>
+                                </div>
+                            </div>
+                            <div class="webix_view webix_spacer" view_id="$spacer19"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 375px; height: 86px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer20"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 86px;"></div>
+                        </div>
+                        <div class="webix_view webix_spacer" view_id="$spacer21"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 0px;"></div>
+                        <div class="webix_view webix_spacer" view_id="$spacer22"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 0px;"></div>
+                        <div class="webix_view webix_spacer" view_id="$spacer23"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 0px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_modal" style="z-index: 100;"></div>
+
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$checksuggest1"
+     style="border-width: 1px; display: none; width: 318px; height: 18px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$checksuggest1_layout"
+                 style="width: 302px; height: 2px;">
+                <div class="webix_view webix_list webix_multilist" role="listbox" view_id="$list1"
+                     style="border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: 0px; width: 301px; height: 1px;">
+                    <div class="webix_scroll_cont"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$checksuggest2"
+     style="border-width: 1px; display: none; width: 318px; height: 18px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$checksuggest2_layout"
+                 style="width: 302px; height: 2px;">
+                <div class="webix_view webix_list webix_multilist" role="listbox" view_id="$list2"
+                     style="border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: 0px; width: 301px; height: 1px;">
+                    <div class="webix_scroll_cont"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$suggest1"
+     style="border-width: 1px; display: none; width: 318px; height: 152px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_list" role="listbox" view_id="$suggest1_list"
+                 style="width: 302px; height: 136px;">
+                <div class="webix_scroll_cont">
+                    <div webix_l_id="5" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="0">5
+                    </div>
+                    <div webix_l_id="10" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="-1">10
+                    </div>
+                    <div webix_l_id="20" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="-1">20
+                    </div>
+                    <div webix_l_id="30" class="webix_list_item" style="width:auto; height:34px; overflow:hidden;"
+                         role="option" tabindex="-1">30
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$checksuggest3"
+     style="border-width: 1px; display: none; width: 318px; height: 187px;">
+    <div class="webix_win_content" style="padding: 8px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$checksuggest3_layout"
+                 style="width: 302px; height: 171px;">
+                <div class="webix_view webix_list webix_multilist" role="listbox" view_id="$list3"
+                     style="border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: 0px; width: 301px; height: 170px;">
+                    <div class="webix_scroll_cont"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$suggest2"
+     style="border-width: 1px; display: none; width: 250px; height: 270px;">
+    <div class="webix_win_content" style="padding: 0px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_calendar" role="region" aria-label="Calendar" view_id="$suggest2_calendar"
+                 style="width: 250px; height: 270px;"></div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window webix_popup" role="dialog" tabindex="0" view_id="$suggest3"
+     style="border-width: 1px; display: none; width: 250px; height: 270px;">
+    <div class="webix_win_content" style="padding: 0px;">
+        <div class="webix_win_head" style="display: none;"></div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_calendar" role="region" aria-label="Calendar" view_id="$suggest3_calendar"
+                 style="width: 250px; height: 270px;"></div>
+        </div>
+    </div>
+</div>
+<div class="webix_view webix_window" role="dialog" tabindex="0" view_id="option-add-win"
+     style="border-width: 1px; display: none; width: 600px; height: 493px;">
+    <div class="webix_win_content" style="position: relative;">
+        <div class="webix_win_head">
+            <div class="webix_view webix_toolbar webix_layout_toolbar" role="toolbar" view_id="$toolbar1"
+                 style="white-space: nowrap; width: 600px; height: 40px;">
+                <div class="webix_scroll_cont">
+                    <div class="webix_view webix_control webix_el_label" view_id="$label1"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 1px; margin-left: 3px; width: 552px; height: 38px;"></div>
+                    <div class="webix_view webix_control webix_el_icon" view_id="$icon1"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 1px; margin-left: 4px; width: 38px; height: 38px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_layout_line" view_id="$layout1" style="width: 600px; height: 453px;">
+                <div class="webix_view webix_form webix_layout_form" role="form" view_id="option-form"
+                     style="border-width: 0px 0px 1px; margin-left: 0px; margin-top: 0px; width: 600px; height: 415px;">
+                    <div class="webix_scroll_cont">
+                        <div class="webix_view webix_layout_line" view_id="$tabview1"
+                             style="margin-left: 17px; margin-top: 17px; width: 566px; height: 381px;">
+                            <div class="webix_view webix_control webix_el_tabbar" view_id="$tabbar1"
+                                 style="border-width: 0px; margin-left: 0px; margin-top: 0px; width: 566px; height: 46px;"></div>
+                            <div class="webix_view webix_multiview" view_id="$multiview1"
+                                 style="position: relative; margin-left: 0px; margin-top: -1px; width: 566px; height: 336px;">
+                                <div class="webix_view webix_scrollview" view_id="view1592945789865" role="tabpanel"
+                                     style="border-width: 0px; width: 566px; height: 336px;">
+                                    <div class="webix_scroll_cont">
+                                        <div class="webix_view webix_layout_line" view_id="$layout2"
+                                             style="width: 566px; height: 345px;">
+                                            <div class="webix_view webix_layout_line" view_id="$layout3"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: 0px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text" view_id="$text2"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;"></div>
+                                                <div class="webix_view webix_control webix_el_text" view_id="$text3"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;"></div>
+                                            </div>
+                                            <div class="webix_view webix_layout_line" view_id="$layout4"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text"
+                                                     view_id="user-password"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;"></div>
+                                                <div class="webix_view webix_control webix_el_text"
+                                                     view_id="user-password-confirm"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;"></div>
+                                            </div>
+                                            <div class="webix_view webix_layout_line" view_id="$layout5"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text" view_id="$text4"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;"></div>
+                                                <div class="webix_view webix_control webix_el_select webix_disabled_view"
+                                                     aria-disabled="true" view_id="$select1"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;">
+                                                    <div class="webix_disabled"></div>
+                                                </div>
+                                            </div>
+                                            <div class="webix_view webix_layout_line" view_id="$layout6"
+                                                 style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 60px;">
+                                                <div class="webix_view webix_control webix_el_text webix_multicombo webix_disabled_view"
+                                                     aria-disabled="true" view_id="$multicombo1"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 284px; height: 60px;">
+                                                    <div class="webix_disabled"></div>
+                                                </div>
+                                                <div class="webix_view webix_control webix_el_text webix_multicombo webix_disabled_view"
+                                                     aria-disabled="true" view_id="$multicombo2"
+                                                     style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 283px; height: 60px;">
+                                                    <div class="webix_disabled"></div>
+                                                </div>
+                                            </div>
+                                            <div class="webix_view webix_control webix_el_textarea" view_id="$textarea1"
+                                                 style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 100px;"></div>
+                                            <div class="webix_view webix_spacer" view_id="$spacer1"
+                                                 style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 566px; height: 10px;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="webix_view webix_layout_line" view_id="$layout10"
+                     style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; border-bottom-width: 0px; margin-left: 0px; margin-top: -1px; width: 600px; height: 38px;">
+                    <div class="webix_view webix_spacer" view_id="$spacer3"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 340px; height: 38px;"></div>
+                    <div class="webix_view webix_control webix_el_button webix_secondary" view_id="$button5"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 10px; width: 120px; height: 38px;"></div>
+                    <div class="webix_view webix_control webix_el_button webix_secondary" view_id="$button6"
+                         style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 10px; width: 120px; height: 38px;"></div>
+                </div>
+            </div>
+        </div>
+        <div class="webix_resize_handle" webix_disable_drag="true"></div>
+    </div>
+</div>
+<div class="webix_view webix_window login_window" role="dialog" tabindex="0" view_id="loginWindow"
+     style="border-width: 1px; display: block; width: 1918px; height: 100%; z-index: 101; top: 0px; left: 0px;">
+    <div class="webix_win_content">
+        <div class="webix_win_head">
+            <div class="webix_view webix_spacer" view_id="$spacer24" style="width: 1918px; height: 46px;"></div>
+        </div>
+        <div class="webix_win_body">
+            <div class="webix_view webix_form webix_layout_form" role="form" view_id="loginForm"
+                 style="width: 1918px; height: 655px;">
+                <div class="webix_scroll_cont">
+                    <div class="webix_view webix_layout_line" view_id="$layout11"
+                         style="border-width: 0px; margin-left: 17px; margin-top: 17px; width: 1884px; height: 621px;">
+                        <div class="webix_view webix_spacer" view_id="$spacer4"
+                             style="border-width: 0px; margin-left: 0px; margin-top: 0px; width: 1884px; height: 22px;"></div>
+                        <div class="webix_view webix_spacer" view_id="$spacer5"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 22px;"></div>
+                        <div class="webix_view webix_layout_line" view_id="$layout12"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 162px;">
+                            <div class="webix_view webix_spacer" view_id="$spacer6"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 727px; height: 162px;"></div>
+                            <div class="webix_view" view_id="logobox"
+                                 style="border-width: 1px; display: inline-block; vertical-align: top; margin-top: 0px; margin-left: -1px; width: 430px; height: 160px;">
+                                <div class=" webix_template"><img src="../assets/imgs/erpico-logo-pbx.png"
+                                                                  valign="middle" style="width: 100%"></div>
+                            </div>
+                            <div class="webix_view webix_spacer" view_id="$spacer7"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 727px; height: 162px;"></div>
+                        </div>
+                        <div class="webix_view webix_spacer" view_id="$spacer8"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 22px;"></div>
+                        <div class="webix_view webix_layout_line" view_id="$layout13"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 90px;">
+                            <div class="webix_view webix_spacer" view_id="$spacer9"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 375px; height: 90px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer10"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 90px;"></div>
+                            <div class="webix_view webix_control webix_el_text" view_id="auth_login"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top:
+                                 0px; margin-left: -1px; width: 410px; height: 90px;">
+                                <div class="webix_el_box" style=" height:60px"><label
+                                            style="text-align:center; line-height:54px;" onclick=""
+                                            for="1592945790127" class="webix_inp_label ">Произошла ошибка соединения
+                                        с сервером</label></div>
+                            </div>
+                            <div class="webix_view webix_spacer" view_id="$spacer11"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 375px; height: 90px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer12"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 90px;"></div>
+                        </div>
+                        <div class="webix_view webix_layout_line" view_id="$layout14"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 90px;">
+                            <div class="webix_view webix_spacer" view_id="$spacer13"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 375px; height: 90px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer14"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 90px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer15"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 375px; height: 90px;"></div>
+                            <div class="webix_view webix_spacer" view_id="$spacer16"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: -1px; width: 374px; height: 90px;"></div>
+                        </div>
+                        <div class="webix_view webix_layout_line" view_id="$layout15"
+                             style="white-space: nowrap; border-left-width: 0px; border-right-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 70px;">
+                            <div class="webix_view webix_control webix_el_label login_message" view_id="message"
+                                 style="display: inline-block; vertical-align: top; border-width: 0px; margin-top: 0px; margin-left: 0px; width: 1884px; height: 70px; text-align: center;">
+                                <div class="webix_el_box"
+                                     style="width: 390px; height: 70px; line-height: 64px; display: inline-block;"></div>
+                            </div>
+                        </div>
+                        <div class="webix_view webix_spacer" view_id="$spacer21"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 22px;"></div>
+                        <div class="webix_view webix_spacer" view_id="$spacer22"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 23px;"></div>
+                        <div class="webix_view webix_spacer" view_id="$spacer23"
+                             style="border-width: 0px; margin-left: 0px; margin-top: -1px; width: 1884px; height: 22px;"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<div class="webix_modal" style="z-index: 100;"></div>
+</body>
+</html>
