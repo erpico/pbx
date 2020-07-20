@@ -31,30 +31,30 @@ class PBXOldContactCdr {
     $queues = $this->utils->sql_allowed_queues_for_records($que);
 
     $demand = "	SELECT 
-    A.id AS id,
-    A.calldate AS calldate,
-    A.queue AS queue,
-    A.agentid AS agentid,
-    A.agentname AS agentname,
-    A.agentdev AS agentdev,
-    A.agentcalls AS agentcalls,
-    A.holdtime AS holdtime,
-    A.talktime AS talktime,
-    A.ringtime AS ringtime,
-    A.position AS position,
-    A.origposition AS origposition,
-    A.callerid AS callerid,
-    A.src AS src,
-    A.reason AS reason,
-    A.record_file AS record_file,
+    a.id AS id,
+    a.calldate AS calldate,
+    a.queue AS queue,
+    a.agentid AS agentid,
+    a.agentname AS agentname,
+    a.agentdev AS agentdev,
+    a.agentcalls AS agentcalls,
+    a.holdtime AS holdtime,
+    a.talktime AS talktime,
+    a.ringtime AS ringtime,
+    a.position AS position,
+    a.origposition AS origposition,
+    a.callerid AS callerid,
+    a.src AS src,
+    a.reason AS reason,
+    a.record_file AS record_file,
     B.fullname AS fullname_queue,
     C.fullname AS fullname_agent,
     channel,
     dstchannel,
     uniqid AS uid
-    FROM queue_cdr AS A
-    LEFT JOIN queue AS B ON (A.queue=B.name)
-    LEFT JOIN acl_user AS C ON (A.agentname=C.name)";
+    FROM queue_cdr AS a
+    LEFT JOIN queue AS B ON (a.queue=B.name)
+    LEFT JOIN acl_user AS C ON (a.agentname=C.name)";
   if(isset($filter['t1']) && isset($filter['t2'])) $demand = $demand."
     WHERE calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
   else $demand = $demand."
@@ -75,7 +75,7 @@ class PBXOldContactCdr {
   $demand = $demand." 
     ORDER BY calldate DESC";
 
-  // die($demand);
+  //die($demand);
   $result = $this->db->query($demand);
   $cdr_report = array();
   $i = -1;
@@ -96,11 +96,10 @@ class PBXOldContactCdr {
   };
   $cdr_report[$j]['agent'] = $cdr_report[$j]['fullname_agent']!="" ? $cdr_report[$j]['fullname_agent'] : $cdr_report[$j]['agent'];
   $cdr_report[$j]['queue'] = $cdr_report[$j]['fullname_queue']!="" ? $cdr_report[$j]['fullname_queue'] : $cdr_report[$j]['queue'];
-  $cdr_report[$j]['holdtime'] = $this->utils->time_format($cdr_report[$j]['holdtime']);
-  //$cdr_report[$j]['holdtime'] = sprintf("%02d:%02d",intval($cdr_report[$j]['holdtime']/60),intval($cdr_report[$j]['holdtime']%60));
-  $cdr_report[$j]['talktime'] = $this->utils->time_format($cdr_report[$j]['talktime']);
-  $cdr_report[$j]['ringtime'] = $this->utils->time_format($cdr_report[$j]['ringtime']);
-  //$cdr_report[$j]['talktime'] = sprintf("%02d:%02d",intval($cdr_report[$j]['talktime']/60),intval($cdr_report[$j]['talktime']%60));
+  //$cdr_report[$j]['holdtime'] = $this->utils->time_format($cdr_report[$j]['holdtime']);
+  $cdr_report[$j]['holdtime'] = intval($cdr_report[$j]['holdtime']);  
+  $cdr_report[$j]['talktime'] = intval($cdr_report[$j]['talktime']);
+  $cdr_report[$j]['ringtime'] = intval($cdr_report[$j]['ringtime']);  
   $cdr_report[$j]['position'] = $cdr_report[$j]['origposition']."/".$cdr_report[$j]['position'];
   $cdr_report[$j]['status'] = $this->translate($cdr_report[$j]['reason']);
   $cdr_report[$j]['calldate2'] = date('d.m.Y H:i:s',strtotime($cdr_report[$j]['calldate']));

@@ -1,9 +1,12 @@
 <?php
-
+  
+use App\Middleware\OnlyAdmin;
+use App\Middleware\SecureRouteMiddleware;
+use App\Middleware\SetRoles;
 use Slim\Http\Request;
 use Slim\Http\Response;
-
-// Legacy routes
+  
+  // Legacy routes
 
 $app->get('/legacy/phones', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -142,8 +145,8 @@ $app->get('/legacy/grouped_agents_reports', function (Request $request, Response
     return $response->withJson([
         "data" => $grouped_reports->getAgent_reports($filter)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_queues_table_chart1', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -154,8 +157,8 @@ $app->get('/legacy/grouped_queues_table_chart1', function (Request $request, Res
     return $response->withJson([
         "data" => $grouped_reports->getQueues_table_chart1($filter)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_queues_table_chart2', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -166,8 +169,8 @@ $app->get('/legacy/grouped_queues_table_chart2', function (Request $request, Res
     return $response->withJson([
         "data" => $grouped_reports->getQueues_table_chart2($filter)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_queues_table_chart3', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -178,8 +181,8 @@ $app->get('/legacy/grouped_queues_table_chart3', function (Request $request, Res
     return $response->withJson([
         "data" => $grouped_reports->getQueues_table_chart3($filter)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_queues_table_chart4', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -190,8 +193,8 @@ $app->get('/legacy/grouped_queues_table_chart4', function (Request $request, Res
     return $response->withJson([
         "data" => $grouped_reports->getQueues_table_chart4($filter)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_queues_table_chart5', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -202,8 +205,8 @@ $app->get('/legacy/grouped_queues_table_chart5', function (Request $request, Res
     return $response->withJson([
         "data" => $grouped_reports->getQueues_table_chart5($filter)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_queues_table_total', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -214,8 +217,8 @@ $app->get('/legacy/grouped_queues_table_total', function (Request $request, Resp
     return $response->withJson([
         "data" => $grouped_reports->getQueues_table_total($filter)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_queues_name', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -236,8 +239,8 @@ $app->get('/legacy/grouped_queues_name/short', function (Request $request, Respo
 
   $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
   return $response->withJson($grouped_reports->getQueues_name($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -264,8 +267,8 @@ $app->get('/legacy/grouped_reports_total_chart1', function (Request $request, Re
         "pos" => $pos,
         "total_count" => $grouped_reports->getGrouped_reports_total_chart1($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total_chart2', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -278,8 +281,8 @@ $app->get('/legacy/grouped_reports_total_chart2', function (Request $request, Re
         "pos" => $pos,
         "total_count" => $grouped_reports->getGrouped_reports_total_chart2($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total_chart3', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -292,8 +295,8 @@ $app->get('/legacy/grouped_reports_total_chart3', function (Request $request, Re
         "pos" => $pos,
         "total_count" => $grouped_reports->getGrouped_reports_total_chart3($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total_chart4', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -306,8 +309,8 @@ $app->get('/legacy/grouped_reports_total_chart4', function (Request $request, Re
         "pos" => $pos,
         "total_count" => $grouped_reports->getGrouped_reports_total_chart4($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total_chart5', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -320,8 +323,8 @@ $app->get('/legacy/grouped_reports_total_chart5', function (Request $request, Re
         "pos" => $pos,
         "total_count" => $grouped_reports->getGrouped_reports_total_chart5($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total_chart6', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -334,8 +337,8 @@ $app->get('/legacy/grouped_reports_total_chart6', function (Request $request, Re
         "pos" => $pos,
         "total_count" => $grouped_reports->getGrouped_reports_total_chart6($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total_chart7', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -348,10 +351,8 @@ $app->get('/legacy/grouped_reports_total_chart7', function (Request $request, Re
         "pos" => $pos,
         "total_count" => $grouped_reports->getGrouped_reports_total_chart7($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/lost_calls_list', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -377,9 +378,7 @@ $app->get('/legacy/lost_calls_total', function (Request $request, Response $resp
         // "total_count" => $lost_calls->getLost_calls_total($filter, $pos, $count, 1)
     ]);
 
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/traffic_for_period', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -391,8 +390,8 @@ $app->get('/legacy/traffic_for_period', function (Request $request, Response $re
         "data" => $analysis_outgoing_calls->getTraffic_for_period($filter, $pos, $count, 0),
         "total_count" => $analysis_outgoing_calls->getTraffic_for_period($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/popular_city_for_period', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -404,8 +403,8 @@ $app->get('/legacy/popular_city_for_period', function (Request $request, Respons
         "data" => $analysis_outgoing_calls->getPopular_city_for_period($filter, $pos, $count, 0),
         "total_count" => $analysis_outgoing_calls->getPopular_city_for_period($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/popular_longdistance_over_period', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -417,8 +416,8 @@ $app->get('/legacy/popular_longdistance_over_period', function (Request $request
         "data" => $analysis_outgoing_calls->getPopular_longdistance_over_period($filter, $pos, $count, 0),
         "total_count" => $analysis_outgoing_calls->getPopular_longdistance_over_period($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/popular_cell_for_period', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -430,8 +429,8 @@ $app->get('/legacy/popular_cell_for_period', function (Request $request, Respons
         "data" => $analysis_outgoing_calls->getPopular_cell_for_period($filter, $pos, $count, 0),
         "total_count" => $analysis_outgoing_calls->getPopular_cell_for_period($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/most_calling_employees_for_period', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -443,10 +442,8 @@ $app->get('/legacy/most_calling_employees_for_period', function (Request $reques
         "data" => $analysis_outgoing_calls->getMost_calling_employees_for_period($filter, $pos, $count, 0),
         "total_count" => $analysis_outgoing_calls->getMost_calling_employees_for_period($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/operators_work_report_list', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -458,8 +455,8 @@ $app->get('/legacy/operators_work_report_list', function (Request $request, Resp
         "data" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 0),
         "total_count" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/operators_work_report', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -471,9 +468,8 @@ $app->get('/legacy/operators_work_report', function (Request $request, Response 
         "data" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 0),
         "total_count" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 
 $app->get('/legacy/interval_reports_day', function (Request $request, Response $response, array $args) use ($app) {
@@ -501,8 +497,8 @@ $app->get('/legacy/interval_reports_day_chart1', function (Request $request, Res
         "pos" => $pos,
         "total_count" => $interval_reports->getInterval_reports_day_chart1($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/interval_reports_day_chart2', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -515,8 +511,8 @@ $app->get('/legacy/interval_reports_day_chart2', function (Request $request, Res
         "pos" => $pos,
         "total_count" => $interval_reports->getInterval_reports_day_chart2($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/interval_reports_day_chart3', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -529,8 +525,8 @@ $app->get('/legacy/interval_reports_day_chart3', function (Request $request, Res
         "pos" => $pos,
         "total_count" => $interval_reports->getInterval_reports_day_chart3($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/interval_reports_day_chart4', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -543,8 +539,8 @@ $app->get('/legacy/interval_reports_day_chart4', function (Request $request, Res
         "pos" => $pos,
         "total_count" => $interval_reports->getInterval_reports_day_chart4($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/interval_reports_day_chart5', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -557,10 +553,8 @@ $app->get('/legacy/interval_reports_day_chart5', function (Request $request, Res
         "pos" => $pos,
         "total_count" => $interval_reports->getInterval_reports_day_chart5($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/daily_report', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -572,10 +566,8 @@ $app->get('/legacy/daily_report', function (Request $request, Response $response
         "data" => $daily_report->getDaily_report($filter, $pos, $count, 0),
         "total_count" => $daily_report->getDaily_report($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/month_traffic_period', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -587,8 +579,8 @@ $app->get('/legacy/month_traffic_period', function (Request $request, Response $
         // "pos" => $pos,
         // "total_count" => $month_traffic->getMonth_traffic_period($filter, $pos, $count, 1)
     );
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/month_traffic', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -601,8 +593,8 @@ $app->get('/legacy/month_traffic', function (Request $request, Response $respons
         // "pos" => $pos,
         // "total_count" => $month_traffic->getMonth_traffic($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/month_traffic_chart', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -615,10 +607,8 @@ $app->get('/legacy/month_traffic_chart', function (Request $request, Response $r
         "pos" => $pos,
         "total_count" => $month_traffic->getMonth_traffic_chart($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/hourly_load_chart1', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -627,8 +617,8 @@ $app->get('/legacy/hourly_load_chart1', function (Request $request, Response $re
 
     $hourly_load = new \Erpico\Hourly_load($app->getContainer());
     return $response->withJson($hourly_load->getHourly_load_chart1($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/hourly_load_chart2', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -637,8 +627,8 @@ $app->get('/legacy/hourly_load_chart2', function (Request $request, Response $re
 
     $hourly_load = new \Erpico\Hourly_load($app->getContainer());
     return $response->withJson($hourly_load->getHourly_load_chart2($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/hourly_load', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -651,10 +641,8 @@ $app->get('/legacy/hourly_load', function (Request $request, Response $response,
         // "pos" => $pos,
         // "total_count" => $hourly_load->getHourly_load($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/compare_calls_chart', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -663,8 +651,8 @@ $app->get('/legacy/compare_calls_chart', function (Request $request, Response $r
 
     $compare_calls = new \Erpico\Compare_calls($app->getContainer());
     return $response->withJson($compare_calls->getCompare_calls_chart($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/compare_calls', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -676,10 +664,8 @@ $app->get('/legacy/compare_calls', function (Request $request, Response $respons
         "data" => $compare_calls->getCompare_calls($filter, $pos, $count, 0),
         "total_count" => $compare_calls->getCompare_calls($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_incoming_external_total', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -692,8 +678,8 @@ $app->get('/legacy/ext_incoming_external_total', function (Request $request, Res
         "pos" => $pos,
         "total_count" => $incoming_external->getExt_incoming_external_total($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_incoming_external_personal', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -705,10 +691,8 @@ $app->get('/legacy/ext_incoming_external_personal', function (Request $request, 
         "data" => $incoming_external->getExt_incoming_external_personal($filter, $pos, $count, 0),
         "pos" => $pos
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_incoming_internal', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -721,10 +705,8 @@ $app->get('/legacy/ext_incoming_internal', function (Request $request, Response 
         "pos" => $pos,
         "total_count" => $incoming_internal->getExt_incoming_internal($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_outgoing', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -737,10 +719,8 @@ $app->get('/legacy/ext_outgoing', function (Request $request, Response $response
         "pos" => $pos,
         "total_count" => $outgoing->getExt_outgoing($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_dashboard_agentslist[/[{id}]]', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -777,8 +757,8 @@ $app->get('/legacy/ext_dashboard_getgages', function (Request $request, Response
 
     $dashboard = new \Erpico\Ext_dashboard($app->getContainer());
     return $response->withJson($dashboard->getExt_dashboard_getgages($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_dashboard_agents_stat', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -791,8 +771,8 @@ $app->get('/legacy/ext_dashboard_agents_stat', function (Request $request, Respo
         "pos" => $pos
         // "total_count" => $dashboard->getExt_dashboard_agentsstat($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_dashboard_agents_stat_chart', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -801,8 +781,8 @@ $app->get('/legacy/ext_dashboard_agents_stat_chart', function (Request $request,
 
     $dashboard = new \Erpico\Ext_dashboard($app->getContainer());
     return $response->withJson($dashboard->getExt_dashboard_agentsstat($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_dashboard_treetable', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -811,8 +791,8 @@ $app->get('/legacy/ext_dashboard_treetable', function (Request $request, Respons
 
     $dashboard = new \Erpico\Ext_dashboard($app->getContainer());
     return $response->withJson($dashboard->getExt_dashboard_treetable($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_dashboard_callschart', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -821,8 +801,8 @@ $app->get('/legacy/ext_dashboard_callschart', function (Request $request, Respon
 
     $dashboard = new \Erpico\Ext_dashboard($app->getContainer());
     return $response->withJson($dashboard->getExt_dashboard_callschart($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_dashboard_hourschart', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -831,8 +811,8 @@ $app->get('/legacy/ext_dashboard_hourschart', function (Request $request, Respon
 
     $dashboard = new \Erpico\Ext_dashboard($app->getContainer());
     return $response->withJson($dashboard->getExt_dashboard_hourschart($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext_dashboard_worktimechart', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -843,9 +823,7 @@ $app->get('/legacy/ext_dashboard_worktimechart', function (Request $request, Res
     
     return $response->withJson($dashboard->getExt_dashboard_worktimechart($filter, $pos, $count, 0));
 
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext/checklist/list[/{params:.*}]', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -888,8 +866,8 @@ $app->get('/legacy/ext/checklist/tree', function (Request $request, Response $re
 
     $res = $checklist->fetchTree($start, $finish, $parent, $open);
     return $response->withJson($res);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->post('/legacy/ext/checklists/change[/[{id}]]', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -900,8 +878,8 @@ $app->post('/legacy/ext/checklists/change[/[{id}]]', function (Request $request,
 
     $checklist = new \Erpico\Ext_checklist($app->getContainer());
     return $response->withJson($checklist->checklist_change($filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext/checklists/groups[/[{gid}]]', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -914,8 +892,8 @@ $app->get('/legacy/ext/checklists/groups[/[{gid}]]', function (Request $request,
 
     $checklist = new \Erpico\Ext_checklist($app->getContainer());
     return $response->withJson($checklist->getExt_checklist_listgroups($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->post('/legacy/ext/checklist/addgroup', function (Request $request, Response $response, array $args) use ($app) {
     $params = $request->getParams();
@@ -924,8 +902,8 @@ $app->post('/legacy/ext/checklist/addgroup', function (Request $request, Respons
 
     $checklist = new \Erpico\Ext_checklist($app->getContainer());
     return $response->withJson($checklist->addgroup($params));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->post('/legacy/ext/checklist/deletegroup', function (Request $request, Response $response, array $args) use ($app) {
     $params = $request->getParams();
@@ -934,8 +912,8 @@ $app->post('/legacy/ext/checklist/deletegroup', function (Request $request, Resp
 
     $checklist = new \Erpico\Ext_checklist($app->getContainer());
     return $response->withJson($checklist->deletegroup($params));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->post('/legacy/ext/checklist/questions/save[/[{id}]]', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -946,8 +924,8 @@ $app->post('/legacy/ext/checklist/questions/save[/[{id}]]', function (Request $r
 
     $checklist = new \Erpico\Ext_checklist($app->getContainer());
     return $response->withJson($checklist->checklist_save($filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->post('/legacy/ext/checklists/fill[/[{id}]]', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -960,26 +938,23 @@ $app->post('/legacy/ext/checklists/fill[/[{id}]]', function (Request $request, R
 
     $checklist = new \Erpico\Ext_checklist($app->getContainer());
     return $response->withJson($checklist->getExt_checklist_fill($filter, $pos, $count, 0));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->post('/legacy/ext/checklist/deleteanswer', function (Request $request, Response $response, array $args) use ($app) {
 
     $checklist = new \Erpico\Ext_checklist($app->getContainer());
     return $response->withJson($checklist->checklist_delete_answer());
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/ext/scripts/list', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
     $pos = intval($request->getParam('start', 0));
     $count = $request->getParam('count', 20);
-
     $scripts = new \Erpico\Ext_scripts($app->getContainer());
+    
     return $response->withJson($scripts->getExt_scripts_list($filter, $pos, $count, 0));
-
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/legacy/ext/scripts/liststages[/{params:.*}]', function (Request $request, Response $response, array $args) use ($app) {
@@ -1001,8 +976,8 @@ $app->get('/legacy/ext/scripts/liststages[/{params:.*}]', function (Request $req
         "pos" => $pos,
         "total_count" => $scripts->getExt_scripts_list_stages($filter, $pos, $count, 1)
     ]);
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','phc.admin','erpico.admin']));
 
 $app->get('/legacy/ext_scripts_stages', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -1020,13 +995,11 @@ $app->get('/legacy/ext_scripts_stages', function (Request $request, Response $re
 
 $app->post('/legacy/ext/scripts/save/stageelements', function (Request $request, Response $response, array $args) use ($app) {
     $params = $request->getParams();
-
     // Here we should check parameters
-
     $scripts = new \Erpico\Ext_scripts($app->getContainer());
+    
     return $response->withJson($scripts->scripts_save_stage_elements($params));
-
-})->add('\App\Middleware\OnlyAuthUser');
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
 $app->get('/legacy/ext/scripts/list/stageelements[/[{id}]]', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -1034,31 +1007,28 @@ $app->get('/legacy/ext/scripts/list/stageelements[/[{id}]]', function (Request $
     if (isset($args['id'])) {
         $filter['list_stage_elements'] = intval($args['id']);
     }
-
     $scripts = new \Erpico\Ext_scripts($app->getContainer());
+    
     return $response->withJson($scripts->scripts_list_stage_elements($filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
 $app->post('/legacy/ext/scripts/save/stage', function (Request $request, Response $response, array $args) use ($app) {
     $params = $request->getParams();
 
     // Here we should check parameters
-
     $scripts = new \Erpico\Ext_scripts($app->getContainer());
+    
     return $response->withJson($scripts->scripts_save_stage($params));
-
-})->add('\App\Middleware\OnlyAuthUser');
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
 $app->post('/legacy/ext/scripts/save', function (Request $request, Response $response, array $args) use ($app) {
     $params = $request->getParams();
 
     // Here we should check parameters
-
     $scripts = new \Erpico\Ext_scripts($app->getContainer());
+    
     return $response->withJson($scripts->scripts_save($params));
-
-})->add('\App\Middleware\OnlyAuthUser');
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
 $app->get('/legacy/nps/options/{option_key}', function (Request $request, Response $response, array $args) use ($app) {
     $option_key = $args["option_key"];
@@ -1066,8 +1036,8 @@ $app->get('/legacy/nps/options/{option_key}', function (Request $request, Respon
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->getFilter($option_key, $filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/count', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam("filter", "");
@@ -1075,56 +1045,56 @@ $app->get('/legacy/nps/count', function (Request $request, Response $response, a
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->getCount($filter, $byCities));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/promoters', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam("filter", "");
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->getPromoters($filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/detractors', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam("filter", "");
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->getDetractors($filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/report', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam("filter", "");
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->getReport($filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/clients', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam("filter", "");
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->getClients($filter));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/clients/import', function (Request $request, Response $response, array $args) use ($app) {
     $data = $request->getParam("data", null);
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->importClients($data));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/clients/remove', function (Request $request, Response $response, array $args) use ($app) {
     $id = $request->getParam("id", null);
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->removeClient(intval($id)));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/legacy/nps/clients/setstate', function (Request $request, Response $response, array $args) use ($app) {
     $npsId = $request->getParam("npsId", null);
@@ -1132,8 +1102,8 @@ $app->get('/legacy/nps/clients/setstate', function (Request $request, Response $
 
     $nps = new \Erpico\Nps($app->getContainer());
     return $response->withJson($nps->setClientState(intval($npsId),intval($state)));
-
-})->add('\App\Middleware\OnlyAuthUser');
+  
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.nps','erpico.admin']));
 
 $app->get('/controllers/groups.php', function (Request $request, Response $response, array $args) use($app) {
   $container = $app->getContainer();

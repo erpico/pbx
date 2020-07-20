@@ -1,7 +1,9 @@
 <?php
 // DIC configuration
-
-$container = $app->getContainer();
+  
+  use App\Middleware\OnlyAdmin;
+  
+  $container = $app->getContainer();
 
 // view renderer
 $container['renderer'] = function ($c) {
@@ -51,6 +53,16 @@ $container['db'] = function ($c) {
 $container['auth'] = function ($c) use ($app){
     return new \Erpico\User($app->getContainer()['db']);
 };
+$container['roleProvider'] = function ($container) {
+  $myService = new RoleProvider($container);
+  
+  return $myService;
+};
+$container['onlyAdmin'] = function ($container) {
+    $myService = new OnlyAdmin($container, $container->get('roleProvider'));
+    
+    return $myService;
+};
 
 require_once( __DIR__ . "/legacy/utils.php");
 require_once( __DIR__ . "/user.php");
@@ -86,10 +98,12 @@ require_once( __DIR__ . "/outgoingcampaign.php");
 require_once( __DIR__ . "/contact_groups.php");
 require_once( __DIR__ . "/rules.php");
 require_once( __DIR__ . "/helpers/config_helper.php");
-  require_once( __DIR__ . "/Translator.php");
+require_once( __DIR__ . "/Translator.php");
 require_once( __DIR__ . "/pbx_settings.php");
 require_once( __DIR__ . "/old_cdr.php");
 require_once( __DIR__ . "/old_contact_cdr.php");
+require_once( __DIR__ . "/Providers/RoleProvider.php");
+require_once( __DIR__ . "/aliases.php");
 
 if (!isset($PBXUser)){
   $PBXUser = new \Erpico\User();

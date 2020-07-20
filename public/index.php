@@ -1,5 +1,9 @@
 <?php
-if (PHP_SAPI == 'cli-server') {
+  
+  use Tkhamez\Slim\RoleAuth\RoleMiddleware;
+  use Tkhamez\Slim\RoleAuth\SecureRouteMiddleware;
+  
+  if (PHP_SAPI == 'cli-server') {
     // To help the built-in PHP dev server, check if the request was actually for
     // something which should probably be served as a static file
     $url  = parse_url($_SERVER['REQUEST_URI']);
@@ -22,7 +26,6 @@ require __DIR__ . '/../src/dependencies.php';
 
 // Register middleware
 require __DIR__ . '/../src/middleware.php';
-
 // Register routes
 require __DIR__ . '/../src/routes.php';
 require __DIR__ . '/../src/legacyroutes.php';
@@ -30,6 +33,5 @@ require __DIR__ . '/../src/legacyroutes.php';
 // Allow multiple requests 
 // https://stackoverflow.com/questions/1430883/simultaneous-requests-to-php-script
 session_write_close();
-
 // Run app
 $app->run();

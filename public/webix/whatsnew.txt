@@ -1,18 +1,31 @@
-Version 7.1.1 (December 2019)
+Version 7.2.2 (March 2020)
 ==============================
 
-### Fixes
+### Fixes 
 
-- wrong block-select when frozen rows are used
-- incorrect selection/editing when frozen rows are used
-- minColumnWidth doesn't used during datatable init
-- panels added by drag-n-drop can be initialized incorrectly
-- destroying views while drag active can cause errors
-- behavior of hightlight view when custom line-height used for text
-- regression in areaselection behaviors after Webix 7.0
-- regression in drag-n-drop in submenus after Webix 7.1
-- regression in template auto-height after Webix 7.1
+- non-existent font mentions
+- correct width for Segmented options
+- Datatable: touch scroll issue
 
+Version 7.2.1 (March 2020)
+==============================
+
+### Fixes 
+
+- PDF viewer navigation to zero page
+- Colorboard onItemClick event does not fire for selected cells
+
+
+Version 7.2 (February 2020)
+==============================
+
+### Major features
+
+- New File Manager widget
+- Multi-column sorting for Datatable
+- ExcelFilter for Datatable
+- Customization API for Filter widget
+- Export to PDF with styles
 
 Version 7.1.0 (December 2019)
 ==============================

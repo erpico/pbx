@@ -117,9 +117,9 @@ class Contact_cdr_report {
         };
         $cdr_report[$j]['agent'] = $cdr_report[$j]['fullname_agent'] != "" ? $cdr_report[$j]['fullname_agent'] : $cdr_report[$j]['agent'];
         $cdr_report[$j]['queue'] = $cdr_report[$j]['fullname_queue'] != "" ? $cdr_report[$j]['fullname_queue'] : $cdr_report[$j]['queue'];
-        $cdr_report[$j]['holdtime'] = $utils->time_format($cdr_report[$j]['holdtime']);
+        /*$cdr_report[$j]['holdtime'] = $utils->time_format($cdr_report[$j]['holdtime']);
         $cdr_report[$j]['talktime'] = $utils->time_format($cdr_report[$j]['talktime']);
-        $cdr_report[$j]['ringtime'] = $utils->time_format($cdr_report[$j]['ringtime']);
+        $cdr_report[$j]['ringtime'] = $utils->time_format($cdr_report[$j]['ringtime']);*/
         $cdr_report[$j]['position'] = $cdr_report[$j]['origposition']."/".$cdr_report[$j]['position'];
         $cdr_report[$j]['status'] = $cdr_report[$j]['reason'];
         $cdr_report[$j]['calldate2'] = date('d.m.Y H:i:s',strtotime($cdr_report[$j]['calldate']));

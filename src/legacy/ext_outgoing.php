@@ -15,7 +15,7 @@ class Ext_outgoing {
 
   public function getExt_outgoing($filter, $pos, $count = 20, $onlycount = 0) {
     
-    $utils = new Utils();
+    $utils = new Utils($this->container);
     $users = $this->auth->getUsersList();
     
     $sql = "SELECT 
@@ -38,8 +38,15 @@ class Ext_outgoing {
       $sql = "SELECT COUNT(distinct src) ";
     }
     $sql .= " FROM cdr 
-            LEFT JOIN acl_user ON (acl_user.name = cdr.src)
-            WHERE LENGTH(src) > 1 AND LENGTH(src) < 5  ";          
+    LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+            LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)            
+            WHERE ";
+    $intPhones = $utils->getIntPhones();
+    if (count($intPhones)) {
+      $sql .= " src IN ('".trim(implode("','", $intPhones), "'")."') ";          
+    } else {
+      $sql .= " LENGTH(src) > 1 AND LENGTH(src) < 4 ";          
+    }
 
     $wsql = "";
     if (is_array($filter)) {

@@ -47,6 +47,8 @@ class User
   private $token;
   private $token_id = 0;
   private $id = 0;
+  
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days'];
 
   public function __construct($db = null, $_id = 0) {
     if (isset($db)) {
@@ -57,7 +59,9 @@ class User
       $this->db = $container['db'];
     }
     if (!intval($_id)) {
-      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ? self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken($_COOKIE['pbx_token']) : 0)));
+      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
+        self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
+          ($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
       if (is_array($token_data)) {
         $this->id = $token_data['acl_user_id'];
         $this->token_id = $token_data['id'];
@@ -154,7 +158,8 @@ class User
     $res = $this->db->query($sql);
     if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {    
       return [
-        'error' => 0,    
+        'error' => 0,
+        'roles' => $this->getUserRoles() ? $this->getUserRoles()  : ['user'],
         'name' => $row['name'],
         'fullname' => $row['fullname'],    
       ];
@@ -170,6 +175,18 @@ class User
     $result_queue = $this->db->query("SELECT B.val FROM cfg_user_setting AS B WHERE acl_user_id = '{$this->id}' AND B.handle = 'cti.ext' LIMIT 1 ");
     $myrow_queue = $result_queue->fetch(\PDO::FETCH_ASSOC);
     return $myrow_queue['val']!="" ? $myrow_queue['val'] : $x;
+  }
+
+  public function saveExt($ext){
+    $this->db->query("DELETE FROM cfg_user_setting  WHERE acl_user_id != '{$this->id}' AND handle = 'cti.ext' AND val = '".addslashes($ext)."'");
+    $res = $this->db->query("SELECT id, val FROM cfg_user_setting WHERE acl_user_id = '{$this->id}' AND handle = 'cti.ext' LIMIT 1 ");
+    $row = $res->fetch(\PDO::FETCH_ASSOC);
+    if ($row && $row['val'] != $ext) {      
+      $this->db->query("UPDATE cfg_user_setting SET val = '".addslashes($ext)."' WHERE id = '{$row['id']}' LIMIT 1");  
+    } else if (!$row) {
+      $this->db->query("INSERT INTO cfg_user_setting SET acl_user_id = '{$this->id}', handle = 'cti.ext', val = '".addslashes($ext)."'");  
+    }
+    return 0;
   }
 
   public function allow_extens() {
@@ -241,8 +258,7 @@ class User
     };
     return $user_extens;
   }
-
-
+  
   public function allowed_queues()
   {
     if(isset($_COOKIE['token'])) {
@@ -306,8 +322,7 @@ class User
     };
     return $user_queues;
   }
-
-
+  
   public function getUsersList() {
     $sql = "SELECT A.name, A.fullname, B.val, A.description, C.ip, C.issued, C.updated, C.version 
             FROM acl_user AS A LEFT JOIN cfg_user_setting AS B ON A.id = B.acl_user_id LEFT JOIN acl_auth_token AS C ON C.acl_user_id = A.id 
@@ -321,7 +336,7 @@ class User
     }
     return $result;
   }
-
+  
   public function deny_numbers()
   {
     if(isset($_COOKIE['token'])) {
@@ -414,6 +429,25 @@ class User
     return $myrow_queue['val']!="" ? $myrow_queue['val'] : $x;
   }
 
+  public function getAuthUserSettings() {
+    if (!$this->id) return 0;
+    $sql = "SELECT 
+      U.id, U.name, U.fullname, U.description, C.val as phone, U.state
+      FROM acl_user as U
+      LEFT JOIN cfg_user_setting AS C ON (C.acl_user_id = U.id AND C.handle = 'cti.ext')
+      WHERE U.id = {$this->id}
+    ";
+     $res = $this->db->query($sql);        
+     $row = $res->fetch();
+     if (isset($row['id']) && intval($row['id'])) {
+      $groups =  $this->getUserGroups(intval($row['id']));
+      $row['user_groups'] = $groups['names'];
+      $row['user_groups_ids'] = $groups['ids'];
+      $row['config'] = $this->getUserConfig($row['id']);
+    }    
+     return $row;
+  }
+
   public function fetchList($filter = "", $start = 0, $end = 20, $onlycount = 0, $shortlist = 0, $fullnameAsValue = 0, $likeStringValues = true)
   {
     if ($onlycount) {
@@ -486,8 +520,9 @@ class User
           $result[] = ["id"=>$row["id"], "value"=>$row["name"], "phone"=>$row["phone"], "fullname" => $row["fullname"]];
         }
       } else {
-      $row['rules'] = $rules->getUserRules($row['id']);
-      $result[] = $row;
+        $row['config'] = $this->getUserConfig($row['id']);
+        $row['rules'] = $rules->getUserRules($row['id']);
+        $result[] = $row;
       }
     }
 
@@ -539,7 +574,7 @@ class User
 
   }
 
-  public function addUpdate($params)
+  public function addUpdate($params, $disable_rules = false)
   {
     try {          
       if (intval($params['id'])) {
@@ -559,19 +594,21 @@ class User
       }
 
       if (isset($params['fullname']) && strlen(trim($params['fullname']))) {
-        if (!$this->isUniqueColumn("fullname", $params['fullname'], $params['id'])) {
+        /*if (!$this->isUniqueColumn("fullname", $params['fullname'], $params['id'])) {
           return [ "result" => false, "message" => "Ф.И.О. занято другим пользователем"];
-        } else {
+        } else {*/
           $sql .= "`fullname` = '".trim(addslashes($params['fullname']))."',";
-        }
+        //}
       } else {
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
       }
 
-      if (isset($params['state']) && intval($params['state'])) {
-        $sql .= "`state` = '".intval($params['state'])."',";
-      } else {
-        return ["result" => false, "message" => "state can`t be empty"];
+      if (!$disable_rules) {
+        if (isset($params['state']) && intval($params['state'])) {
+          $sql .= "`state` = '".intval($params['state'])."',";
+        } else {
+          return ["result" => false, "message" => "state can`t be empty"];
+        }
       }
       
       if (!intval($params['id'])) {
@@ -597,30 +634,47 @@ class User
       }
       $res = $this->db->query($sql);
       if ($res) {
+        $sql = "";
         if (intval($params['id'])) {
           $id = intval($params['id']);
-          $sql = "UPDATE cfg_user_setting SET ";
+          $start_sql = "UPDATE cfg_user_setting SET ";
           $end_sql = " WHERE acl_user_id = {$id} AND handle = 'cti.ext' LIMIT 1";
         } else {
           $id = $this->db->lastInsertId();
-          $sql = "INSERT INTO cfg_user_setting SET ";
+          $start_sql = "INSERT INTO cfg_user_setting SET ";
         }
-        $rules = new PBXRules();
-        $rules->saveUser($params['rules'], $id);
-        $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
-        if(isset($end_sql)) {
-          $sql .= $end_sql;
-        }
-        $res = $this->db->query($sql);
-        if (isset($params['user_groups_ids'])) {
-          $groups = explode(",",$params['user_groups_ids']);
-          $groups_int = [];
-          foreach ($groups as $group) {
-            if (intval($group)) $groups_int[] = intval($group);
+        if (!$disable_rules) {
+          $rules = new PBXRules();
+          $rules->saveUser($params['rules'], $id);
+          $user_cti_ext = $this->getUserConfigByHandle(intval($params['id']), "cti.ext");
+          if (intval($params['id']) && count($user_cti_ext) == 0) {
+            $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+          } else {
+            $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
           }
-          if (is_array($groups_int) && COUNT($groups_int)) {
-            
-            $this->saveUserGroups($groups_int,$id);
+        }
+        if(isset($end_sql) && strlen($sql)) {
+          $start_sql .= $sql;
+          $start_sql .= $end_sql;
+          $res = $this->db->query($start_sql);
+        }
+        if (isset($ext_sql)) {
+          $res_ext = $this->db->query($ext_sql);
+        }
+        if (isset($params['config'])) {
+          $this->saveUserConfig($id, json_decode($params['config'], true));
+        }
+        if (!$disable_rules) {
+          if (isset($params['user_groups_ids'])) {
+            $groups = explode(",",$params['user_groups_ids']);
+            $groups_int = [];
+            foreach ($groups as $group) {
+              if (intval($group)) $groups_int[] = intval($group);
+            }
+            if (is_array($groups_int) && COUNT($groups_int)) {
+              // $this->deleteUserGroups($groups_int,$id);
+              $this->saveUserGroups($groups_int,$id);
+            }
           }
         }
       }
@@ -630,6 +684,93 @@ class User
 
     return ["result" => true, "message" => "Операция прошла успешно"];
 
+  }
+  
+  public function getId()
+  {
+    return $this->id;
+  }
+  
+  /**
+   * @return array
+   */
+  public function getUserRoles()
+  {
+    $result = [];
+    $sql = 'SELECT DISTINCT  R.handle
+      FROM acl_user_has_rules AS H
+      LEFT JOIN acl_rule AS R ON (R.id = H.acl_rule_id)
+      WHERE acl_user_id = '.$this->getId();
+    $res = $this->db->query($sql);
+    
+    while ($res && $row = $res->fetch()) {
+      $result[] = $row['handle'];
+    }
+    
+    return $result ? $result : ['user'];
+  }
+  
+  private function getUserConfig($userId)
+  {
+    $sql = "SELECT handle, val FROM cfg_user_setting WHERE acl_user_id = $userId";
+    $res = $this->db->query($sql);
+    $result = [];
+    while ($res && $row = $res->fetch()) {
+      $result[] = ['key' => $row['handle'], 'value' => $row['val']];
+    }
+    
+    return $result;
+  }
+  
+  private function saveUserConfig($userId, $params)
+  {
+    $paramsKeys = array_column($params, 'key');
+    $paramsValues = array_column($params, 'value');
+    foreach (self::ALLOWED_CONFIG_HANDLES  as $handle) {
+      $key = array_search($handle, $paramsKeys);
+      if ($key !== FALSE && strlen($paramsValues[$key])) {
+        $this->addUpdateUserConfigByHandle($userId, $paramsKeys[$key], $paramsValues[$key]);
+      } else $this->deleteUserConfigByHandle($userId, $handle);
+    }
+  }
+  private function deleteUserConfigByHandle($userId, $handle)
+  {
+    $result = false;
+    $config = $this->getUserConfigByHandle($userId, $handle);
+    if ($config) {
+      $sql = "DELETE FROM cfg_user_setting WHERE id = {$config[id]}";
+      $res = $this->db->query($sql);
+      $result = $res ? true : false;
+    }
+    
+    return $result;
+  }
+  
+  private function addUpdateUserConfigByHandle($userId, $handle, $value)
+  {
+    $config = $this->getUserConfigByHandle($userId, $handle);
+    $sql = 'INSERT INTO cfg_user_setting';
+    if ($config) {
+      $sql = 'UPDATE cfg_user_setting';
+      $endSql ="WHERE id = {$config[id]}";
+    }
+    $sql .= " SET val = '".trim(addslashes($value))."', handle = '".trim(addslashes($handle))."', updated = NOW(), acl_user_id = '{$userId}'";
+    if (isset($endSql)) $sql .= ' '.$endSql;
+    $res = $this->db->query($sql);
+    
+    return $res ? true : false;
+  }
+  
+  private function getUserConfigByHandle($userId, $handle)
+  {
+    $result = [];
+    $res = $this->db->query("SELECT id, val FROM cfg_user_setting WHERE acl_user_id = '{$userId}' AND handle = '{$handle}' LIMIT 1");
+    $row = $res->fetch();
+    if ($row) {
+      $result = ['id' => $row['id'], 'value' => $row['val'], 'handle' => $handle];
+    }
+    
+    return $result;
   }
 
   public function remove($id) {
@@ -653,6 +794,13 @@ class User
     $this->db->query($sql);
     }
   }
+
+  // public function deleteUserGroups($group_ids, $user_id) {
+  //   if (is_array($group_ids)) {
+  //     $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_group_id IN (".implode(",",$group_ids).") AND acl_user_id = {$user_id}";
+  //     $this->db->query($sql);
+  //   }
+  // }
 
   public function saveUserGroups($group_ids, $user_id) {
     if (is_array($group_ids)) {
@@ -728,13 +876,16 @@ class User
   public function isUniqueColumn($column, $value, $id = 0)
   {    
     try {
-      $data = $this->fetchList([$column => $value], 0, 3, 0, 0, 0, 0);
+      //$data = $this->fetchList([$column => $value], 0, 3, 0, 0, 0, 0);      
+      $sql = " SELECT id FROM acl_user WHERE $column = '".addslashes($value)."'";
+      $res = $this->db->query($sql, \PDO::FETCH_NUM);
+      $data = $res->fetchAll();
       if (is_array($data)) {
         if (COUNT($data) > 1) {
           return false;
         } else if (COUNT($data) == 1){
           if (intval($id)) {
-            return $data[0]["id"] == intval($id);
+            return $data[0][0] == intval($id);
           } else {
             return false;
           }        

@@ -3,6 +3,17 @@
 namespace Erpico;
 
 class Utils {
+  private $container;
+  private $db;
+  private $auth;  
+
+  public function __construct($contaiter = 0) {
+    if (is_object($contaiter)) {
+      $this->container = $contaiter;
+      $this->db = $contaiter['db'];
+      $this->auth = $contaiter['auth'];
+    }
+  }
 
   public function time_format($x)
   {
@@ -101,7 +112,7 @@ class Utils {
                 if ($user_extens[$h] == $user_extens[$g]) $repeat = 1;
             };
             if (!$repeat) {
-                $extens .= "src LIKE '" . $user_extens[$h] . "' OR dst LIKE '" . $user_extens[$h] . "' ";
+                $extens .= "src = '" . $user_extens[$h] . "' OR dst = '" . $user_extens[$h] . "' ";
                 $extens .= " OR ";
             };
         };
@@ -166,6 +177,17 @@ class Utils {
     $delSpace = str_replace(', ', ',',$delSpace);
     $value = explode(",",$delSpace);
     return $value;
+  }
+  
+  public function getIntPhones() 
+  {    
+    $phones = [];
+    $res = $this->db->query("SELECT phone FROM acl_user_phone");
+    while($row = $res->fetch(\PDO::FETCH_NUM)) {
+      $phone = preg_replace("/[^\d]/", "", trim($row[0]));
+      if (strlen($phone)) $phones[] = $phone;
+    }
+    return $phones;
   }
 
 }

@@ -42,11 +42,12 @@ class Ext_incoming_external {
 					queue,
 					count(distinct IF(agentname='',NULL,agentname)) AS agents,
 					SUM(IF(holdtime < 20 AND talktime > 0,1,0)) AS sl_cnt,
-          count(distinct IF(talktime>0,src,NULL)) AS cnt_unique_src";
+          count(distinct IF(talktime>0,src,NULL)) AS cnt_unique_src,
+          agentname";
 
-    if (isset($filter['queue']) && strlen($filter['queue'])) {
-      $sql .= ", agentname ";
-    }
+    // if (isset($filter['queue']) && strlen($filter['queue'])) {
+    //   $sql .= ", agentname ";
+    // }
     if ($onlycount) {
       $sql = "SELECT COUNT(*) ";
     }
@@ -66,7 +67,7 @@ class Ext_incoming_external {
     if (!isset($filter['queue'])) {
       $sql.= "AND reason != 'RINGNOANSWER' AND !outgoing	GROUP BY queue ORDER BY queue ";
     } else {
-      $sql.= "AND queue = '{$filter['queue']}' AND agentname != '' GROUP BY agentname ORDER BY agentname ";
+      $sql.= "AND reason != 'RINGNOANSWER' AND queue = '{$filter['queue']}' AND !outgoing GROUP BY agentname ORDER BY agentname ";
     }
 
     if ($count) {
@@ -82,6 +83,7 @@ class Ext_incoming_external {
       $row = $res->fetch(\PDO::FETCH_NUM);
       return intval($row[0]);
     }
+    //  die($sql);
     $res = $this->db->query($sql);
 
     while($list = $res->fetch(\PDO::FETCH_BOTH)) {
@@ -176,15 +178,15 @@ class Ext_incoming_external {
     $sql.= $queues;
 
     if (!isset($filter['queue'])) {
-      $sql.= "AND reason != 'RINGNOANSWER' AND !outgoing	GROUP BY queue ORDER BY queue ";
+      $sql.= "AND reason != 'RINGNOANSWER' AND !outgoing GROUP BY queue ORDER BY queue ";
     } else {
-        $sql.= "AND queue = '{$filter['queue']}' AND agentname != '' GROUP BY agentname ORDER BY agentname ";
+        $sql.= "AND reason != 'RINGNOANSWER' AND queue = '{$filter['queue']}' AND !outgoing GROUP BY agentname ORDER BY agentname ";
     }    
 
     if ($count) {
         $sql .= " LIMIT $pos, $count";
     }
-
+    // die($sql);
     $res = $this->db->query($sql);
     
     $result = [];
