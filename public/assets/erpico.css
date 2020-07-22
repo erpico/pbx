@@ -750,19 +750,19 @@ line-height: 114%;
 .webix_window .webix_form .webix_layout_line .webix_control:last-child{
     padding-right: 0;
 }
-.webix_window .webix_form .webix_layout_line .webix_control:last-child .webix_el_box{
+/* .webix_window .webix_form .webix_layout_line .webix_control:last-child .webix_el_box{
     width: calc(100% - 17px) !important;
-}
-.webix_window .webix_form .webix_layout_line .webix_control:last-child .webix_inp_static{
+} */
+/* .webix_window .webix_form .webix_layout_line .webix_control:last-child .webix_inp_static{
     width: 100% !important;
-}
+} */
 
 .webix_window.window-label-left .webix_form .webix_layout_line .webix_control:last-child .webix_el_box{
     width: initial !important;
 }
-.webix_window.window-label-left .webix_form .webix_layout_line .webix_control:last-child .webix_inp_static{
-    width: initial !important;
-}
+/* .webix_window.window-label-left .webix_form .webix_layout_line .webix_control:last-child .webix_inp_static{
+    width: initial !important; 
+} */
 /* .webix_window .webix_form .webix_view, */
 .webix_window .webix_form .webix_multiview .webix_view{
     padding: 0 0 15px;
