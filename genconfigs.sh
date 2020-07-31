@@ -7,12 +7,12 @@ php ./genconfigs.php
 
 cd ./configs
 
-if diff sip.conf sip.conf.new > /dev/null 2>&1
+if diff sip.conf sip.conf.new > /dev/null 2>&1 && diff sip.registry.conf sip.registry.conf.new > /dev/null 2>&1
 then
   echo "SIP config not changed"
 else
-  cp sip.conf.new sip.conf
-  cp sip.registry.conf.new sip.registry.conf
+  cp sip.conf.new sip.conf 
+  cp sip.registry.conf.new sip.registry.conf 
   sudo asterisk -rx "sip reload"
 fi
 

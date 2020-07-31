@@ -93,7 +93,6 @@ class PBXPhone {
       $sql .= " WHERE ".$wsql;
     }
 
-    $res = $this->db->query($sql);
     $res = $this->db->query($sql, $onlyCount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
     $result = [];
 
