@@ -6,6 +6,11 @@
     width: 104px;
     height: 32px;
 }
+.logobox,
+.webix_view[view_id="logobox"]{
+    border-left: none;
+    border-right: none;
+}
 .input_login > .webix_el_box,
 .input_login > .webix_el_box > label,
 .input_password > .webix_el_box > label,
@@ -210,6 +215,11 @@ center, b, .webix_view, .webix_hcell,
     color: #fff;
     font-size: 20px;
     padding: 0;
+}
+.login_window .webix_inp_label.error_label{
+    font-size: 16px;
+    font-weight: 100;
+    white-space: normal;
 }
 .login_window .webix_el_text .webix_el_box{
     border-bottom: 1px solid #fff;
@@ -550,7 +560,120 @@ border-left: 1px solid #22B7E1;
     content: "";
 }
 
+/*nps style*/
+.green-block{
+	border: medium none;
+	box-sizing: border-box;
+	padding: 3px 2px 1px;
+}
+.green-block>div{
+	background: #eafecf;
+	border: 1px solid #b3d277;
+	border-radius: 5px;
+	box-sizing: border-box;
+	/*box-shadow: -1px 1px 2px 1px #ccc;*/
+}
+/*переворачиваем график*/
+.flip-horizontal-chart{
+	-moz-transform: scaleX(-1);
+	-webkit-transform: scaleX(-1);
+	-o-transform: scaleX(-1);
+	transform: scaleX(-1);
+	-ms-filter: fliph; /*IE*/
+	filter: fliph; /*IE*/
+    right: 0;
+    border: 0;
+}
+/*переворачивает обратно тексты*/
+.flip-horizontal-chart .webix_chart_legend_item,
+.flip-horizontal-chart .webix_canvas_text{
+	-moz-transform: scaleX(-1);
+	-webkit-transform: scaleX(-1);
+	-o-transform: scaleX(-1);
+	transform: scaleX(-1);
+	-ms-filter: fliph; /*IE*/
+	filter: fliph; /*IE*/
+}
+.flip-horizontal-chart .webix_chart_legend_item{
+	padding-right: 0;
+}
+.no-flip-horizontal-chart{
+    left: 0;
+    border: 0;
+}
+.dashboardnps.webix_abslayout>.panel_drag_view:first-child{
+    margin-left: -10px;
+}
+.chart-number{
+	font-size: 1.3em;
+	font-weight: bold;
+	margin: 0 10px;
+}
+.chart-detractor .webix_chart_legend{
+	width: 100%;
+	color: #fff;
+	/*background: #b93b36;*/
+	background: #d81b1b;
+	text-align: center;
+}
+.chart-promouter .webix_chart_legend{
+	width: 100%;
+	background: #27ae60;
+	text-align: center;
+	color: #000;
+}
+.chart-detractor .webix_chart_legend_item,
+.chart-promouter .webix_chart_legend_item{
+	float: none !important;
+}
 
+.webix_chart.nps_chart .webix_canvas_text{
+	background: rgba(255, 153, 0, .7);
+	color: #000;
+	/*margin-left: -31px;
+	margin-top: 13px;*/
+	margin-left: 0;
+	margin-top: 0;
+	padding: 1px 3px;
+}
+
+.webix_chart.nps_chart .webix_canvas_text.webix_axis_item_x{
+	background: transparent;
+	color: inherit;
+    margin: 0 0 0 -31px;
+	padding: 20px 6px;
+	transform: rotate(328deg);
+}
+
+.webix_chart.nps_chart .webix_canvas_text.webix_axis_item_y{
+	background: transparent;
+	color: inherit;
+	margin: 0;
+	padding: 0;
+}
+.chart-detractor .webix_axis_item_y{
+	left: 100%;
+}
+.webix_chart.nps_chart .webix_axis_item_x{
+	font-weight: bold;
+}
+.webix_chart.nps_chart .webix_axis_item_x ~ .webix_axis_item_x{
+	font-weight: normal;
+}
+/*end nps style*/
+/*стиль для остальных графиков*/
+.webix_chart .webix_canvas_text.webix_axis_item_x{
+    background: transparent;
+    margin: 0 0 0 -31px;
+    padding: 12px 6px;
+    transform: rotate(328deg);
+    white-space: none;
+    overflow: hidden;
+    white-space: nowrap;
+}
+.webix_chart .webix_axis_item_x ~ .webix_axis_item_x {
+    font-weight: normal;
+}
 /**/
 .webix_ss_header, .webix_ss_header TD, .webix_ss_vscroll_header, .webix_dd_drag_column {
     font-size: 15px;
@@ -560,6 +683,10 @@ border-left: 1px solid #22B7E1;
 }
 .webix_dtable {
     border: 0;
+}
+/* PHC-264 */
+.webix_window .webix_select_mark .webix_cell .greencircle {
+    margin-top: 10px;
 }
 
 /*панель фильтрации*/
