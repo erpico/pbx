@@ -70,7 +70,7 @@ class PBXCdr {
       $cwsql .= "	AND (cdr.src = '".$userPhone."' OR cdr.dst = '".$userPhone."') "; //Ignore CDR
       $qwsql .= "	AND ( a.agentname = '".$userName."' OR a.src = '".$userPhone."' OR a.agentdev  = '".$userPhone."')";
     }
-
+  
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
@@ -238,7 +238,7 @@ class PBXCdr {
       }*/
       //$sql .= " LIMIT 100"; // No more for now
       $cdr = [];                
-      //die($sql);
+      // die($sql);
       $res = $this->db->query($sql);
       //die(var_dump($res));
       $lcd -= 3600*24;

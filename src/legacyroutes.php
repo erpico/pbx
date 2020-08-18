@@ -388,6 +388,7 @@ $app->get('/legacy/traffic_for_period', function (Request $request, Response $re
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getTraffic_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getTraffic_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -401,6 +402,7 @@ $app->get('/legacy/popular_city_for_period', function (Request $request, Respons
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getPopular_city_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getPopular_city_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -414,6 +416,7 @@ $app->get('/legacy/popular_longdistance_over_period', function (Request $request
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getPopular_longdistance_over_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getPopular_longdistance_over_period($filter, $pos, $count, 1)
     ]);
   
@@ -427,6 +430,7 @@ $app->get('/legacy/popular_cell_for_period', function (Request $request, Respons
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getPopular_cell_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getPopular_cell_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -440,6 +444,7 @@ $app->get('/legacy/most_calling_employees_for_period', function (Request $reques
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getMost_calling_employees_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getMost_calling_employees_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -453,6 +458,7 @@ $app->get('/legacy/operators_work_report_list', function (Request $request, Resp
     $operators_work_report = new \Erpico\Operators_work_report($app->getContainer());
     return $response->withJson([
         "data" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 1)
     ]);
   
@@ -466,6 +472,7 @@ $app->get('/legacy/operators_work_report', function (Request $request, Response 
     $operators_work_report = new \Erpico\Operators_work_report($app->getContainer());
     return $response->withJson([
         "data" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 1)
     ]);
   

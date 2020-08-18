@@ -274,7 +274,7 @@ class User
      FROM cfg_setting
      WHERE handle = 'cti.queues.allowed' ";
     $result_user_defult_queues = $this->db->query($demand_user_defult_queues);
-    while ($myrow_user_defult_queues =$result_user_defult_queues->fetch(\PDO::FETCH_ASSOC)) {
+    while ($myrow_user_defult_queues = $result_user_defult_queues->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_defult_queues['val'] != "") {
             $b = explode(",", $myrow_user_defult_queues['val']);
             $c = count($b);
