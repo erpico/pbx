@@ -20,7 +20,8 @@ class PBXOutgoingCampaign  {
     "action"=> 1,
     "action_value" => 0,
     "min_call_time"=> 1,
-    "concurrent_calls_limit" => 1
+    "concurrent_calls_limit" => 1,
+    "dial_context" => 0
   ];
 
   const WEEK_DAYS = [
