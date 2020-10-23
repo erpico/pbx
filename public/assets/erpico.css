@@ -369,6 +369,7 @@ input::-ms-reveal, input::-ms-clear {
 .bad-row {
   background-color: rgb(255,168,168);
 }
+
 .greencircle, .greencircle_state{
     background-color: #33ff33;
     border-radius: 50%;
@@ -377,7 +378,15 @@ input::-ms-reveal, input::-ms-clear {
     display: inline-block;
 }
 
-.greencircle_state, .redcircle_state, .disablecircle_state {
+.graycircle, .graycircle_state{
+    background-color: gray;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+}
+
+.greencircle_state, .redcircle_state, .graycircle_state, .disablecircle_state {
     width: 8px !important;
     height: 8px !important;
 }

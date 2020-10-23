@@ -11,7 +11,8 @@ class PBXPhone {
     "login" => 0,
     "password" => 0,
     "rules" => 0,
-    "default_phone" => 1
+    "default_phone" => 1,
+    "active" => 0
   ],
   GROUPS_FIELDS = [
     "name" => 0,

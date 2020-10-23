@@ -11,7 +11,8 @@ class PBXChannel {
     "name" => 0,
     "fullname" => 0,
     "host" => 0,
-    "port" => 1
+    "port" => 1,
+    "active" => 0
   ];
 
   public function __construct() {
