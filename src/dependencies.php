@@ -144,3 +144,4 @@ require_once( __DIR__ . "/old_cdr.php");
 require_once( __DIR__ . "/old_contact_cdr.php");
 require_once( __DIR__ . "/Providers/RoleProvider.php");
 require_once( __DIR__ . "/aliases.php");
+require_once( __DIR__ . "/blacklist.php");

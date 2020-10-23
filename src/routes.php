@@ -346,14 +346,6 @@ $app->get('/auth/settings', function (Request $request, Response $response, arra
   return $response->withJson(["data"=>$app->getContainer()['auth']->getAuthUserSettings()]);   
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/[{name}]', function (Request $request, Response $response, array $args) {
-    // Sample log message
-    $this->logger->info("Loading WebApp");
-
-    // Render index view
-    return $this->renderer->render($response, 'index.phtml', $args);
-});
-
 $app->get('/phones/list', function (Request $request, Response $response, array $args) use($app) {
     $phone = new PBXPhone();
 
@@ -809,3 +801,72 @@ $app->any('/user/exten/save', function (Request $request, Response $response, ar
 
   return $response->withJson( [ "error" => $result ]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+
+$app->get('/blacklist', function (Request $request, Response $response, array $args) use($app){
+
+    if (!($filter = $request->getParam('filter', ""))){
+        $filter = [];
+    }
+    $filter["deleted"] = 0;
+    $start = $request->getParam('start', 0);
+    $count = $request->getParam('count', 20);
+
+    $blacklist = new PBXBlacklist($app->getContainer());
+
+    return $response->withJson([
+        "data" => $blacklist->fetchList($filter, $start, $count, 0),
+        "filter" => $filter
+    ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->post('/blacklist/add', function (Request $request, Response $response, array $args) use($app){
+    $blacklist = new PBXBlacklist($app->getContainer());
+    $result = $blacklist->saveBlacklistItem($request->getParams());
+
+    return $response->withJson([
+        "result" => $result,
+        "message" => $result ? "Сохранение прошло успешно!" : "Ошибка сохранения"
+    ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->post('/blacklist/{id}/update', function (Request $request, Response $response, array $args) use($app){
+    $id = intval($args["id"]);
+    $blacklist = new PBXBlacklist($app->getContainer());
+    if ($id) {
+        $result = $blacklist->updateBlacklistItem($id, $request->getParams());
+        return $response->withJson([
+            "result" => $result,
+            "message" => $result ? "Изменение прошло успешно!" : "Ошибка изменения"
+            ]);
+    }
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->delete('/blacklist/{id}/delete', function (Request $request, Response $response, array $args) use($app){
+    $id = intval($args["id"]);
+    $blacklist = new PBXBlacklist($app->getContainer());
+    $result = $blacklist->deleteFromBlacklist($id);
+
+    return $response->withJson([
+        "result" => $result,
+        "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
+        ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->post('/blacklist/{id}/remove', function (Request $request, Response $response, array $args) use($app){
+    $id = intval($args["id"]);
+    $blacklist = new PBXBlacklist($app->getContainer());
+    $result = $blacklist->removeFromBlacklist($id);
+
+    return $response->withJson([
+        "result" => $result,
+        "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
+    ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->get('/[{name}]', function (Request $request, Response $response, array $args) {
+  // Sample log message
+  $this->logger->info("Loading WebApp");
+
+  // Render index view
+  return $this->renderer->render($response, 'index.phtml', $args);
+});
