@@ -701,7 +701,7 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
           ->withHeader('Content-Type', 'text/plain')
           ->write($template);
   
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+});//->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
 $app->post('/phones/provisioning/start', function (Request $request, Response $response, array $args) use($app) {
   $data = $request->getParams();
