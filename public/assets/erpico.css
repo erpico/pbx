@@ -1033,3 +1033,8 @@ padding-bottom: 0;
 .footer > td > div {
     color: #22B7E1;
 }
+div[button_id="oc-results-tab"],
+div[button_id="oc-queues-tab"],
+div[button_id="oc-journal-tab"]{
+    color: dimgrey!important;
+}
