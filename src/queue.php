@@ -13,7 +13,9 @@ class PBXQueue {
     "service_id" => 1,
     "sl" => 1,
     "pattern" => 0,
-    "active" => 0
+    "active" => 0,
+    "autopause" => 1,
+    "alarms" => 0
   ];
 
   public function __construct() {
@@ -96,6 +98,7 @@ class PBXQueue {
       if ($onlyCount) {
         return intval($row[0]);
       }
+
       if ($fullnameAsValue) {
         $result[] = ["id"=>$row["name"], "value"=>$row["fullname"]];
       } else {
@@ -165,6 +168,7 @@ class PBXQueue {
           return [ "result" => false, "message" => "Код может содержать только символы английского алфавита и знак '_'"];
         }
       }
+
       foreach (self::FIELDS as $field => $isInt) {
         if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
           if (strlen($ssql)) $ssql .= ",";
