@@ -352,9 +352,10 @@ $app->get('/phones/list', function (Request $request, Response $response, array 
     $filter = $request->getParam('filter', "");
     $start = $request->getParam('start', 0);
     $count = $request->getParam('count', 20);
+    $sort = $request->getParam('sort', "");
 
     return $response->withJson([
-        "data" => $phone->fetchList($filter, $start, $count, 0),
+        "data" => $phone->fetchList($filter, $start, $count, 0,true, $sort),
         "total_count" => $phone->fetchList($filter, $start, $count, 1),
         "pos" => $start
     ]);

@@ -56,7 +56,7 @@ class PBXPhone {
     return $this->cfgSettings;
   }
 
-  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $likeStringValues = true) {
+  public function fetchList($filter = "", $start = 0, $end = 20, $onlyCount = 0, $likeStringValues = true, $sort = "") {
     $sql = "SELECT ";
     if (intval($onlyCount)) {
       $ssql = " COUNT(*) ";
@@ -93,6 +93,18 @@ class PBXPhone {
 
     if (strlen($wsql)) {
       $sql .= " WHERE ".$wsql;
+    }
+
+    if (is_array($sort)) {
+      $sql .= " ORDER BY ";
+      foreach (self::FIELDS as $field => $isInt) {
+        if ($sort[$field]) {
+          $sqlField = self::getTableName() . ".`$field`";
+          $sql .= ($isInt ? $sqlField : $sqlField . " + 0 ") . $sort[$field];
+        }
+      }
+    } else {
+      $sql .= " ORDER BY ".self::getTableName() . ".`phone` + 0";
     }
 
     $res = $this->db->query($sql, $onlyCount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
