@@ -790,6 +790,14 @@ $app->post('/aliases/{alias_id}/save', function (Request $request, Response $res
   return $response->withJson($res);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
+$app->post('/aliases/{alias_id}/remove', function (Request $request, Response $response, array $args) use($app) {
+  $aliases = new PBXAliases();
+  $id = intval($args["alias_id"]);
+  $res = $aliases->remove($id);
+
+  return $response->withJson($res);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+
 $app->any('/user/exten/save', function (Request $request, Response $response, array $args) use($app) {
   $user = $app->getContainer()['auth'];
 
@@ -842,6 +850,7 @@ $app->post('/blacklist/{id}/update', function (Request $request, Response $respo
     }
 })->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
 
+/*
 $app->delete('/blacklist/{id}/delete', function (Request $request, Response $response, array $args) use($app){
     $id = intval($args["id"]);
     $blacklist = new PBXBlacklist($app->getContainer());
@@ -851,12 +860,12 @@ $app->delete('/blacklist/{id}/delete', function (Request $request, Response $res
         "result" => $result,
         "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
         ]);
-})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));*/
 
 $app->post('/blacklist/{id}/remove', function (Request $request, Response $response, array $args) use($app){
     $id = intval($args["id"]);
     $blacklist = new PBXBlacklist($app->getContainer());
-    $result = $blacklist->removeFromBlacklist($id);
+    $result = $blacklist->remove($id);
 
     return $response->withJson([
         "result" => $result,

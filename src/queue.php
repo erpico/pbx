@@ -176,7 +176,6 @@ class PBXQueue {
           $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";
         }  
       }
-      
 
       if (strlen($ssql)) {
         $sql .= $ssql;
