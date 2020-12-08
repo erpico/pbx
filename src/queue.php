@@ -232,7 +232,7 @@ class PBXQueue {
             $sql = "INSERT INTO queue_agent 
             (queue_id, penalty, phone, static, acl_user_id) 
             VALUES 
-            (".intval($queue_id).", ".intval($agents["penalty"]).", '".intval($agents["phone"])."', ".intval($agents["static"]).", ";
+            (".intval($queue_id).", ".intval($agents["penalty"]).", '".$agents["phone"]."', ".intval($agents["static"]).", ";
             if ($user_id == NULL){
               $sql .= " NULL )";
             } else {
