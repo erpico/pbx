@@ -585,9 +585,9 @@ class User
       };
       if (isset($params['name']) && strlen(trim($params['name']))) {
         if (!$this->isUniqueColumn("name", $params['name'], $params['id'])) {
-          return [ "result" => false, "message" => "Логин занят другим пользователем"];
+          return ["result" => false, "message" => "Логин занят другим пользователем"];
         } else {
-          $sql .= "`name` = '".trim(addslashes($params['name']))."',";
+          $sql .= "`name` = '" . trim(addslashes($params['name'])) . "',";
         }
       } else {
         return ["result" => false, "message" => "Логин не может быть пустым"];
@@ -597,7 +597,7 @@ class User
         /*if (!$this->isUniqueColumn("fullname", $params['fullname'], $params['id'])) {
           return [ "result" => false, "message" => "Ф.И.О. занято другим пользователем"];
         } else {*/
-          $sql .= "`fullname` = '".trim(addslashes($params['fullname']))."',";
+        $sql .= "`fullname` = '" . trim(addslashes($params['fullname'])) . "',";
         //}
       } else {
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
@@ -605,7 +605,7 @@ class User
 
       if (!$disable_rules) {
         if (isset($params['state']) && intval($params['state'])) {
-          $sql .= "`state` = '".intval($params['state'])."',";
+          $sql .= "`state` = '" . intval($params['state']) . "',";
         } else {
           return ["result" => false, "message" => "state can`t be empty"];
         }
@@ -614,9 +614,9 @@ class User
       if (!intval($params['id'])) {
         if (isset($params['password']) && strlen($params['password'])) {
           $sql .= "password = sha1(md5(concat(md5(md5('".addslashes($params["password"])."')), ';Ej>]sjkip'))),";
-        } else {
+        } /*else {
           return ["result" => false, "message" => "password can`t be empty"];
-        }
+        }*/
       } else {
         if (isset($params['password']) && trim($params['password'])) {
           $sql .= "password = sha1(md5(concat(md5(md5('".addslashes($params["password"])."')), ';Ej>]sjkip'))),";
@@ -632,6 +632,7 @@ class User
       if (isset($endsql)) {
         $sql .= $endsql;
       }
+
       $res = $this->db->query($sql);
       if ($res) {
         $sql = "";
@@ -653,9 +654,9 @@ class User
             $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
           }
         }
-        if(isset($end_sql) && strlen($sql)) {
+        if (strlen($sql)) {
           $start_sql .= $sql;
-          $start_sql .= $end_sql;
+          $start_sql .= isset($end_sql)?$end_sql:"";
           $res = $this->db->query($start_sql);
         }
         if (isset($ext_sql)) {
