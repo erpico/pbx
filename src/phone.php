@@ -96,13 +96,14 @@ class PBXPhone {
     }
 
     if (is_array($sort)) {
-      $sql .= " ORDER BY ";
+      $osql = "";
       foreach (self::FIELDS as $field => $isInt) {
         if ($sort[$field]) {
           $sqlField = self::getTableName() . ".`$field`";
-          $sql .= ($isInt ? $sqlField : $sqlField . " + 0 ") . $sort[$field];
+          $osql .= ($isInt ? $sqlField : $sqlField . " + 0 ") . $sort[$field];
         }
       }
+      $sql .= empty($osql) ? "" : " ORDER BY " . $osql;
     } else {
       $sql .= " ORDER BY ".self::getTableName() . ".`phone` + 0";
     }

@@ -100,8 +100,8 @@ class PBXBlacklist
   {
     $sql = "UPDATE {$this->getTableName()} SET phone=:phone, comment=:comment, action=:action WHERE id=:id";
     $stmt = $this->db->prepare($sql);
-    $stmt->bindParam('phone', $params["phone"]);
-    $stmt->bindParam('comment', $params["comment"]);
+    $stmt->bindParam('phone', trim($params["phone"]));
+    $stmt->bindParam('comment', trim(addslashes($params["comment"])));
     $stmt->bindParam('action', $params["action"]);
     $stmt->bindParam('id', $id);
     return $stmt->execute() ? true : false;
@@ -111,8 +111,8 @@ class PBXBlacklist
   {
     $sql = "INSERT INTO {$this->getTableName()}(phone, comment, action, deleted) VALUES (:phone, :comment, :action, 0)";
     $stmt = $this->db->prepare($sql);
-    $stmt->bindParam('phone', $params["phone"]);
-    $stmt->bindParam('comment', $params["comment"]);
+    $stmt->bindParam('phone', trim($params["phone"]));
+    $stmt->bindParam('comment', trim(addslashes($params["comment"])));
     $stmt->bindParam('action', $params["action"]);
     return $stmt->execute() ? true : false;
   }

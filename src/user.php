@@ -649,9 +649,9 @@ class User
           $rules->saveUser($params['rules'], $id);
           $user_cti_ext = $this->getUserConfigByHandle(intval($params['id']), "cti.ext");
           if (intval($params['id']) && count($user_cti_ext) == 0) {
-            $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+            $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '".trim(addslashes($params['phone']))."', updated = NOW()";
           } else {
-            $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+            $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '".trim(addslashes($params['phone']))."', updated = NOW()";
           }
         }
         if (strlen($sql)) {
