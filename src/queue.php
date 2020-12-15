@@ -219,7 +219,7 @@ class PBXQueue {
   } 
   
   public function saveQueueAgents($queue_id, $user_id, $agents) {
-    $sql = "SELECT COUNT(*) FROM queue_agent WHERE queue_id = ".intval($queue_id)." AND phone = '{$agents["phone"]}'";
+    $sql = "SELECT COUNT(*) FROM queue_agent WHERE queue_id = ".intval($queue_id)." AND phone = '".trim(addslashes($agents["phone"]))."'";
          if ($user_id == NULL){
           $sql .= " AND acl_user_id IS NULL";
         } else {
@@ -232,7 +232,7 @@ class PBXQueue {
             $sql = "INSERT INTO queue_agent 
             (queue_id, penalty, phone, static, acl_user_id) 
             VALUES 
-            (".intval($queue_id).", ".intval($agents["penalty"]).", '".$agents["phone"]."', ".intval($agents["static"]).", ";
+            (".intval($queue_id).", ".intval($agents["penalty"]).", '".trim(addslashes($agents["phone"]))."', ".intval($agents["static"]).", ";
             if ($user_id == NULL){
               $sql .= " NULL )";
             } else {
