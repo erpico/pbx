@@ -704,6 +704,26 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
   
 });//->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
+$app->any('/config/contacts', function (Request $request, Response $response, array $args) use($app) {
+
+  $user = new User();
+  $users = $user->fetchList([ "state" => 1], 0, 1000, 0);
+
+  $result = '<YeastarIPPhoneDirectory>'."\n";
+
+  foreach ($users as $e) {
+    if (!strlen($e['phone'])) continue;
+    $result .= '<DirectoryEntry><Name>'.$e['fullname'].'</Name><Telephone>'.$e['phone'].'</Telephone></DirectoryEntry>'."\n";        
+  }
+
+  $result .= "</YeastarIPPhoneDirectory>";
+
+  $response->getBody()->write($result);
+  return $response->withStatus(200)
+          ->withHeader('Content-Type', 'text/xml');          
+
+});
+
 $app->post('/phones/provisioning/start', function (Request $request, Response $response, array $args) use($app) {
   $data = $request->getParams();
 
