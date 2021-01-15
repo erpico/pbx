@@ -240,7 +240,7 @@ $app->get('/legacy/grouped_queues_name/short', function (Request $request, Respo
   $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
   return $response->withJson($grouped_reports->getQueues_name($filter, $pos, $count, 0));
   
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
