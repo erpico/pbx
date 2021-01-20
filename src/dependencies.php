@@ -3,6 +3,7 @@
   
 use App\Middleware\OnlyAdmin;
 use App\Services\RequestTypeService;
+use PAMI\Client\Impl\ClientImpl;
 
 $container = $app->getContainer();
 
@@ -83,6 +84,34 @@ $container['db'] = function ($c)  use ($container, $app) {
   } catch (PDOException $exception) {
     return 0;
   }
+};
+
+$container['ami'] = function ($c)  use ($container, $app) {
+  $options = array(    
+    'scheme' => 'tcp://',    
+    'connect_timeout' => 10,
+    'read_timeout' => 10
+  );
+  $filename = "/etc/erpico.conf";
+  if (file_exists($filename)) {
+    $fcfg = fopen($filename, "r");
+    $config = [];
+    while ($s = fgets($fcfg)) {
+      list($key,$value) = explode("=", $s, 2);
+      $key = trim($key);
+      $value = trim($value, " \"\t\n\r\0\x0B");
+      $config[$key] = $value;
+    };
+    fclose($fcfg);
+    $options['username'] = $config['ami_user'];
+    $options['secret'] = $config['ami_secret'];
+    $options['port'] = $config['ami_port'];
+    $options['host'] = $config['ami_server'];
+  } else {
+    return 0;
+  }
+  $ami = new \PAMI\Client\Impl\ClientImpl($options);  
+  return $ami;
 };
 
 $container['auth'] = function ($c) use ($app){

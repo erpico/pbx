@@ -1,7 +1,11 @@
 <?php
 
+use PAMI\Client\Impl\ClientImpl;
+use PAMI\Message\Action\SIPPeersAction;
+
 class PBXPhone {
   protected $db;
+  protected $ami;
   private $cfgSettings;
   const FIELDS = [
     "phone" => 0,
@@ -28,6 +32,7 @@ class PBXPhone {
     global $app;
     $container = $app->getContainer();
     $this->db = $container['db'];
+    $this->ami = $container['ami'];
     $this->server_host = $container['server_host'];
     $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
@@ -564,5 +569,30 @@ class PBXPhone {
       
     }
     return $value .= $i ? $i : "";
+  }
+
+  public function appendRealtime(&$arr) {    
+     if ($this->ami) {
+      $this->ami->open();
+      $response = $this->ami->send(new SIPPeersAction());
+      $pmap = [];
+      $peers = $response->getEvents();      
+      foreach ($peers as $p) {        
+        if (get_class($p) != "PAMI\Message\Event\PeerEntryEvent") continue;
+        $pmap[$p->getObjectName()] = $p;
+      }
+      $this->ami->close();
+      
+      for ($i = 0; $i < count($arr); $i++) {
+        $phone = $arr[$i]['phone'];
+        if (isset($pmap[$phone])) {
+          $arr[$i]['s_ip'] = $pmap[$phone]->getIPAddress();
+          if ($arr[$i]['s_ip'] == '-none-') $arr[$i]['s_ip'] = "";
+          $arr[$i]['s_port'] = $pmap[$phone]->getIPPort();
+          if ($arr[$i]['s_port'] == '0') $arr[$i]['s_port'] = "";
+          $arr[$i]['s_status'] = $pmap[$phone]->getStatus();
+        }
+      }
+     }
   }
 }
