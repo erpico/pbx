@@ -378,6 +378,14 @@ input::-ms-reveal, input::-ms-clear {
     display: inline-block;
 }
 
+.yellowcircle, .yellowcircle_state{
+    background-color: #ffda33;
+    border-radius: 50%;
+    width: 10px;
+    height: 10px;
+    display: inline-block;
+}
+
 .graycircle, .graycircle_state{
     background-color: gray;
     border-radius: 50%;
@@ -386,7 +394,7 @@ input::-ms-reveal, input::-ms-clear {
     display: inline-block;
 }
 
-.greencircle_state, .redcircle_state, .graycircle_state, .disablecircle_state {
+.greencircle_state, .redcircle_state, .graycircle_state, .disablecircle_state, .yellowcircle, .yellowcircle_state {
     width: 8px !important;
     height: 8px !important;
 }
