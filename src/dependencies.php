@@ -90,7 +90,7 @@ $container['ami'] = function ($c)  use ($container, $app) {
   $options = array(    
     'scheme' => 'tcp://',    
     'connect_timeout' => 10,
-    'read_timeout' => 10
+    'read_timeout' => 100
   );
   $filename = "/etc/erpico.conf";
   if (file_exists($filename)) {
