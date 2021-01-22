@@ -48,7 +48,7 @@ class User
   private $token_id = 0;
   private $id = 0;
   
-  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules', 'cfwd.duration.of.redirection'];
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules', 'cfwd.duration.of.redirection', 'cfwd.divert'];
 
   public function __construct($db = null, $_id = 0) {
     if (isset($db)) {
@@ -522,6 +522,9 @@ class User
       } else {
         $row['config'] = $this->getUserConfig($row['id']);
         $row['rules'] = $rules->getUserRules($row['id']);
+        foreach ($row['config'] as $item) {
+          $row["config.".$item['key']] = $item['value'];
+        }
         $result[] = $row;
       }
     }
@@ -583,8 +586,9 @@ class User
       } else {
         $sql = " INSERT INTO acl_user SET ";
       };
+
       if (isset($params['name']) && strlen(trim($params['name']))) {
-        if (!$this->isUniqueColumn("name", $params['name'], $params['id'])) {
+        if (!$this->isUniqueColumn("name", $params['name'], $params['id']) && !intval($params['id'])) {
           return ["result" => false, "message" => "Логин занят другим пользователем"];
         } else {
           $sql .= "`name` = '" . trim(addslashes($params['name'])) . "',";
@@ -654,6 +658,7 @@ class User
             $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '".trim(addslashes($params['phone']))."', updated = NOW()";
           }
         }
+
         if (strlen($sql)) {
           $start_sql .= $sql;
           $start_sql .= isset($end_sql)?$end_sql:"";
@@ -754,9 +759,12 @@ class User
     if ($config) {
       $sql = 'UPDATE cfg_user_setting';
       $endSql ="WHERE id = {$config[id]}";
+    } else {
+      //var_dump($handle); die();
     }
     $sql .= " SET val = '".trim(addslashes($value))."', handle = '".trim(addslashes($handle))."', updated = NOW(), acl_user_id = '{$userId}'";
     if (isset($endSql)) $sql .= ' '.$endSql;
+
     $res = $this->db->query($sql);
     
     return $res ? true : false;
