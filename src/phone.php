@@ -5,6 +5,7 @@ use PAMI\Message\Action\SIPPeersAction;
 
 class PBXPhone {
   protected $db;
+
   protected $ami;
   private $cfgSettings;
   const FIELDS = [
@@ -571,18 +572,23 @@ class PBXPhone {
     return $value .= $i ? $i : "";
   }
 
-  public function appendRealtime(&$arr) {    
-     if ($this->ami) {
-      $this->ami->open();
+  public function appendRealtime(&$arr)
+  {
+    if ($this->ami) {
+      try {
+        $this->ami->open();
+      } catch (Exception $e) {
+        return;
+      }
       $response = $this->ami->send(new SIPPeersAction());
       $pmap = [];
-      $peers = $response->getEvents();      
-      foreach ($peers as $p) {        
+      $peers = $response->getEvents();
+      foreach ($peers as $p) {
         if (get_class($p) != "PAMI\Message\Event\PeerEntryEvent") continue;
         $pmap[$p->getObjectName()] = $p;
       }
       $this->ami->close();
-      
+
       for ($i = 0; $i < count($arr); $i++) {
         $phone = $arr[$i]['phone'];
         if (isset($pmap[$phone])) {
@@ -593,6 +599,6 @@ class PBXPhone {
           $arr[$i]['s_status'] = $pmap[$phone]->getStatus();
         }
       }
-     }
+    }
   }
 }

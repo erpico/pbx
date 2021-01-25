@@ -193,11 +193,13 @@ class PBXQueue {
         if (is_array($agents) && count($agents)){
           $this->deleteQueueAgentsExceptFor($id);
           foreach ($agents as $a) {
-            if (intval($a['acl_user_id']) == 0 && intval($a['phone']) == 0){
-              return [ "result" => false, "message" => "Укажите номер телефона или выберите сотрудника."];
-            }
-            if (intval($a['acl_user_id']) || intval($a['phone'])) {
-              if ($a['acl_user_id'] == ""){
+            if (
+              intval($a['acl_user_id']) == 0
+              && (trim($a['phone']) === "" || $a['phone'] === null)
+            ) {
+              return ["result" => false, "message" => "Укажите номер телефона или выберите сотрудника."];
+            } else {
+              if ($a['acl_user_id'] == "") {
                 $a['acl_user_id'] = NULL;
               }
               $this->saveQueueAgents($id, $a['acl_user_id'], $a);

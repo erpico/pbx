@@ -225,12 +225,14 @@ class PBXContactGroups {
       if (!intval($this->getId())) {     
         $this->setId($this->db->lastInsertId());
       }
+
       $this->deleteQueues();
       $this->deleteItems();
 
       $this->insertQueues($this->stringToArr($queues));
       $this->insertItemsUsers($this->stringToArr($items_users));
       $this->insertItemsQueues($this->stringToArr($items_queues));
+
       
       return ["result" => TRUE, "message" => "Контактная группа сохранена"];
     }
@@ -265,7 +267,7 @@ class PBXContactGroups {
     foreach ($arr as $value) {                   
         $sql = "INSERT INTO contact_groups_items SET 
         `contact_groups_id` = '".$this->getId()."',
-        `queue_id` = '".$value."'";
+        `queue_id` = '".$value."', `queue` = '' ";
         $res = $this->db->query($sql);      
     }
   }
@@ -274,7 +276,7 @@ class PBXContactGroups {
     foreach ($arr as $value) {            
         $sql = "INSERT INTO contact_groups_items SET 
         `contact_groups_id` = '".$this->getId()."',
-        `acl_user_id` = '".$value."'";
+        `acl_user_id` = '".$value."', `queue` = ''";
         $res = $this->db->query($sql);      
     }
   }

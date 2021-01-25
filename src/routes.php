@@ -363,14 +363,21 @@ $app->get('/phones/list', function (Request $request, Response $response, array 
         "total_count" => $phone->fetchList($filter, $start, $count, 1),
         "pos" => $start
     ]);
-})->add('\App\Middleware\OnlyAuthUser');
+})->add("\App\Middleware\OnlyAdmin");
 
 $app->get('/phones/list/short', function (Request $request, Response $response, array $args) use($app) {
   $phone = new PBXPhone();
 
   $filter = $request->getParam('filter', "");
+  $result = [];
 
-  return $response->withJson($phone->fetchList($filter));
+  foreach ($phone->fetchList($filter) as $item) {
+    $result[] = [
+      'id' => $item['id'], 'phone' => $item['phone'], 'model' =>$item['model']
+      ];
+  }
+
+  return $response->withJson($result);
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->post('/phones/{phone_id}/save', function (Request $request, Response $response, array $args) use($app) {
