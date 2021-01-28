@@ -7,6 +7,7 @@ use Erpico\PBXRules;
 use App\Middleware\OnlyAdmin;
 use App\Middleware\SecureRouteMiddleware;
 use App\Middleware\SetRoles;
+use PHPMailer\PHPMailer\PHPMailer;
 // Routes
 
 $app->post('/auth/login', function (Request $request, Response $response, array $args) {
@@ -903,6 +904,46 @@ $app->post('/blacklist/{id}/remove', function (Request $request, Response $respo
         "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
     ]);
 })->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->get('/vm/email', function (Request $request, Response $response, array $args) {
+
+    $_email = $request->getParam("to", "rp@erpico.ru");//"rp@erpico.ru";
+    $_subj  = "ErpicoPBX: пропущенный звонок";
+    $_text  = "Звонок с номера ".$request->getParam("tel")." в ".date("d.m.Y H:i:s");
+
+    $mail = new PHPMailer;
+         
+    $mail->Mailer = "smtp";
+    $mail->Host = 'mail.erpico.ru';  // Specify main and backup SMTP servers
+    //$mail->Port = 25;
+    $mail->SMTPAuth = true;                               // Enable SMTP authentication
+    $mail->Username = 'noreply';                 // SMTP username
+    $mail->Password = 'oL(H&LVrh7lnyef';
+    $mail->SMTPOptions = array(
+      'ssl' => array(
+          'verify_peer' => false,
+          'verify_peer_name' => false,
+          'allow_self_signed' => true
+          )
+    );
+
+    $msg = "";
+
+    $mail->setFrom('noreply@erpicopbx.ru', 'Erpico PBX');
+    $mail->addAddress($_email);      
+    
+    $mail->Subject = $_subj;
+    $mail->IsHTML(true);
+    $mail->CharSet = 'UTF-8';    
+
+    $mail->AltBody = $_text;
+    $mail->Body = $_text;    
+
+    return $response->withJson([
+      "result" => $mail->send()
+    ]
+    );
+});
 
 $app->get('/[{name}]', function (Request $request, Response $response, array $args) {
   // Sample log message
