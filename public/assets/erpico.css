@@ -1046,3 +1046,12 @@ div[button_id="oc-queues-tab"],
 div[button_id="oc-journal-tab"]{
     color: dimgrey!important;
 }
+
+a {
+    color: black;
+}
+
+a:hover {
+    color: #22B7E1;;
+    cursor: hand;
+}

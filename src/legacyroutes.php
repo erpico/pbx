@@ -456,12 +456,12 @@ $app->get('/legacy/operators_work_report_list', function (Request $request, Resp
     $count = $request->getParam('count', 20);
 
     $operators_work_report = new \Erpico\Operators_work_report($app->getContainer());
-    return $response->withJson([
+    /*return $response->withJson([
         "data" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 0),
         "pos" => $pos,
         "total_count" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 1)
-    ]);
-  
+    ]);*/
+    return $response->withJson($operators_work_report->getOperators_work_report_list($filter, 0, 100, 0));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/operators_work_report', function (Request $request, Response $response, array $args) use ($app) {
@@ -470,12 +470,12 @@ $app->get('/legacy/operators_work_report', function (Request $request, Response 
     $count = $request->getParam('count', 20);
 
     $operators_work_report = new \Erpico\Operators_work_report($app->getContainer());
-    return $response->withJson([
+    /*return $response->withJson([
         "data" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 0),
         "pos" => $pos,
         "total_count" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 1)
-    ]);
-  
+    ]);*/
+    return $response->withJson($operators_work_report->getOperators_work_report($filter, 0, 100, 0));    
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 
