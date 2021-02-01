@@ -47,7 +47,7 @@ class Lost_calls {
 
         $query = "
         SELECT MAX(calldate), UNIX_TIMESTAMP(MAX(calldate)) 
-        FROM queue_cdr 
+        FROM queue_cdr
         WHERE src LIKE '%".substr($src,2)."' ".$sql;
 
         $que = $this->auth->allowed_queues();
@@ -176,17 +176,25 @@ class Lost_calls {
       $ssql = "  DISTINCT src, queue, agentname ";
     /*}*/
 
-    if(isset($filter['t1']) && isset($filter['t2'])) $sql = "
-      AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
-    else $sql = "
-      AND UNIX_TIMESTAMP(Now())-UNIX_TIMESTAMP(calldate) < 86400 ";
+    if (isset($filter['t1']) && isset($filter['t2'])) {
+      $sql = " AND calldate>'" . $filter['t1'] . "' AND calldate<'" . $filter['t2'] . "' ";
+    }
+    else {
+      $sql = " AND UNIX_TIMESTAMP(Now())-UNIX_TIMESTAMP(calldate) < 86400 ";
+    }
 
     $wsql = $sql;
+    if (isset($filter['queues']) && !empty($filter['queues'])) {
+      $sql .= "AND queue.id IN (".$filter['queues'].") ";
+    }
+
     $sql.= " AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') ";
+    $w2sql = $wsql;
+    $w2sql.=" AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') ";
 
     $query = "
       SELECT ".$ssql." 
-      FROM queue_cdr 
+      FROM queue_cdr LEFT JOIN queue ON queue.name = queue_cdr.queue
       WHERE LENGTH(src) > 4 AND !outgoing ".$sql;
 
     $que = $this->auth->allowed_queues();
@@ -202,6 +210,8 @@ class Lost_calls {
       $row = $res->fetch(\PDO::FETCH_NUM);
       return intval($row[0]);
     }*/
+
+
     $lost_calls = $this->db->query($query);
     $count = 0;
     $lost_calls_arr = [];
@@ -220,7 +230,7 @@ class Lost_calls {
     for ($j = 0; $j < $count; $j++) {
         $src = $lost_calls_arr[$j][0];
 
-        $lastAbandonedCallDates = $this->getLastCallDate($src, $sql);
+        $lastAbandonedCallDates = $this->getLastCallDate($src, $w2sql);
         $lastAbandonedCallDate = $lastAbandonedCallDates[0];
         $lastAbandonedCallDateUTM = $lastAbandonedCallDates[1];
         $callDateFilter = " AND calldate>'".$lastAbandonedCallDate."'";
