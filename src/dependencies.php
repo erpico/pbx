@@ -74,6 +74,7 @@ $container['db'] = function ($c)  use ($container, $app) {
     $db['user'] = $config['db_user'];
     $db['password'] = $config['db_password'];
     $db['schema'] = $config['db_schema'];
+    $container['instance_id'] = $config['vpn_name'];
   }
   try {
     $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['schema'].";charset=UTF8", $db['user'], $db['password']);
@@ -83,7 +84,7 @@ $container['db'] = function ($c)  use ($container, $app) {
     return $pdo;
   } catch (PDOException $exception) {
     return 0;
-  }
+  }  
 };
 
 $container['ami'] = function ($c)  use ($container, $app) {

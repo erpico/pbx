@@ -11,9 +11,7 @@ use App\Middleware\SetRoles;
 use AmoCRM\OAuth2\Client\Provider\AmoCRM;
 
 $app->any('/amocrm/register', function (Request $request, Response $response, array $args) use($app) {
-    $id = $request->getParam("id", "e268e13f-dcbf-4f5e-b55a-db5ac6abcb1f");
-
-    $_SESSION['oauth2state'] = bin2hex(random_bytes(16));
+    $id = $request->getParam("id", "e268e13f-dcbf-4f5e-b55a-db5ac6abcb1f");    
 
     echo '<html><body margin=0 padding=0 style="margin: 0;"><div>
         <script
@@ -24,8 +22,9 @@ $app->any('/amocrm/register', function (Request $request, Response $response, ar
             data-compact="false"
             data-class-name="className"
             data-color="default"
-            data-state="' . $_SESSION['oauth2state'] . '"
+            data-state="' . $app->getContainer()['instance_id'] . '"
             data-error-callback="handleOauthError"
+            data-mode="post_message"
             src="https://www.amocrm.ru/auth/button.min.js"
         ></script>
         </div></body></html>';

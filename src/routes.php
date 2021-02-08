@@ -336,7 +336,9 @@ $app->post('/contact_groups/{id}', function (Request $request, Response $respons
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
 $app->get('/auth/info', function (Request $request, Response $response, array $args) use($app) {    
-    return $response->withJson($app->getContainer()['auth']->getInfo());
+  $data = $app->getContainer()['auth']->getInfo();
+  $data['instance'] =  $app->getContainer()['instance_id'];
+  return $response->withJson($data);
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/auth/logout', function (Request $request, Response $response, array $args) use($app) {    
