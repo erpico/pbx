@@ -45,7 +45,7 @@ $queues = new PBXQueue();
 
 $reload = [];
 
-$current = file_get_contents(__DIR__ ."/configs/sip.conf");
+$current = @file_get_contents(__DIR__ ."/configs/sip.conf");
 $new = $phones->getConfig()."\n".$peers->getConfig();
 
 if (strcmp($current, $new) != 0) {
@@ -55,7 +55,7 @@ if (strcmp($current, $new) != 0) {
   $reload['sip'] = "sip reload";
 }
 
-$current = file_get_contents(__DIR__ ."/configs/sip.registry.conf");
+$current = @file_get_contents(__DIR__ ."/configs/sip.registry.conf");
 $new = $peers->getRegConfig();
 
 if (strcmp($current, $new) != 0) {
@@ -65,7 +65,7 @@ if (strcmp($current, $new) != 0) {
   $reload['sip'] = "sip reload";
 }
 
-$current = file_get_contents(__DIR__ ."/configs/queues.conf");
+$current = @file_get_contents(__DIR__ ."/configs/queues.conf");
 $new = $queues->getConfig();
 
 if (strcmp($current, $new) != 0) {
@@ -75,7 +75,7 @@ if (strcmp($current, $new) != 0) {
   $reload['queue'] = "queue reload all";
 }
 
-$current = file_get_contents(__DIR__ ."/configs/pjsip.conf");
+$current = @file_get_contents(__DIR__ ."/configs/pjsip.conf");
 $new = $phones->getPjsipConfig()."\n".$peers->getPjsipConfig();
 
 if (strcmp($current, $new) != 0) {
@@ -86,7 +86,7 @@ if (strcmp($current, $new) != 0) {
 
 if (isset($ami)) {
   foreach ($reload as $cmd) {
-    var_dump($ami->send(new CommandAction($cmd)));
+    $ami->send(new CommandAction($cmd));
   }
 
   $ami->close();

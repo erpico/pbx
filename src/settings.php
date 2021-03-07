@@ -9,7 +9,7 @@ return [
         'renderer' => [
             'template_path' => __DIR__ . '/../templates/',
         ],
-        'server_host' => $_SERVER['SERVER_ADDR'],
+        'server_host' => isset($_SERVER['SERVER_ADDR']) ? $_SERVER['SERVER_ADDR'] : '',
         // Monolog settings
         'logger' => [
             'name' => 'slim-app',

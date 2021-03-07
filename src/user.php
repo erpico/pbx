@@ -61,7 +61,7 @@ class User
     if (!intval($_id)) {
       $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
         self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
-          ($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
+          isset($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
       if (is_array($token_data)) {
         $this->id = $token_data['acl_user_id'];
         $this->token_id = $token_data['id'];
