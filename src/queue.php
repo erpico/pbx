@@ -253,6 +253,7 @@ class PBXQueue {
       if ($p['deleted'] || !$p['active']) {
         continue;
       }
+      
       $result .= "[{$p['name']}]({$p['pattern']})\n";    
       if (is_array($p['agents'])) {
         foreach ($p['agents'] as $a) {

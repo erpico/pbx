@@ -8,6 +8,8 @@ use App\Middleware\OnlyAdmin;
 use App\Middleware\SecureRouteMiddleware;
 use App\Middleware\SetRoles;
 use PHPMailer\PHPMailer\PHPMailer;
+use GuzzleHttp\Client;
+use Supervisor\Supervisor;
 // Routes
 
 $app->post('/auth/login', function (Request $request, Response $response, array $args) {
@@ -945,6 +947,32 @@ $app->get('/vm/email', function (Request $request, Response $response, array $ar
       "result" => $mail->send()
     ]
     );
+});
+
+$app->get('/system/services', function (Request $request, Response $response, array $args) {
+  $guzzleClient = new \GuzzleHttp\Client([
+    'auth' => ['erpicopbx', 'k9JjUk4FImZJSrc'],
+  ]);
+
+  // Pass the url and the guzzle client to the fXmlRpc Client
+  $client = new \fXmlRpc\Client(
+      'http://127.0.0.1:9001/RPC2',
+      new \fXmlRpc\Transport\HttpAdapterTransport(
+          new \Http\Message\MessageFactory\GuzzleMessageFactory(),
+          new \Http\Adapter\Guzzle6\Client($guzzleClient)
+      )
+  );
+
+  // Pass the client to the Supervisor library.
+  $supervisor = new \Supervisor\Supervisor($client);
+
+  $processes = $supervisor->getAllProcessInfo();  
+
+  return $response->withJson([
+    "result" => true,
+    "processes" =>$processes
+  ]);
+
 });
 
 $app->get('/[{name}]', function (Request $request, Response $response, array $args) {
