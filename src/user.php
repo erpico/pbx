@@ -48,7 +48,7 @@ class User
   private $token_id = 0;
   private $id = 0;
   
-  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days'];
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules', 'cfwd.duration.of.redirection', 'cfwd.divert'];
 
   public function __construct($db = null, $_id = 0) {
     if (isset($db)) {
@@ -61,7 +61,7 @@ class User
     if (!intval($_id)) {
       $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
         self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
-          ($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
+          isset($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
       if (is_array($token_data)) {
         $this->id = $token_data['acl_user_id'];
         $this->token_id = $token_data['id'];
@@ -109,7 +109,7 @@ class User
     $sql = "SELECT id, name, fullname
 	          FROM acl_user
 	          WHERE name='".addslashes($login)."' 
-            AND password = sha1(md5(concat(md5(md5('".addslashes($password)."')), ';Ej>]sjkip')))";            
+              AND password = sha1(md5(concat(md5(md5('".addslashes($password)."')), ';Ej>]sjkip')))";
     $res = $this->db->query($sql);
     if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {
       $token = substr(sha1(sprintf("%s%d", $row['name'], round(microtime(1) * 1000))), 0, 32); 
@@ -274,7 +274,7 @@ class User
      FROM cfg_setting
      WHERE handle = 'cti.queues.allowed' ";
     $result_user_defult_queues = $this->db->query($demand_user_defult_queues);
-    while ($myrow_user_defult_queues =$result_user_defult_queues->fetch(\PDO::FETCH_ASSOC)) {
+    while ($myrow_user_defult_queues = $result_user_defult_queues->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_defult_queues['val'] != "") {
             $b = explode(",", $myrow_user_defult_queues['val']);
             $c = count($b);
@@ -522,6 +522,9 @@ class User
       } else {
         $row['config'] = $this->getUserConfig($row['id']);
         $row['rules'] = $rules->getUserRules($row['id']);
+        foreach ($row['config'] as $item) {
+          $row["config.".$item['key']] = $item['value'];
+        }
         $result[] = $row;
       }
     }
@@ -583,11 +586,12 @@ class User
       } else {
         $sql = " INSERT INTO acl_user SET ";
       };
+
       if (isset($params['name']) && strlen(trim($params['name']))) {
-        if (!$this->isUniqueColumn("name", $params['name'], $params['id'])) {
-          return [ "result" => false, "message" => "Логин занят другим пользователем"];
+        if (!$this->isUniqueColumn("name", $params['name'], $params['id']) && !intval($params['id'])) {
+          return ["result" => false, "message" => "Логин занят другим пользователем"];
         } else {
-          $sql .= "`name` = '".trim(addslashes($params['name']))."',";
+          $sql .= "`name` = '" . trim(addslashes($params['name'])) . "',";
         }
       } else {
         return ["result" => false, "message" => "Логин не может быть пустым"];
@@ -597,7 +601,7 @@ class User
         /*if (!$this->isUniqueColumn("fullname", $params['fullname'], $params['id'])) {
           return [ "result" => false, "message" => "Ф.И.О. занято другим пользователем"];
         } else {*/
-          $sql .= "`fullname` = '".trim(addslashes($params['fullname']))."',";
+        $sql .= "`fullname` = '" . trim(addslashes($params['fullname'])) . "',";
         //}
       } else {
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
@@ -605,7 +609,7 @@ class User
 
       if (!$disable_rules) {
         if (isset($params['state']) && intval($params['state'])) {
-          $sql .= "`state` = '".intval($params['state'])."',";
+          $sql .= "`state` = '" . intval($params['state']) . "',";
         } else {
           return ["result" => false, "message" => "state can`t be empty"];
         }
@@ -614,9 +618,9 @@ class User
       if (!intval($params['id'])) {
         if (isset($params['password']) && strlen($params['password'])) {
           $sql .= "password = sha1(md5(concat(md5(md5('".addslashes($params["password"])."')), ';Ej>]sjkip'))),";
-        } else {
+        } /*else {
           return ["result" => false, "message" => "password can`t be empty"];
-        }
+        }*/
       } else {
         if (isset($params['password']) && trim($params['password'])) {
           $sql .= "password = sha1(md5(concat(md5(md5('".addslashes($params["password"])."')), ';Ej>]sjkip'))),";
@@ -632,6 +636,7 @@ class User
       if (isset($endsql)) {
         $sql .= $endsql;
       }
+
       $res = $this->db->query($sql);
       if ($res) {
         $sql = "";
@@ -648,14 +653,15 @@ class User
           $rules->saveUser($params['rules'], $id);
           $user_cti_ext = $this->getUserConfigByHandle(intval($params['id']), "cti.ext");
           if (intval($params['id']) && count($user_cti_ext) == 0) {
-            $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+            $ext_sql = "INSERT INTO cfg_user_setting SET acl_user_id = '{$id}', handle = 'cti.ext', val = '".trim(addslashes($params['phone']))."', updated = NOW()";
           } else {
-            $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '{$params['phone']}', updated = NOW()";
+            $sql .= "acl_user_id = '{$id}', handle = 'cti.ext', val = '".trim(addslashes($params['phone']))."', updated = NOW()";
           }
         }
-        if(isset($end_sql) && strlen($sql)) {
+
+        if (strlen($sql)) {
           $start_sql .= $sql;
-          $start_sql .= $end_sql;
+          $start_sql .= isset($end_sql)?$end_sql:"";
           $res = $this->db->query($start_sql);
         }
         if (isset($ext_sql)) {
@@ -753,9 +759,12 @@ class User
     if ($config) {
       $sql = 'UPDATE cfg_user_setting';
       $endSql ="WHERE id = {$config[id]}";
+    } else {
+      //var_dump($handle); die();
     }
     $sql .= " SET val = '".trim(addslashes($value))."', handle = '".trim(addslashes($handle))."', updated = NOW(), acl_user_id = '{$userId}'";
     if (isset($endSql)) $sql .= ' '.$endSql;
+
     $res = $this->db->query($sql);
     
     return $res ? true : false;

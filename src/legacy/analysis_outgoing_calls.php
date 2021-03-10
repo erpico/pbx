@@ -36,7 +36,7 @@ class Analysis_outgoing_calls
 
     $sql = "	SELECT COUNT(id) AS cnt, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS sum 
                 FROM cdr 
-                WHERE LENGTH(src) IN (3,4) AND LENGTH(dst) IN (3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+                WHERE LENGTH(src) IN (2,3,4) AND LENGTH(dst) IN (2,3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
@@ -51,7 +51,7 @@ class Analysis_outgoing_calls
 
     $sql = "	SELECT COUNT(id) AS cnt, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS sum 
             FROM cdr 
-            WHERE LENGTH(src) IN (3,4) AND LENGTH(dst) IN (5,6) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+            WHERE LENGTH(src) IN (2,3,4) AND LENGTH(dst) IN (5,6,7) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $sql .= $extens;
 
@@ -63,7 +63,7 @@ class Analysis_outgoing_calls
 
     $sql = "	SELECT COUNT(id) AS cnt, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS sum 
             FROM cdr 
-            WHERE LENGTH(src) IN (3,4) AND LENGTH(dst) > 9 AND dst LIKE '89%' AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+            WHERE LENGTH(src) IN (2,3,4) AND LENGTH(dst) > 9 AND dst LIKE '89%' AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $sql .= $extens;
 
@@ -75,7 +75,7 @@ class Analysis_outgoing_calls
 
     $sql = "	SELECT COUNT(id) AS cnt, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS sum 
             FROM cdr 
-            WHERE LENGTH(src) IN (3,4) AND LENGTH(dst) > 9 AND dst NOT LIKE '89%' AND dst NOT LIKE '810%' AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+            WHERE LENGTH(src) IN (2,3,4) AND LENGTH(dst) > 9 AND dst NOT LIKE '89%' AND dst NOT LIKE '810%' AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $sql .= $extens;
 
@@ -87,7 +87,7 @@ class Analysis_outgoing_calls
 
     $sql = "	SELECT COUNT(id) AS cnt, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS sum 
             FROM cdr 
-            WHERE LENGTH(src) IN (3,4) AND LENGTH(dst) > 9 AND dst LIKE '810%' AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+            WHERE LENGTH(src) IN (2,3,4) AND LENGTH(dst) > 9 AND dst LIKE '810%' AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $result = $this->db->query($sql);
     $myrow = $result->fetch(\PDO::FETCH_ASSOC);
@@ -103,19 +103,22 @@ class Analysis_outgoing_calls
     $utils = new Utils();
 
     if ($onlycount) {
-      $ssql = " COUNT(*) ";
+      $ssql = " COUNT(DISTINCT dst) ";
     } else {
       $ssql = " dst AS dst, count(dst) AS count_dst, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS floor, GROUP_CONCAT(DISTINCT src) AS group_src ";
     }
 
     $sql = "	SELECT ".$ssql." FROM cdr 
-      WHERE length(dst) IN (5,6) and length(src) IN (3,4) AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+      WHERE length(dst) IN (5,6,7) and length(src) IN (2,3,4) AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $sql .= $extens;
 
-    $sql .= "	group by dst order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT {$pos},{$count}";
+    if (!$onlycount) {
+      $sql .= " group by dst order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT {$pos},{$count}";
+    }
+
     if ($onlycount) {
       $res = $this->db->query($sql);
       $row = $res->fetch(\PDO::FETCH_NUM);
@@ -141,20 +144,22 @@ class Analysis_outgoing_calls
     $total_arr = [];
 
     if ($onlycount) {
-      $ssql = " COUNT(*) ";
+      $ssql = " COUNT(DISTINCT dst) ";
     } else {
       $ssql = " dst AS dst, count(dst) AS count_dst, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS floor, GROUP_CONCAT(DISTINCT src) AS group_src  ";
     }
 
     $sql = "SELECT ".$ssql." FROM cdr 
-    WHERE length(dst) > 10 and dst not like '89%' and length(src) IN (3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+    WHERE length(dst) > 10 and dst not like '89%' and length(src) IN (2,3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $sql .= $extens;
 
-    $sql .= " group by dst order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT 20";
-
+    if (!$onlycount) {
+      $sql .= " group by dst order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT {$pos},{$count}";
+    }
+    
     if ($onlycount) {
       $res = $this->db->query($sql);
       $row = $res->fetch(\PDO::FETCH_NUM);
@@ -179,19 +184,21 @@ class Analysis_outgoing_calls
     $total_arr = [];
 
     if ($onlycount) {
-      $ssql = " count(*) ";
+      $ssql = " COUNT(DISTINCT dst) ";
     } else {
       $ssql = "dst AS dst, count(dst) AS count_dst, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS floor, GROUP_CONCAT(DISTINCT src) AS group_src ";
     }
 
     $sql = "SELECT ".$ssql." FROM cdr 
-      WHERE length(dst) > 10 and dst like '89%' and length(src) IN (3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+      WHERE length(dst) > 10 and dst like '89%' and length(src) IN (2,3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $sql .= $extens;
 
-    $sql .= "	group by dst order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT 20";
+    if (!$onlycount) {
+      $sql .= " group by dst order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT {$pos},{$count}";
+    }
     
     if ($onlycount) {
       $res = $this->db->query($sql);
@@ -216,19 +223,22 @@ class Analysis_outgoing_calls
     $total_arr = [];
 
     if ($onlycount) {
-      $ssql = " count(*) ";
+      $ssql = " COUNT(DISTINCT dst) ";
     } else {
       $ssql = "src AS src, count(src) AS count_src, FLOOR(SUM(IF(disposition = 'ANSWERED',duration,0))/60) AS floor, GROUP_CONCAT(DISTINCT dst) AS group_dst ";
     }
 
     $sql = "SELECT ".$ssql." FROM cdr 
-      WHERE length(dst) > 4 and length(src) IN (3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
+      WHERE length(dst) > 4 and length(src) IN (2,3,4) AND calldate >= '" . $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $ext = $this->auth->allow_extens();
     $extens = $utils->sql_allow_extens($ext);
     $sql .= $extens;
 
-    $sql .= "	group by src order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT 20";
+    if (!$onlycount) {
+      $sql .= " group by dst order by SUM(IF(disposition = 'ANSWERED',duration,0)) desc LIMIT {$pos},{$count}";
+    }
+
     if ($onlycount) {
       $res = $this->db->query($sql);
       $row = $res->fetch(\PDO::FETCH_NUM);

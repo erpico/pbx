@@ -56,7 +56,7 @@
     '/legacy/ext/scripts/' => ['phc.admin','erpico.admin'],
     '/queues/' => ['phc.admin','erpico.admin'],
     '/contact_groups/' => ['phc.admin','erpico.admin'],
-    '/legacy/grouped_queues_name/short' => ['erpico.admin'],
+    '/legacy/grouped_queues_name/short' => ['erpico.admin','phc.reports'],
     '/groups/' => ['erpico.admin'],
     '/legacy/' => ['erpico.admin'],
     '/config/' => ['erpico.admin'],

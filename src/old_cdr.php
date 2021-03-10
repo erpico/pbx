@@ -37,7 +37,7 @@ class PBXOldCdr {
     $timeisset = 0;
 
     if (intval($onlyCount)) {
-      if ($timeisset != 2) return 4000000; // Return infinite for scrolling
+      if ($timeisset != 2) return 100000; // Return infinite for scrolling
       $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(*) AS n FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  $queues $qwsql) as u UNION SELECT COUNT(uniqueid) AS n FROM cdr WHERE 1=1 $extens $cwsql) as c";                              
       $res = $this->db->query($sql);      
       $row = $res->fetch(PDO::FETCH_NUM);      

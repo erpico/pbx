@@ -7,6 +7,9 @@ use Erpico\PBXRules;
 use App\Middleware\OnlyAdmin;
 use App\Middleware\SecureRouteMiddleware;
 use App\Middleware\SetRoles;
+use PHPMailer\PHPMailer\PHPMailer;
+use GuzzleHttp\Client;
+use Supervisor\Supervisor;
 // Routes
 
 $app->post('/auth/login', function (Request $request, Response $response, array $args) {
@@ -335,7 +338,9 @@ $app->post('/contact_groups/{id}', function (Request $request, Response $respons
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
 $app->get('/auth/info', function (Request $request, Response $response, array $args) use($app) {    
-    return $response->withJson($app->getContainer()['auth']->getInfo());
+  $data = $app->getContainer()['auth']->getInfo();
+  $data['instance'] =  $app->getContainer()['instance_id'];
+  return $response->withJson($data);
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/auth/logout', function (Request $request, Response $response, array $args) use($app) {    
@@ -346,34 +351,38 @@ $app->get('/auth/settings', function (Request $request, Response $response, arra
   return $response->withJson(["data"=>$app->getContainer()['auth']->getAuthUserSettings()]);   
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/[{name}]', function (Request $request, Response $response, array $args) {
-    // Sample log message
-    $this->logger->info("Loading WebApp");
-
-    // Render index view
-    return $this->renderer->render($response, 'index.phtml', $args);
-});
-
 $app->get('/phones/list', function (Request $request, Response $response, array $args) use($app) {
     $phone = new PBXPhone();
 
     $filter = $request->getParam('filter', "");
     $start = $request->getParam('start', 0);
     $count = $request->getParam('count', 20);
+    $sort = $request->getParam('sort', "");
+
+    $data = $phone->fetchList($filter, $start, $count, 0,true, $sort);
+
+    $phone->appendRealtime($data);
 
     return $response->withJson([
-        "data" => $phone->fetchList($filter, $start, $count, 0),
+        "data" => $data,
         "total_count" => $phone->fetchList($filter, $start, $count, 1),
         "pos" => $start
     ]);
-})->add('\App\Middleware\OnlyAuthUser');
+})->add("\App\Middleware\OnlyAdmin");
 
 $app->get('/phones/list/short', function (Request $request, Response $response, array $args) use($app) {
   $phone = new PBXPhone();
 
   $filter = $request->getParam('filter', "");
+  $result = [];
 
-  return $response->withJson($phone->fetchList($filter));
+  foreach ($phone->fetchList($filter) as $item) {
+    $result[] = [
+      'id' => $item['id'], 'phone' => $item['phone'], 'model' =>$item['model']
+      ];
+  }
+
+  return $response->withJson($result);
 })->add('\App\Middleware\OnlyAuthUser');
 
 $app->post('/phones/{phone_id}/save', function (Request $request, Response $response, array $args) use($app) {
@@ -709,7 +718,27 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
           ->withHeader('Content-Type', 'text/plain')
           ->write($template);
   
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+});//->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+
+$app->any('/config/contacts', function (Request $request, Response $response, array $args) use($app) {
+
+  $user = new User();
+  $users = $user->fetchList([ "state" => 1], 0, 1000, 0);
+
+  $result = '<YeastarIPPhoneDirectory>'."\n";
+
+  foreach ($users as $e) {
+    if (!strlen($e['phone'])) continue;
+    $result .= '<DirectoryEntry><Name>'.$e['fullname'].'</Name><Telephone>'.$e['phone'].'</Telephone></DirectoryEntry>'."\n";        
+  }
+
+  $result .= "</YeastarIPPhoneDirectory>";
+
+  $response->getBody()->write($result);
+  return $response->withStatus(200)
+          ->withHeader('Content-Type', 'text/xml');          
+
+});
 
 $app->post('/phones/provisioning/start', function (Request $request, Response $response, array $args) use($app) {
   $data = $request->getParams();
@@ -797,6 +826,14 @@ $app->post('/aliases/{alias_id}/save', function (Request $request, Response $res
   return $response->withJson($res);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
+$app->post('/aliases/{alias_id}/remove', function (Request $request, Response $response, array $args) use($app) {
+  $aliases = new PBXAliases();
+  $id = intval($args["alias_id"]);
+  $res = $aliases->remove($id);
+
+  return $response->withJson($res);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+
 $app->any('/user/exten/save', function (Request $request, Response $response, array $args) use($app) {
   $user = $app->getContainer()['auth'];
 
@@ -809,3 +846,139 @@ $app->any('/user/exten/save', function (Request $request, Response $response, ar
 
   return $response->withJson( [ "error" => $result ]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+
+$app->get('/blacklist', function (Request $request, Response $response, array $args) use($app){
+
+    if (!($filter = $request->getParam('filter', ""))){
+        $filter = [];
+    }
+    $filter["deleted"] = 0;
+    $start = $request->getParam('start', 0);
+    $count = $request->getParam('count', 20);
+
+    $blacklist = new PBXBlacklist($app->getContainer());
+
+    return $response->withJson([
+        "data" => $blacklist->fetchList($filter, $start, $count, 0),
+        "filter" => $filter
+    ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->post('/blacklist/add', function (Request $request, Response $response, array $args) use($app){
+    $blacklist = new PBXBlacklist($app->getContainer());
+    $result = $blacklist->saveBlacklistItem($request->getParams());
+
+    return $response->withJson([
+        "result" => $result,
+        "message" => $result ? "Сохранение прошло успешно!" : "Ошибка сохранения"
+    ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->post('/blacklist/{id}/update', function (Request $request, Response $response, array $args) use($app){
+    $id = intval($args["id"]);
+    $blacklist = new PBXBlacklist($app->getContainer());
+    if ($id) {
+        $result = $blacklist->updateBlacklistItem($id, $request->getParams());
+        return $response->withJson([
+            "result" => $result,
+            "message" => $result ? "Изменение прошло успешно!" : "Ошибка изменения"
+            ]);
+    }
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+/*
+$app->delete('/blacklist/{id}/delete', function (Request $request, Response $response, array $args) use($app){
+    $id = intval($args["id"]);
+    $blacklist = new PBXBlacklist($app->getContainer());
+    $result = $blacklist->deleteFromBlacklist($id);
+
+    return $response->withJson([
+        "result" => $result,
+        "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
+        ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));*/
+
+$app->post('/blacklist/{id}/remove', function (Request $request, Response $response, array $args) use($app){
+    $id = intval($args["id"]);
+    $blacklist = new PBXBlacklist($app->getContainer());
+    $result = $blacklist->remove($id);
+
+    return $response->withJson([
+        "result" => $result,
+        "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
+    ]);
+})->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
+
+$app->get('/vm/email', function (Request $request, Response $response, array $args) {
+
+    $_email = $request->getParam("to", "rp@erpico.ru");//"rp@erpico.ru";
+    $_subj  = "ErpicoPBX: пропущенный звонок";
+    $_text  = "Звонок с номера ".$request->getParam("tel")." в ".date("d.m.Y H:i:s");
+
+    $mail = new PHPMailer;
+         
+    $mail->Mailer = "smtp";
+    $mail->Host = 'mail.erpico.ru';  // Specify main and backup SMTP servers
+    //$mail->Port = 25;
+    $mail->SMTPAuth = true;                               // Enable SMTP authentication
+    $mail->Username = 'noreply';                 // SMTP username
+    $mail->Password = 'oL(H&LVrh7lnyef';
+    $mail->SMTPOptions = array(
+      'ssl' => array(
+          'verify_peer' => false,
+          'verify_peer_name' => false,
+          'allow_self_signed' => true
+          )
+    );
+
+    $msg = "";
+
+    $mail->setFrom('noreply@erpicopbx.ru', 'Erpico PBX');
+    $mail->addAddress($_email);      
+    
+    $mail->Subject = $_subj;
+    $mail->IsHTML(true);
+    $mail->CharSet = 'UTF-8';    
+
+    $mail->AltBody = $_text;
+    $mail->Body = $_text;    
+
+    return $response->withJson([
+      "result" => $mail->send()
+    ]
+    );
+});
+
+$app->get('/system/services', function (Request $request, Response $response, array $args) {
+  $guzzleClient = new \GuzzleHttp\Client([
+    'auth' => ['erpicopbx', 'k9JjUk4FImZJSrc'],
+  ]);
+
+  // Pass the url and the guzzle client to the fXmlRpc Client
+  $client = new \fXmlRpc\Client(
+      'http://127.0.0.1:9001/RPC2',
+      new \fXmlRpc\Transport\HttpAdapterTransport(
+          new \Http\Message\MessageFactory\GuzzleMessageFactory(),
+          new \Http\Adapter\Guzzle6\Client($guzzleClient)
+      )
+  );
+
+  // Pass the client to the Supervisor library.
+  $supervisor = new \Supervisor\Supervisor($client);
+
+  $processes = $supervisor->getAllProcessInfo();  
+
+  return $response->withJson([
+    "result" => true,
+    "processes" =>$processes
+  ]);
+
+});
+
+$app->get('/[{name}]', function (Request $request, Response $response, array $args) {
+  // Sample log message
+  $this->logger->info("Loading WebApp");
+
+  // Render index view
+  return $this->renderer->render($response, 'index.phtml', $args);
+});

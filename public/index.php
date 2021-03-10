@@ -1,8 +1,8 @@
 <?php
-  
-  use Tkhamez\Slim\RoleAuth\RoleMiddleware;
-  use Tkhamez\Slim\RoleAuth\SecureRouteMiddleware;
-  
+
+use Tkhamez\Slim\RoleAuth\RoleMiddleware;
+use Tkhamez\Slim\RoleAuth\SecureRouteMiddleware;
+
   if (PHP_SAPI == 'cli-server') {
     // To help the built-in PHP dev server, check if the request was actually for
     // something which should probably be served as a static file
@@ -29,9 +29,14 @@ require __DIR__ . '/../src/middleware.php';
 // Register routes
 require __DIR__ . '/../src/routes.php';
 require __DIR__ . '/../src/legacyroutes.php';
+require __DIR__ . '/../src/amocrm.php';
+
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Methods: GET, POST');
 
 // Allow multiple requests 
 // https://stackoverflow.com/questions/1430883/simultaneous-requests-to-php-script
 session_write_close();
 // Run app
+$app->add(\App\Middleware\CheckDBMiddleware::class);
 $app->run();

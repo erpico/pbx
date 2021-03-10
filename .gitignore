@@ -7,4 +7,6 @@
 /tmp/*
 composer.lock
 composer.phar
+public/package-lock.json
+/.idea/*
 

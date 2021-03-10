@@ -11,3 +11,7 @@ account.1.user_name = #phone#
 account.1.sip_server_host = #server#
 account.1.sip_server_port = 5060
 network.dhcp_host_name = yealink-t-#phone#
+remote_phonebook.data.1.name = Телефоны
+remote_phonebook.data.1.url = http://#server#/config/contacts
+local_time.time_zone = +3
+local_time.time_zone_name = Russia(Moscow)

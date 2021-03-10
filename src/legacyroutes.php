@@ -240,7 +240,7 @@ $app->get('/legacy/grouped_queues_name/short', function (Request $request, Respo
   $grouped_reports = new \Erpico\Grouped_reports($app->getContainer());
   return $response->withJson($grouped_reports->getQueues_name($filter, $pos, $count, 0));
   
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/grouped_reports_total', function (Request $request, Response $response, array $args) use ($app) {
     $filter = $request->getParam('filter', []);
@@ -388,6 +388,7 @@ $app->get('/legacy/traffic_for_period', function (Request $request, Response $re
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getTraffic_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getTraffic_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -401,6 +402,7 @@ $app->get('/legacy/popular_city_for_period', function (Request $request, Respons
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getPopular_city_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getPopular_city_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -414,6 +416,7 @@ $app->get('/legacy/popular_longdistance_over_period', function (Request $request
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getPopular_longdistance_over_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getPopular_longdistance_over_period($filter, $pos, $count, 1)
     ]);
   
@@ -427,6 +430,7 @@ $app->get('/legacy/popular_cell_for_period', function (Request $request, Respons
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getPopular_cell_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getPopular_cell_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -440,6 +444,7 @@ $app->get('/legacy/most_calling_employees_for_period', function (Request $reques
     $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($app->getContainer());
     return $response->withJson([
         "data" => $analysis_outgoing_calls->getMost_calling_employees_for_period($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $analysis_outgoing_calls->getMost_calling_employees_for_period($filter, $pos, $count, 1)
     ]);
   
@@ -451,11 +456,12 @@ $app->get('/legacy/operators_work_report_list', function (Request $request, Resp
     $count = $request->getParam('count', 20);
 
     $operators_work_report = new \Erpico\Operators_work_report($app->getContainer());
-    return $response->withJson([
+    /*return $response->withJson([
         "data" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $operators_work_report->getOperators_work_report_list($filter, $pos, $count, 1)
-    ]);
-  
+    ]);*/
+    return $response->withJson($operators_work_report->getOperators_work_report_list($filter, 0, 100, 0));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 $app->get('/legacy/operators_work_report', function (Request $request, Response $response, array $args) use ($app) {
@@ -464,11 +470,12 @@ $app->get('/legacy/operators_work_report', function (Request $request, Response 
     $count = $request->getParam('count', 20);
 
     $operators_work_report = new \Erpico\Operators_work_report($app->getContainer());
-    return $response->withJson([
+    /*return $response->withJson([
         "data" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 0),
+        "pos" => $pos,
         "total_count" => $operators_work_report->getOperators_work_report($filter, $pos, $count, 1)
-    ]);
-  
+    ]);*/
+    return $response->withJson($operators_work_report->getOperators_work_report($filter, 0, 100, 0));    
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
 

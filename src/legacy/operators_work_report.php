@@ -417,25 +417,48 @@ class Operators_work_report {
                   break;
           }
 
-          $duration = "";
+          $duration = 0;          
           if ($event['action'] != 'STARTWORK' && $event['action'] != 'ENDWORK') {
-              $duration = $this->parse_timestamp($event['duration']);
+              //$duration = $this->parse_timestamp($event['duration']);
+              $duration = $event['duration'];
+              $duretion_secs = $event['duration'];
               if ($debug) {
                   $t += $event['duration'];
                   $duration .= " / " . date('d.m.Y H:i:s', $t);
               }
           }
 
-          if (isset($data_of_operator)) unset($data_of_operator);
-          $data_of_operator['type'] = $text;
-          $data_of_operator['calldate'] = date('d.m.Y H:i:s', $etime);
-          $data_of_operator['duration'] = $duration;
+          if (isset($doo)) unset($doo);
+          $doo['type'] = $text;
+          $doo['calldate'] = $etime;//date('d.m.Y H:i:s', $etime);
+          //$doo['timestamp'] = $etime;          
+          $doo['duration'] = $duration;
           $agent_queues = $this->auth->fullname_queue($event['queues']);
-          $data_of_operator['queue'] = implode(", ", $agent_queues);
-          $datas_of_operator[] = $data_of_operator;
+          $doo['queue'] = implode(", ", $agent_queues);
+          // Check prevision record and if it same - add queue
+          if (count($datas_of_operator)) {
+              $pe = $datas_of_operator[count($datas_of_operator) - 1];
+              if ($pe['type'] == $doo['type'] &&
+                  abs($pe['calldate'] - $doo['calldate']) < 2 &&
+                  abs($pe['duration'] - $doo['duration']) < 2) {
+                    $datas_of_operator[count($datas_of_operator) - 1]['queue'] .= ", ".$doo['queue'];
+                  } else {
+                    $datas_of_operator[] = $doo;                      
+                  }
+          } else {
+            $datas_of_operator[] = $doo;
+          }
       }
 
       $string_of_operator['type'] = $name_of_operator;
+      for ($z = 0; $z < count($datas_of_operator); $z++) {
+        $datas_of_operator[$z]['calldate'] = date('d.m.Y H:i:s', $datas_of_operator[$z]['calldate']);
+        if ($datas_of_operator[$z]['duration']) {
+            $datas_of_operator[$z]['duration'] = $this->parse_timestamp($datas_of_operator[$z]['duration']);
+        } else {
+            $datas_of_operator[$z]['duration'] = "";
+        }
+      }
       $string_of_operator['data'] = $datas_of_operator;
       if (isset($datas_of_operator)) unset($datas_of_operator);
       $strings_of_operator[] = $string_of_operator;

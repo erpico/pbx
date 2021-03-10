@@ -1,9 +1,20 @@
 <?php
 // DIC configuration
   
-  use App\Middleware\OnlyAdmin;
-  
-  $container = $app->getContainer();
+use App\Middleware\OnlyAdmin;
+use App\Services\RequestTypeService;
+use PAMI\Client\Impl\ClientImpl;
+
+$container = $app->getContainer();
+
+// Replace to localhost on $_SERVER
+if (in_array(getenv('env'), ['dev','test'])) {
+  set_error_handler(function ($severity, $message, $file, $line) {
+    if (error_reporting() & $severity) {
+      throw new \ErrorException($message, 0, $severity, $file, $line);
+    }
+  });
+}
 
 // view renderer
 $container['renderer'] = function ($c) {
@@ -24,30 +35,84 @@ $container['logger'] = function ($c) {
 $container['server_host'] = function ($c) {
     return $c->get('settings')['server_host'];
 };
-$container['db'] = function ($c) {
-    $db = $c->get('settings')['db'];
-    $filename = "/etc/erpico.conf";
-    if (file_exists($filename)) {
-        $fcfg = fopen($filename, "r");
-        $config = [];
-		while ($s = fgets($fcfg)) {
-			list($key,$value) = explode("=", $s, 2);
-			$key = trim($key);
-			$value = trim($value, " \"\t\n\r\0\x0B");
-			$config[$key] = $value;
-		};
-  fclose($fcfg);
-      $db['host'] = $config['db_host'];
-      $db['user'] = $config['db_user'];
-      $db['password'] = $config['db_password'];
-      $db['schema'] = $config['db_schema'];
+$container['errorHandler'] = function ($c) {
+  return function ($request, $response, $exception) use ($c) {
+    return $response->withStatus(500)->withJson([
+     'result' => false, 'message' => $exception->getMessage()
+   ]);
+  };
+};
+$container['phpErrorHandler'] = function ($c) {
+  return function ($request, $response, $exception) use ($c) {
+    return $response->withStatus(500)->withJson([
+     'result' => false, 'message' => $exception->getMessage()
+     ]);
+  };
+};
+$container['notAllowedHandler'] = function ($c) {
+  return function ($request, $response) use ($c) {
+    return $response->withStatus(500)->withJson([
+      'result' => false, 'message' => 'Неверный тип запроса '.$request->getMethod()
+    ]);
+  };
+};
+
+$container['db'] = function ($c)  use ($container, $app) {
+  $db = $c->get('settings')['db'];
+  $filename = "/etc/erpico.conf";
+  if (file_exists($filename)) {
+    $fcfg = fopen($filename, "r");
+    $config = [];
+    while ($s = fgets($fcfg)) {
+      list($key,$value) = explode("=", $s, 2);
+      $key = trim($key);
+      $value = trim($value, " \"\t\n\r\0\x0B");
+      $config[$key] = $value;
+    };
+    fclose($fcfg);
+    $db['host'] = $config['db_host'];
+    $db['user'] = $config['db_user'];
+    $db['password'] = $config['db_password'];
+    $db['schema'] = $config['db_schema'];
+    $container['instance_id'] = $config['vpn_name'];
   }
-    $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['schema'].";charset=UTF8",
-        $db['user'], $db['password']);
+  try {
+    $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['schema'].";charset=UTF8", $db['user'], $db['password']);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
-    $pdo->query("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY,',''))");
+    $pdo->query("SET sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY,',''))");    
     return $pdo;
+  } catch (PDOException $exception) {
+    return 0;
+  }  
+};
+
+$container['ami'] = function ($c)  use ($container, $app) {
+  $options = array(    
+    'scheme' => 'tcp://',    
+    'connect_timeout' => 10,
+    'read_timeout' => 100
+  );
+  $filename = "/etc/erpico.conf";
+  if (file_exists($filename)) {
+    $fcfg = fopen($filename, "r");
+    $config = [];
+    while ($s = fgets($fcfg)) {
+      list($key,$value) = explode("=", $s, 2);
+      $key = trim($key);
+      $value = trim($value, " \"\t\n\r\0\x0B");
+      $config[$key] = $value;
+    };
+    fclose($fcfg);
+    $options['username'] = $config['ami_user'];
+    $options['secret'] = $config['ami_secret'];
+    $options['port'] = $config['ami_port'];
+    $options['host'] = $config['ami_server'];
+  } else {
+    return 0;
+  }
+  $ami = new \PAMI\Client\Impl\ClientImpl($options);  
+  return $ami;
 };
 
 $container['auth'] = function ($c) use ($app){
@@ -62,6 +127,11 @@ $container['onlyAdmin'] = function ($container) {
     $myService = new OnlyAdmin($container, $container->get('roleProvider'));
     
     return $myService;
+};
+$container[RequestTypeService::class] = function ($container) {
+  $requestTypeService = new RequestTypeService();
+  
+  return $requestTypeService;
 };
 
 require_once( __DIR__ . "/legacy/utils.php");
@@ -104,7 +174,4 @@ require_once( __DIR__ . "/old_cdr.php");
 require_once( __DIR__ . "/old_contact_cdr.php");
 require_once( __DIR__ . "/Providers/RoleProvider.php");
 require_once( __DIR__ . "/aliases.php");
-
-if (!isset($PBXUser)){
-  $PBXUser = new \Erpico\User();
-}
+require_once( __DIR__ . "/blacklist.php");
