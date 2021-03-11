@@ -1,5 +1,7 @@
 <?php
 
+use App\ExportImport;
+
 class PBXChannel {
   protected $db;
   const FIELDS = [
@@ -283,4 +285,44 @@ class PBXChannel {
     return $value .= $i ? $i : "";
   }
 
+  public function export(){
+    $res = [];
+    foreach ($this->fetchList(null, 0, null, 0) as $item) {
+      unset($item['id']);
+      $res["channels"][] = $item;
+    }
+
+    return $res;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    if ($delete) {
+      $exportImport->truncateTables([
+        $this->getTableName()
+      ]);
+    }
+
+    $channels = $data->channels;
+
+    foreach ($channels as $item) {
+      $exportImport->importAction($item, [
+        "provider",
+        "login",
+        "password",
+        "phone",
+        "rules",
+        "name",
+        "fullname",
+        "host",
+        "port",
+        "active",
+        "deleted"
+      ], $this->getTableName());
+    }
+
+    return $result;
+  }
 }

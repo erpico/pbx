@@ -1,5 +1,7 @@
 <?php
 
+use App\ExportImport;
+
 class PBXQueue {
   protected $db;
   const FIELDS = [
@@ -280,4 +282,60 @@ class PBXQueue {
     return  $value .= $i ? $i : "";
   }
 
+  public function export(){
+    $result = [];
+
+    // queues
+    foreach ($this->fetchList(null, 0, null, 0) as $item) {
+      $agents = $item['agents'];
+      unset($item['id']);
+      unset($item['agents']);
+      $item['agents'] = [];
+      foreach ($agents as $agent) {
+        unset($agent['id']);
+        $item['agents'][] = $agent;
+      }
+
+      $result["queues"][] = $item;
+    }
+
+    return $result;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    //queue
+    //queue_agent
+
+    if ($delete) {
+      $exportImport->truncateTables([
+        "queue", "queue_agent"
+      ]);
+    }
+
+    $queues = $data->queues;
+    $agents = $data->agents;
+
+    foreach ($queues as $item) {
+      // queue
+      $exportImport->importAction($item,array_keys(self::FIELDS),'queue');
+      // queue_agent
+      foreach ($agents as $agent) {
+        $agent['acl_user_id'] = (new \Erpico\User())->getIdByName($agent->name);
+        if (!empty($agent['acl_user_id'])) {
+          $exportImport->importAction($agent, ['acl_user_id', 'name', 'phone', 'static', 'penalty'], "queue_agent");
+        }
+      }
+    }
+
+    return $result;
+  }
+
+  public function getIdByName($name)
+  {
+    $result = $this->db->query("SELECT id FROM {$this->getTableName()} WHERE name = '{$name}'");
+    return $result->fetchColumn();
+  }
 }

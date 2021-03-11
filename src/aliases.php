@@ -1,5 +1,7 @@
 <?php
 
+use App\ExportImport;
+
 class PBXAliases
 {
   const FIELDS = [
@@ -180,4 +182,36 @@ class PBXAliases
     }
   }
 
+
+  public function export(){
+    $res = [];
+    foreach ($this->fetchList(null, 0, null, 0) as $item) {
+      $alias = [];
+      $alias['number'] = $item['number'];
+      $alias['type'] = $item['type'];
+      $alias['deleted'] = $item['deleted'];
+
+      $res['aliases'][] = $alias;
+    }
+
+    return $res;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    if ($delete) {
+      $exportImport->truncateTables([
+        $this->getTableName()
+      ]);
+    }
+
+    $aliases = $data->aliases;
+    foreach ($aliases as $item) {
+      $exportImport->importAction($item, ["number", "type", "deleted"], $this->getTableName());
+    }
+
+    return $result;
+  }
 }

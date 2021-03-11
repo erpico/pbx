@@ -41,6 +41,9 @@ class OnlyAuthUser
 
 namespace Erpico;
 
+use App\ExportImport;
+use phpDocumentor\Reflection\Types\This;
+
 class User
 {
   private $db;
@@ -497,7 +500,7 @@ class User
     if (strlen($wsql)) {
       $sql .= "WHERE ".$wsql;
     }
-    if (!intval($onlycount)) {
+    if (!intval($onlycount) && intval($end)) {
       $sql .= " LIMIT {$start}, {$end}";
     }
     $res = $this->db->query($sql, $onlycount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
@@ -1010,5 +1013,144 @@ class User
     $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_group_id = {$group_id} AND acl_user_id NOT IN (".implode(",",$user_ids).")";
     $this->db->query($sql);
     return true;
-  } 
+  }
+
+  public function getIdByName($name) {
+    $result = null;
+    if (!empty($name)) {
+      $sql = "SELECT id FROM acl_user WHERE name = '{$name}'";
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute();
+      $result = $stmt->fetchColumn();
+    }
+
+    return $result;
+  }
+
+  public function getNameById($id) {
+    $result = null;
+    if (!empty($name)) {
+      $sql = "SELECT name FROM acl_user WHERE id = {$id}";
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute();
+      $result = $stmt->fetchColumn();
+    }
+
+    return $result;
+  }
+
+  public function export() {
+    $result = [];
+
+    $groups = $this->getAllGroups(null, 0, null, 0);
+    foreach ($groups as $group) {
+      $sql = "SELECT handle, val FROM cfg_group_setting WHERE acl_user_group_id = ".$group['id'];
+      $res = $this->db->query($sql);
+      $group['config'] = [];
+      while ($row = $res->fetch()) {
+        $group['config'][$row['handle']] = $row['val'];
+      }
+
+      $names = [];
+      foreach ($group['list_users_ids'] as $users_id) {
+        $names[] = $this->getNameById($users_id);
+      }
+
+      $group['users'] = $group['list_users_str'];
+
+      unset($group['id']);
+      unset($group['list_users_ids']);
+      unset($group['list_users_str']);
+      unset($group['rules']);
+
+      $result["user_groups"][] = $group;
+    }
+
+    $sql = "SELECT id, name, fullname, password, state FROM acl_user";
+    $res = $this->db->query($sql);
+    while ($row = $res->fetch()) {
+      $config = $this->getUserConfig($row['id']);
+      foreach ($config as $key => $item) {
+        $row['config'][$item['key']] = $item['value'];
+      }
+      unset($row['id']);
+      $result["users"][] = $row;
+    }
+
+    return $result;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    //acl_user
+    //acl_user_group
+    //acl_user_group_has_users
+    //cfg_user_setting
+    //cfg_group_setting
+
+    if ($delete) {
+      $exportImport->truncateTables([
+        "acl_user",
+        "acl_user_group",
+        "acl_user_group_has_users",
+        "cfg_user_setting",
+        "cfg_group_setting"
+      ]);
+    }
+
+    $user_groups = $data->user_groups;
+
+    $users = $data->users;
+
+    foreach ($users as $user) {
+      // юзеры
+      $user->created = date("Y-m-d H:i:s");
+      $userId = $exportImport->importAction($user, ['name', 'fullname', 'password', 'state', 'created'], "acl_user");
+
+      foreach ($user->config as $configKey => $configItem) {
+        // конфиг для юзера
+        $config = [
+          'acl_user_id' => $userId,
+          'handle' => $configKey,
+          'val' => $configItem,
+          'updated' => date("Y-m-d H:i:s")
+        ];
+        $exportImport->importAction($config, ['acl_user_id', 'handle', 'val', 'updated'], "cfg_user_setting");
+      }
+    }
+
+    $connectData = [];
+    foreach ($user_groups as $item) {
+      // группы
+      $userGroupId = $exportImport->importAction($item,['name', 'description'],'acl_user_group');
+
+      // конфиг для группы
+      foreach ($item->config as $configKey => $configItem) {
+        $config = [
+          'acl_user_group_id' => $userGroupId,
+          'handle' => $configKey,
+          'val' => $configItem,
+          'updated' => date("Y-m-d H:i:s")
+        ];
+        $exportImport->importAction($config, ['acl_user_group_id', 'handle', 'val', 'updated'], "cfg_group_setting");
+      }
+
+      // для таблицы связи
+      foreach ($item->users as $name) {
+        $connectData[] = [
+          "acl_user_group_id" => $userGroupId,
+          "acl_user_id" => $this->getIdByName($name)
+        ];
+      }
+    }
+
+    foreach ($connectData as $connect) {
+      // таблица связи юзера и группы
+      $exportImport->importAction($connect,["acl_user_group_id", "acl_user_id"], 'acl_user_group_has_users');
+    }
+
+    return $result;
+  }
 }

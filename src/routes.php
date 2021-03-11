@@ -982,3 +982,42 @@ $app->get('/[{name}]', function (Request $request, Response $response, array $ar
   // Render index view
   return $this->renderer->render($response, 'index.phtml', $args);
 });
+
+$app->post('/import', function  (Request $request, Response $response, array $args) use ($app) {
+
+  $result = null;
+  $filename = $request->getParam('filename');
+  if (empty($filename)) {
+    $fileUpload = $_FILES['upload'];
+    $filename = $fileUpload['tmp_name'];
+  }
+
+  if (file_exists($filename)) {
+    $exportImport = new \App\ExportImport($filename);
+    $result = $response->withJson([
+      "result" => $exportImport->import()
+    ]);
+  } else {
+    $result = $response->withJson([
+      "result" => false
+    ]);
+  }
+
+  return $result;
+});
+
+$app->post('/export', function  (Request $request, Response $response, array $args) use ($app) {
+  $filename = $args['filename'];
+  $exportImport = new \App\ExportImport($filename);
+  return $exportImport->export();
+});
+
+/*$app->post('/upload', function ($request, $response, $args) {
+  $result = null;
+  $tmpFile = tmpfile();
+
+  $metadata = stream_get_meta_data($tmpFile);
+  $result = $metadata;
+
+  return $response->withJson($result);
+});*/
