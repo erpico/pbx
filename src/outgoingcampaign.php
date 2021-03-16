@@ -74,12 +74,13 @@ class PBXOutgoingCampaign  {
           }
         }        
       }
-    }    
+    }
+    $sql .= " WHERE deleted = 0 OR deleted is null";
     if (strlen($wsql)) {
-      $sql .= " WHERE deleted = 0 OR deleted is null AND ".$wsql;
+      $sql.= " AND ".$wsql;
     }
     $sql .= " order by id";
-    $res = $this->db->query($sql);
+
     $res = $this->db->query($sql, $onlyCount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
     $result = [];
 
@@ -390,6 +391,11 @@ class PBXOutgoingCampaign  {
       return true;
     }
     return false;
+  }
+
+  public function remove($id) {
+    $result = $this->db->query("UPDATE outgouing_company SET deleted = 1 WHERE id = {$id}");
+    return $result ? 1 : 0;
   }
 
   private function bindDefaultSettings($id) {
