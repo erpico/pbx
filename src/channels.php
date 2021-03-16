@@ -122,37 +122,22 @@ class PBXChannel {
       } else {
         $sql = "INSERT INTO ".$this->getTableName()." SET ";
       }
-      if (isset($values["login"]) && strlen($values["login"])) {
-        if (!$this->isUniqueColumn("login", $values['login'], $values['id'])) {
-          return [ "result" => false, "message" => "Логин занят другим коналом"];
-        }
-      } else {
-        return [ "result" => false, "message" => "Логин не может быть пустым"];
-      }
+      
       if (isset($values["name"]) && strlen($values["name"])) {
         if (!$this->isUniqueColumn("name", $values['name'], $values['id'])) {
-          return [ "result" => false, "message" => "Код занят другим коналом"];
+          return [ "result" => false, "message" => "Код занят другим каналом"];
         }
       } else {
         return [ "result" => false, "message" => "Код не может быть пустым"];
       }
       if (isset($values["fullname"]) && strlen($values["fullname"])) {
         if (!$this->isUniqueColumn("fullname", $values['fullname'], $values['id'])) {
-          return [ "result" => false, "message" => "Название занят другим коналом"];
+          return [ "result" => false, "message" => "Название занято другим каналом"];
         }
       } else {
         return [ "result" => false, "message" => "Название не может быть пустым"];
       }      
-      if (isset($values["phone"]) && strlen($values["phone"])) {
-        if (!$this->isUniqueColumn("phone", $values['phone'], $values['id'])) {
-          return [ "result" => false, "message" => "Телефон занят другим коналом"];
-        }
-      }
-      if (!isset($values["password"]) || !strlen($values["password"])) {
-        if (!intval($values["id"])) {
-          return [ "result" => false, "message" => "Пароль не может быть пустым"];
-        }
-      }
+            
       if (!isset($values["name"]) || !strlen($values["name"])) {
         if (!intval($values["id"])) {
           return [ "result" => false, "message" => "Код не может быть пустым"];
@@ -202,15 +187,23 @@ class PBXChannel {
                  "  type = friend\n".
                  "  dynamic = no\n".
                  "  host = {$p['host']}\n".
-                 "  port = {$p['port']}\n".
-                 "  remotesecret = {$p['password']}\n".
-                 "  defaultuser = {$p['login']}\n".
-                 "  fromdomain = {$p['host']}\n".
-                 "  fromuser = {$p['login']}\n".
+                 "  port = {$p['port']}\n".                                 
+                 "  fromdomain = {$p['host']}\n".                 
                  "  nat = yes\n".
                  "  context = {$p['rules']}\n".                 
                  "  insecure = port,invite\n".
-                 "  qualify = yes\n\n";
+                 "  qualify = yes\n";            
+
+      if (strlen($p['login'])) {
+        $result .= "  defaultuser = {$p['login']}\n".
+                   "  fromuser = {$p['login']}\n";
+      }
+
+      if (strlen($p['password'])) {
+        $result .= "  remotesecret = {$p['password']}\n";
+      }
+
+      $result .= "\n";
     }
     return $result;    
   }
@@ -222,6 +215,9 @@ class PBXChannel {
 
     foreach ($phones as $p) {
       if ($p['deleted'] || !$p['active']) {
+        continue;
+      }
+      if (!strlen($p['login']) || !strlen($p['password'])) {
         continue;
       }
       $result .= "register => {$p['login']}:{$p['password']}@{$p['host']}:{$p['port']}/{$p['phone']}\n";
@@ -239,17 +235,6 @@ class PBXChannel {
         continue;
       }
       $result .= "[{$p['name']}]\n".
-                 "  type=registration\n".
-                 "  outbound_auth={$p['name']}\n".
-                 "  server_uri=sip:{$p['host']}:{$p['port']}\n".
-                 "  client_uri=sip:{$p['login']}@{$p['host']}:{$p['port']}\n".
-                 "  retry_interval=60\n".
-                 "[{$p['name']}]\n".
-                 "  type=auth\n".
-                 "  auth_type=userpass\n".
-                 "  password={$p['password']}\n".
-                 "  username={$p['login']}\n".
-                 "[{$p['name']}]\n".
                  "  type=aor\n".
                  "  contact=sip:{$p['host']}:{$p['port']}\n".
                  "[{$p['name']}]\n".
@@ -267,7 +252,20 @@ class PBXChannel {
                  "  type=identify\n".
                  "  endpoint={$p['name']}\n".
                  "  match={$p['host']}:{$p['port']}\n\n";
-
+        if (strlen($p['login']) && strlen($p['password'])) {
+          $result .= "[{$p['name']}]\n".
+            "  type=registration\n".
+            "  outbound_auth={$p['name']}\n".
+            "  server_uri=sip:{$p['host']}:{$p['port']}\n".
+            "  client_uri=sip:{$p['login']}@{$p['host']}:{$p['port']}\n".
+            "  retry_interval=60\n".
+            "[{$p['name']}]\n".
+            "  type=auth\n".
+            "  auth_type=userpass\n".
+            "  password={$p['password']}\n".
+            "  username={$p['login']}\n";
+        }
+        $result .= "\n";
     }
     return $result;    
   }
