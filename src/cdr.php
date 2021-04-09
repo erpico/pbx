@@ -238,7 +238,7 @@ class PBXCdr {
       }*/
       //$sql .= " LIMIT 100"; // No more for now
       $cdr = [];                
-      // die($sql);
+      //die($sql);
       $res = $this->db->query($sql);
       //die(var_dump($res));
       $lcd -= 3600*24;

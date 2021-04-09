@@ -112,7 +112,7 @@ class Utils {
                 if ($user_extens[$h] == $user_extens[$g]) $repeat = 1;
             };
             if (!$repeat) {
-                $extens .= "src = '" . $user_extens[$h] . "' OR dst = '" . $user_extens[$h] . "' ";
+                $extens .= "src LIKE '" . $user_extens[$h] . "' OR dst LIKE '" . $user_extens[$h] . "' ";
                 $extens .= " OR ";
             };
         };
