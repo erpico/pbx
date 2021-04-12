@@ -114,9 +114,10 @@ class PBXQueue {
   }
   
   public function getQueueAgent($id) {
-    $sql = "SELECT queue_agent.acl_user_id, acl_user.name, queue_agent.phone, queue_agent.static, queue_agent.penalty FROM queue_agent 
-    LEFT JOIN acl_user ON (acl_user.id = queue_agent.acl_user_id)
-    WHERE queue_agent.queue_id = '{$id}'";
+    $sql = "SELECT queue_agent.acl_user_id, acl_user.name, queue_agent.phone, queue_agent.static, queue_agent.penalty, acl_user_phone.id AS phone_id FROM queue_agent 
+                  LEFT JOIN acl_user ON (acl_user.id = queue_agent.acl_user_id)
+                  LEFT JOIN acl_user_phone ON (acl_user_phone.phone = queue_agent.phone)
+                  WHERE queue_agent.queue_id = '{$id}'";
     $res = $this->db->query($sql);
     $result = [];
     while ($row = $res->fetch()) {
@@ -124,6 +125,7 @@ class PBXQueue {
     }
     return $result; 
   }
+
   private function isUniqueColumn($column, $name, $id) {
     if (in_array($column, SELF::FIELDS)) {
       $data = $this->fetchList([$column => $name], 0, 3, 0, 0, 0);
@@ -260,7 +262,13 @@ class PBXQueue {
       if (is_array($p['agents'])) {
         foreach ($p['agents'] as $a) {
           if ($a['static'] && strlen($a['phone'])) {
-            $result .= "member => Local/{$a['phone']}@queue_member,{$a['penalty']},{$a['phone']}\n";
+            if ($a['phone_id'] != 0) {
+              // SIP member
+              $result .= "member => SIP/{$a['phone']},{$a['penalty']},{$a['phone']},SIP/{$a['phone']}\n";
+            } else {
+              // Other member
+              $result .= "member => Local/{$a['phone']}@queue_member,{$a['penalty']},{$a['phone']}\n";
+            }
           }
         }
       }
