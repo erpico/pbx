@@ -561,7 +561,7 @@ border-left: 1px solid #22B7E1;
 .webix_checkbox_1 .webix_custom_checkbox,
 .webix_checkbox_0 .webix_custom_checkbox{
     color: #1CA1C1;
-    margin-top: 11px;
+    /* margin-top: 11px; */
     overflow: hidden;
 }
 .webix_checkbox_1 .webix_custom_checkbox{
@@ -940,7 +940,7 @@ line-height: 114%;
     padding: 0 0 0 !important;
 }
 .webix_inp_label {
-    padding-left: 10px;
+    /* padding-left: 10px; */
 }
 .webix_multicombo_value .webix_multicombo_delete:after {
     color: #fff;
