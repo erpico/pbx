@@ -51,7 +51,11 @@ class User
   private $token_id = 0;
   private $id = 0;
   
-  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules', 'cfwd.duration.of.redirection', 'cfwd.divert'];
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all',
+    'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from',
+    'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules',
+    'cfwd.duration.of.redirection', 'cfwd.divert',
+    'cfwd.notify', 'cfwd.notify.message'];
 
   public function __construct($db = null, $_id = 0) {
     if (isset($db)) {
