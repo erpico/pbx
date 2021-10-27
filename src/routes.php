@@ -564,10 +564,6 @@ $app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, R
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
   $settings = $request->getParam("settings", 0);
-  $min_call_time = $request->getParam("min_call_time", 0);
-  $concurrent_calls_limit = $request->getParam("concurrent_calls_limit", 0);
-
-  // $outgoingcampaign->addUpdate(["min_call_time" => $min_call_time, "concurrent_calls_limit" => $concurrent_calls_limit]);
 
   return $response->withJson(["result"=>$outgoingcampaign->updateSettings($id,$settings)]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
