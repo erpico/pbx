@@ -106,7 +106,7 @@ class PBXOutgoingCampaign  {
     return $days;
   }
 
-  public function getSettings($id) {
+  public function getSettings($id, $needTime = 0) {
     $sql = "SELECT ".implode(",",self::SETTING_FIELDS)." FROM outgoing_campaign_dial_result_setting WHERE campaign_id = {$id}
       ORDER BY `campaign_id`, `result`";
     $res = $this->db->query($sql);
@@ -123,7 +123,15 @@ class PBXOutgoingCampaign  {
       $row['id'] = $row['result'];
       $result[] = $row;
     }
-    return $result;
+    if ($needTime) {
+      $sql = "SELECT min_call_time, concurrent_calls_limit FROM outgouing_company WHERE id={$id}";
+      $res = $this->db->query($sql);
+      while ($row = $res->fetch()) {
+        $result['min_call_time'] = $row['min_call_time'];
+        $result['concurrent_calls_limit'] = $row['concurrent_calls_limit'];
+      }
+    }
+      return $result;
   }
 
   public function getContactsResults($id) {
@@ -371,8 +379,8 @@ class PBXOutgoingCampaign  {
     return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
-  public function updateSettings($id, $settings) {
-    if (is_string($settings) && strlen($settings)) {
+  public function updateSettings($id, $settings, $concurrent_calls_limit = 1, $min_call_time = 1) {
+      // if (is_string($settings) && strlen($settings)) {
       $js = json_decode($settings);
       $this->deleteAllSettings($id);
       foreach ($js as $result) {
@@ -385,12 +393,25 @@ class PBXOutgoingCampaign  {
         }
         if (strlen($ssql)) {
           $ssql .= ", `campaign_id` = {$id}";
-          $this->db->query(" INSERT INTO outgoing_campaign_dial_result_setting SET ".$ssql);
+          $sql = " INSERT INTO outgoing_campaign_dial_result_setting SET ".$ssql;
+          $this->db->query($sql);
         }
       }
+      
+      if ($concurrent_calls_limit || $min_call_time){
+        $sql = "UPDATE outgouing_company SET ";
+        $ssql = "";
+        if (min_call_time)
+          $ssql .= "`min_call_time`= $min_call_time";
+        if (concurrent_calls_limit)
+        if (strlen($ssql)) $ssql .= ",";
+          $ssql .= "`concurrent_calls_limit`= $concurrent_calls_limit";
+        $sql .= $ssql." WHERE id = $id";  
+        $this->db->query($sql);
+      }
       return true;
-    }
-    return false;
+    // }
+    // return false;
   }
 
   public function remove($id) {

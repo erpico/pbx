@@ -556,16 +556,19 @@ $app->get('/outgoingcampaign/{id}/state/{state}', function (Request $request, Re
 $app->get('/outgoingcampaign/{id}/settings', function (Request $request, Response $response, array $args) use($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
+  $needTime = $request->getParam("needTime", 0);
   
-  return $response->withJson($outgoingcampaign->getSettings($id));
+  return $response->withJson($outgoingcampaign->getSettings($id, $needTime));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
 
 $app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, Response $response, array $args) use($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
   $settings = $request->getParam("settings", 0);
+  $concurrent_calls_limit = $request->getParam("concurrent_calls_limit");
+  $min_call_time = $request->getParam("min_call_time");
 
-  return $response->withJson(["result"=>$outgoingcampaign->updateSettings($id,$settings)]);
+  return $response->withJson(["result"=>$outgoingcampaign->updateSettings($id,$settings, $concurrent_calls_limit, $min_call_time)]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
 
 // SMS messaging
