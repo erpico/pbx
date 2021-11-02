@@ -25,7 +25,7 @@ class PBXOutgoingCampaign  {
   ];
 
   const WEEK_DAYS = [
-    "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс", "Рабочие дни", "Выходные", "Праздники"
+    "", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс", "Рабочие дни", "Выходные", "Праздники"
   ];
 
   const SETTING_FIELDS = [
@@ -430,7 +430,7 @@ class PBXOutgoingCampaign  {
         if (intval($value)) {
           ++$key;
           $sql = "INSERT INTO outgouing_company_weekdays SET
-          `outgouing_company_id` = '{$id}', `weekday_id` = '{$key}'";
+          `outgouing_company_id` = '{$id}', `weekday_id` = '{$value}'";
           $this->db->query($sql);
         }      
       }
