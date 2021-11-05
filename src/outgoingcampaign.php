@@ -420,7 +420,7 @@ class PBXOutgoingCampaign  {
   }
 
   private function bindDefaultSettings($id) {
-    $settings = $this->getSettings(0);
+    $settings = $this->getSettings(1);
     foreach ($settings as $setting) {
       $ssql = "";
       foreach (self::SETTING_FIELDS as $field) {
