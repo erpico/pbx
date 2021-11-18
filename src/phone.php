@@ -546,7 +546,7 @@ class PBXPhone
         "  dynamic = yes\n" .
         "  host = dynamic\n" .
         "  secret = {$p['password']}\n" .
-        "  nat = yes\n" .
+        "  nat = force_rport,comedia\n" .
         (strlen($p['rules']) ? "  context = {$p['rules']}\n" : "") .
         (strlen($p['group_id']) ? "  callgroup = {$p['group_id']}\n  pickupgroup = {$p['group_id']}\n" : "") .
         "  callerid = {$p['user_name']} <{$p['phone']}>\n\n";

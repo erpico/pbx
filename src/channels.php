@@ -189,7 +189,7 @@ class PBXChannel {
                  "  host = {$p['host']}\n".
                  "  port = {$p['port']}\n".                                 
                  "  fromdomain = {$p['host']}\n".                 
-                 "  nat = yes\n".
+                 "  nat = force_rport,comedia\n".
                  "  context = {$p['rules']}\n".                 
                  "  insecure = port,invite\n".
                  "  qualify = yes\n";            
