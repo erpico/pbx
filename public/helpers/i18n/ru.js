@@ -107,5 +107,3 @@ const ru = {
 		notBetween: "не между"
 	}
 };
-
-export default ru;

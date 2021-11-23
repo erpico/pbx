@@ -115,5 +115,3 @@ const en = {
 		notBetween: "not between"
 	}
 };
-
-export default en;

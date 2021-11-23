@@ -13,57 +13,57 @@ use Supervisor\Supervisor;
 // Routes
 
 $app->post('/auth/login', function (Request $request, Response $response, array $args) {
-    $login = $request->getParam('login');
-    $password = $request->getParam('password');
+  $login = $request->getParam('login');
+  $password = $request->getParam('password');
 
-    if (!strlen($login)) return $response->withJson([ "error" => 1, "message" => "No login provided" ]);
+  if (!strlen($login)) return $response->withJson(["error" => 1, "message" => "No login provided"]);
 
-    $user = new Erpico\User($this->db);
-    $result = $user->login($login, $password, $request->getAttribute('ip_address'));
+  $user = new Erpico\User($this->db);
+  $result = $user->login($login, $password, $request->getAttribute('ip_address'));
 
-    return $response->withJson($result);
+  return $response->withJson($result);
 });
 
-$app->get('/cdr/list', function (Request $request, Response $response, array $args) use($app) {
-    $key = $request->getParam('key', 0);
-    $status = $request->getParam('status', 0);
-    $call = $request->getParam('call', 0);
-    $missed = $request->getParam('missed', 0);
-    $password = $request->getParam('password', 0);
-    $filter = $request->getParam('filter', 0);
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
-    $lcd = $request->getParam('lcd', 0);
-    $lli = $request->getParam('lli', 0);
+$app->get('/cdr/list', function (Request $request, Response $response, array $args) use ($app) {
+  $key = $request->getParam('key', 0);
+  $status = $request->getParam('status', 0);
+  $call = $request->getParam('call', 0);
+  $missed = $request->getParam('missed', 0);
+  $password = $request->getParam('password', 0);
+  $filter = $request->getParam('filter', 0);
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+  $lcd = $request->getParam('lcd', 0);
+  $lli = $request->getParam('lli', 0);
 
-    $cdr = new PBXCdr($key, $status, $call, $missed);
-    // return $response->withJson($cdr->getReport($filter, $start, $count, 0));
-    return $response->withJson([
-        "data" => $cdr->getReport($filter, $start, $count, 0, 0, $lcd),
-        "total_count" => $cdr->getReport($filter, $start, $count, 1),
-        "pos" => $lli,
-        "server_footer" => $cdr->getReport($filter, $start, $count, 0, 1)
-    ]);
+  $cdr = new PBXCdr($key, $status, $call, $missed);
+  // return $response->withJson($cdr->getReport($filter, $start, $count, 0));
+  return $response->withJson([
+    "data" => $cdr->getReport($filter, $start, $count, 0, 0, $lcd),
+    "total_count" => $cdr->getReport($filter, $start, $count, 1),
+    "pos" => $lli,
+    "server_footer" => $cdr->getReport($filter, $start, $count, 0, 1)
+  ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/cdr/list/{id}', function (Request $request, Response $response, array $args) use($app) {
-   // $id = $request->getParam('id', 0);
-    $id = (float)$args["id"];
-   // die(var_dump($id));
-    $key = $request->getParam('key', 0);
-    $status = $request->getParam('status', 0);
-    $call = $request->getParam('call', 0);
-    $missed = $request->getParam('missed', 0);
+$app->get('/cdr/list/{id}', function (Request $request, Response $response, array $args) use ($app) {
+  // $id = $request->getParam('id', 0);
+  $id = (float)$args["id"];
+  // die(var_dump($id));
+  $key = $request->getParam('key', 0);
+  $status = $request->getParam('status', 0);
+  $call = $request->getParam('call', 0);
+  $missed = $request->getParam('missed', 0);
 
-    $cdr = new PBXCdr($key, $status, $call, $missed);
-    return $response->withJson($cdr->getReportsByUid($id));
+  $cdr = new PBXCdr($key, $status, $call, $missed);
+  return $response->withJson($cdr->getReportsByUid($id));
 })->add('\App\Middleware\OnlyAuthUser');
 /*$app->get('/controllers/findrecord.php', function (Request $request, Response $response, array $args) use($app) {
   $id = $request->getParam('id', 0);
   return $response->withRedirect("/recording/$id"); 
 });*/
 
-$findrecord = function (Request $request, Response $response, array $args) use($app) {
+$findrecord = function (Request $request, Response $response, array $args) use ($app) {
   $uid = isset($args['id']) ? $args['id'] : $request->getParam('id', 0);
   $uid = str_replace(".mp3", "", $uid);
   $uid = str_replace(".", "", $uid);
@@ -71,233 +71,228 @@ $findrecord = function (Request $request, Response $response, array $args) use($
   $cdr = new PBXCdr();
   $row = $cdr->findById($uid);
   if (!is_array($row)) {
-      return $response->withStatus(404)
-          ->withHeader('Content-Type', 'text/html')
-          ->write('Record not found in database');
+    return $response->withStatus(404)
+      ->withHeader('Content-Type', 'text/html')
+      ->write('Record not found in database');
   }
-  
+
   $filename = "";
-  
+
   if (isset($row['agentname'])) {
-      // Queue
-      $date = str_replace(" ", "-", $row['calldate']);
-  
-      $agent = str_replace("/", "-", $row['agentname']);
-      
-      $uniqid = $row['uniqid'];
-      $cid = $row['src'];
-  
-      $fname = "$date-$cid-$agent-q-$uniqid.wav";
-      $path_parts = pathinfo($fname);    
+    // Queue
+    $date = str_replace(" ", "-", $row['calldate']);
 
-      $filename = "/var/spool/asterisk/monitor/queues/".substr($fname,0,10)."/".substr($fname,11,2)."/".$path_parts['dirname'].'/'.$path_parts['filename'];
-      
-      if(file_exists($filename.".WAV")) {
-        $filename = $filename.".WAV";
-      }
-      else if(file_exists($filename.".wav")) {
-        $filename = $filename.".wav";
-      }
-      else if(file_exists($filename.".mp3")) {
-        $filename = $filename.".mp3";
-      } else if (file_exists($filename)) {
-      } else {
-        $filename = "";
-      }
+    $agent = str_replace("/", "-", $row['agentname']);
+
+    $uniqid = $row['uniqid'];
+    $cid = $row['src'];
+
+    $fname = "$date-$cid-$agent-q-$uniqid.wav";
+    $path_parts = pathinfo($fname);
+
+    $filename = "/var/spool/asterisk/monitor/queues/" . substr($fname, 0, 10) . "/" . substr($fname, 11, 2) . "/" . $path_parts['dirname'] . '/' . $path_parts['filename'];
+
+    if (file_exists($filename . ".WAV")) {
+      $filename = $filename . ".WAV";
+    } else if (file_exists($filename . ".wav")) {
+      $filename = $filename . ".wav";
+    } else if (file_exists($filename . ".mp3")) {
+      $filename = $filename . ".mp3";
+    } else if (file_exists($filename)) {
+    } else {
+      $filename = "";
+    }
   }
-  
+
   if ($filename == "") {
-      // Regular
-      $date = str_replace(" ", "-", $row['calldate']);
-      $time = strtotime($row['calldate']);    
-      $uniqid = $row['uniqueid'];//substr($row['uniqueid'], 0, /*-2*/0);
-      if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
-      $src = $row['src'];
-      $dst = $row['dst'];
-//  var_dump($row);
-//  die($uniqid);
-      $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*-".$uniqid."*");    
-//var_dump($files);
-      if (!is_array($files) || !count($files)) {        
-	  // Last change....
-	  
-	  $files = glob("/var/spool/asterisk/monitor/".date('Y-m-d', $time)."/".date('H',$time)."/*-$src-*".substr($uniqid, 0, -2)."*");    
-	  //var_dump($files);die();
-	  if (!is_array($files) || !count($files)) {
-            return $response->withStatus(404)
-              ->withHeader('Content-Type', 'text/html')
-              ->write('Record not found in filesystem');
-          }
+    // Regular
+    $date = str_replace(" ", "-", $row['calldate']);
+    $time = strtotime($row['calldate']);
+    $uniqid = $row['uniqueid']; //substr($row['uniqueid'], 0, /*-2*/0);
+    if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
+    $src = $row['src'];
+    $dst = $row['dst'];
+    $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-" . $uniqid . "*");
+    if (!is_array($files) || !count($files)) {
+      // Last change....
+      $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
+      if (!is_array($files) || !count($files)) {
+        $files = glob("/var/spool/asterisk/monitor/queues/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
+        if (!is_array($files) || !count($files)) {
+          return $response->withStatus(404)
+            ->withHeader('Content-Type', 'text/html')
+            ->write('Record not found in filesystem');
+        }
       }
-      $filename = $files[0];    
+    }
+    $filename = $files[0];
 
-      if (!file_exists($filename)) {
-        return $response->withStatus(404)
-          ->withHeader('Content-Type', 'text/html')
-          ->write('Record not found in filesystem');
-      
-      }
+    if (!file_exists($filename)) {
+      return $response->withStatus(404)
+        ->withHeader('Content-Type', 'text/html')
+        ->write('Record not found in filesystem');
+    }
   }
-//  die($filename);
+  //  die($filename);
   $fh = fopen($filename, 'rb');
   $stream = new Slim\Http\Stream($fh);
-  return $response            
-          ->withBody($stream)
-          ->withHeader('Content-Type', 'audio/mpeg')
-          ->withHeader('Accept-Ranges', 'bytes')
-          ->withHeader('Content-Length', filesize($filename))
-          ->withHeader('Content-Transfer-Encoding', 'binary')
-          ->withHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"');
+  return $response
+    ->withBody($stream)
+    ->withHeader('Content-Type', 'audio/mpeg')
+    ->withHeader('Accept-Ranges', 'bytes')
+    ->withHeader('Content-Length', filesize($filename))
+    ->withHeader('Content-Transfer-Encoding', 'binary')
+    ->withHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"');
 };
 
-$app->get('/recording/{id}', $findrecord)->setOutputBuffering(false);//->add('\App\Middleware\OnlyAuthUser');
-$app->get('/controllers/findrecord.php', $findrecord)->setOutputBuffering(false);//->add('\App\Middleware\OnlyAuthUser');
+$app->get('/recording/{id}', $findrecord)->setOutputBuffering(false); //->add('\App\Middleware\OnlyAuthUser');
+$app->get('/controllers/findrecord.php', $findrecord)->setOutputBuffering(false); //->add('\App\Middleware\OnlyAuthUser');
 
 
-$app->post('/action/call', function (Request $request, Response $response, array $args) use($app) {
-    $number = $request->getParam('number');
-   
-    if (strlen($number) < 1) {
-        return $response->withJson([ "error" => 1, "message" => "Empty number" ]);
-    }
+$app->post('/action/call', function (Request $request, Response $response, array $args) use ($app) {
+  $number = $request->getParam('number');
 
-    $user = $app->getContainer()['auth'];
-    $ext = $user->getExt();
-
-    $result = json_decode(file_get_contents("http://localhost:5039/pbx?originate=$ext&action=$number"), 1);
-
-    if ($result['result'] == 1) $result['error'] = 0;
-    else $result['error'] = 2;
-
-    return $response->withJson($result);
-
-})->add('\App\Middleware\OnlyAuthUser');
-
-$app->get('/users/list', function (Request $request, Response $response, array $args) use($app) {
-    $filter = $request->getParam('filter', "");
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
-
-    $user = new User();
-
-    return $response->withJson([
-        "data" => $user->fetchList($filter, $start, $count, 0),        
-        "pos" => (int)$start,
-        "total_count" => $user->fetchList($filter, $start, $count, 1)
-    ]);
-})->add('\App\Middleware\OnlyAuthUser');
-
-$app->post('/users/{id}/save[/{disable_rules}]', function (Request $request, Response $response, array $args) use($app) {
-    $params = $request->getParams();
-    $id = intval($args['id']);
-    $user = new User();
-    $result = $args['disable_rules'] ? $response->withJson($user->addUpdate($params, true)) : $response->withJson($user->addUpdate($params));
-    return $result;
-});
-  
-$app->post('/users/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
-    $id = intval($args['id']);
-    $user = new User();
-    
-    return $response->withJson($user->remove($id));
-  });
-
-$app->get('/users/user_groups', function (Request $request, Response $response, array $args) use($app) {
-    $user = new User();
-    return $response->withJson($user->fetchGroups());
-})->add('\App\Middleware\OnlyAuthUser');
-
-$app->post('/settings/{key}/{id}/save', function (Request $request, Response $response, array $args) use($app) {
-  $id = intval($args['id']);
-  $settings = new PBXSettings();
-  $params = $request->getParam("settings", "");
-  if (trim($args['key']) == 'user') {
-    return $response->withJson(["result"=>$settings->setUserSettings($id, $params)]);
-  } else if (trim($args['key']) == 'group') {
-    return $response->withJson(["result"=>$settings->setGroupSettings($id, $params)]);
-  }
-  return $response->withJson(["result"=> FALSE]);
-});
-
-$app->get('/settings/{key}/{id}', function (Request $request, Response $response, array $args) use($app) {
-  $id = intval($args['id']);
-  $settings = new PBXSettings();
-  if (trim($args['key']) == 'user') {
-    return $response->withJson(["data"=>$settings->getUserSettings($id)]);
-  } else if (trim($args['key']) == 'group') {
-    return $response->withJson(["data"=>$settings->getGroupSettings($id)]);
-  }
-  return $response->withJson(["data"=>[]]);
-});
-
-$app->get('/settings/user/{user_id}/default/{handle}', function (Request $request, Response $response, array $args) use($app) {
-  $settings = new PBXSettings();  
-  if (!(int)$args['user_id']) {
-    return $response
-    ->withJson(['result' => false, 'message' => 'Пользователь не обнаружен'])
-    ->withStatus(400);  
+  if (strlen($number) < 1) {
+    return $response->withJson(["error" => 1, "message" => "Empty number"]);
   }
 
-  return $response->withJson($settings->deleteUserSettingByHandle(trim($args['handle']), (int)$args['user_id']));  
-});
+  $user = $app->getContainer()['auth'];
+  $ext = $user->getExt();
 
-$app->get('/settings/default', function (Request $request, Response $response, array $args) use($app) {
-  $settings = new PBXSettings();  
-  
-  return $response->withJson($settings->getDefaultSettings());
-});
+  $result = json_decode(file_get_contents("http://localhost:5039/pbx?originate=$ext&action=$number"), 1);
 
-$app->post('/settings/default/save', function (Request $request, Response $response, array $args) use($app) {
-  $params = $request->getParam("settings", "");
-  $set = new PBXSettings();  
+  if ($result['result'] == 1) $result['error'] = 0;
+  else $result['error'] = 2;
 
-  if (isset($params)) {
-    return $response->withJson(["result"=>$set->setDefaultSettings($params)]);
-  }
-  return $response->withJson(["result"=> FALSE]);
-});
-
-$app->get('/groups/list', function (Request $request, Response $response, array $args) use($app) {
-    $user = new User();
-
-    $filter = $request->getParam('filter', "");
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
-
-    return $response->withJson([
-        "data" => $user->getAllGroups($filter, $start, $count, 0),
-        "total_count" => $user->getAllGroups($filter, $start, $count, 1),
-        "pos" => $start
-    ]);
+  return $response->withJson($result);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->post('/groups/{id}/save', function (Request $request, Response $response, array $args) use($app) {
-    $params = $request->getParams();
-    $id = intval($args['id']);
-    $user = new User();
+$app->get('/users/list', function (Request $request, Response $response, array $args) use ($app) {
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
 
-    return $response->withJson($user->addUpdateGroup($params));
-});
+  $user = new User();
 
-$app->post('/groups/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+  return $response->withJson([
+    "data" => $user->fetchList($filter, $start, $count, 0),
+    "pos" => (int)$start,
+    "total_count" => $user->fetchList($filter, $start, $count, 1)
+  ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/users/{id}/save[/{disable_rules}]', function (Request $request, Response $response, array $args) use ($app) {
   $params = $request->getParams();
   $id = intval($args['id']);
   $user = new User();
-  
+  $result = $args['disable_rules'] ? $response->withJson($user->addUpdate($params, true)) : $response->withJson($user->addUpdate($params));
+  return $result;
+});
+
+$app->post('/users/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args['id']);
+  $user = new User();
+
+  return $response->withJson($user->remove($id));
+});
+
+$app->get('/users/user_groups', function (Request $request, Response $response, array $args) use ($app) {
+  $user = new User();
+  return $response->withJson($user->fetchGroups());
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/settings/{key}/{id}/save', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args['id']);
+  $settings = new PBXSettings();
+  $params = $request->getParam("settings", "");
+  if (trim($args['key']) == 'user') {
+    return $response->withJson(["result" => $settings->setUserSettings($id, $params)]);
+  } else if (trim($args['key']) == 'group') {
+    return $response->withJson(["result" => $settings->setGroupSettings($id, $params)]);
+  }
+  return $response->withJson(["result" => FALSE]);
+});
+
+$app->get('/settings/{key}/{id}', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args['id']);
+  $settings = new PBXSettings();
+  if (trim($args['key']) == 'user') {
+    return $response->withJson(["data" => $settings->getUserSettings($id)]);
+  } else if (trim($args['key']) == 'group') {
+    return $response->withJson(["data" => $settings->getGroupSettings($id)]);
+  }
+  return $response->withJson(["data" => []]);
+});
+
+$app->get('/settings/user/{user_id}/default/{handle}', function (Request $request, Response $response, array $args) use ($app) {
+  $settings = new PBXSettings();
+  if (!(int)$args['user_id']) {
+    return $response
+      ->withJson(['result' => false, 'message' => 'Пользователь не обнаружен'])
+      ->withStatus(400);
+  }
+
+  return $response->withJson($settings->deleteUserSettingByHandle(trim($args['handle']), (int)$args['user_id']));
+});
+
+$app->get('/settings/default', function (Request $request, Response $response, array $args) use ($app) {
+  $settings = new PBXSettings();
+
+  return $response->withJson($settings->getDefaultSettings());
+});
+
+$app->post('/settings/default/save', function (Request $request, Response $response, array $args) use ($app) {
+  $params = $request->getParam("settings", "");
+  $set = new PBXSettings();
+
+  if (isset($params)) {
+    return $response->withJson(["result" => $set->setDefaultSettings($params)]);
+  }
+  return $response->withJson(["result" => FALSE]);
+});
+
+$app->get('/groups/list', function (Request $request, Response $response, array $args) use ($app) {
+  $user = new User();
+
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+
+  return $response->withJson([
+    "data" => $user->getAllGroups($filter, $start, $count, 0),
+    "total_count" => $user->getAllGroups($filter, $start, $count, 1),
+    "pos" => $start
+  ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/groups/{id}/save', function (Request $request, Response $response, array $args) use ($app) {
+  $params = $request->getParams();
+  $id = intval($args['id']);
+  $user = new User();
+
+  return $response->withJson($user->addUpdateGroup($params));
+});
+
+$app->post('/groups/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
+  $params = $request->getParams();
+  $id = intval($args['id']);
+  $user = new User();
+
   return $response->withJson($user->removeGroup($id));
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/groups/users/short', function (Request $request, Response $response, array $args) use($app) {
-    $user = new User();    
-    $filter = $request->getParam('filter', "");
-    $nameAsValue = intval($request->getParam('nameasvalue', 0));
-    
-    $count = $user->fetchList($filter, 0, 0, 1);
-    return $response->withJson( $user->fetchList($filter, 0, $count, 0, 1, $nameAsValue)
-    );
+$app->get('/groups/users/short', function (Request $request, Response $response, array $args) use ($app) {
+  $user = new User();
+  $filter = $request->getParam('filter', "");
+  $nameAsValue = intval($request->getParam('nameasvalue', 0));
+
+  $count = $user->fetchList($filter, 0, 0, 1);
+  return $response->withJson(
+    $user->fetchList($filter, 0, $count, 0, 1, $nameAsValue)
+  );
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/contact_groups/list', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/contact_groups/list', function (Request $request, Response $response, array $args) use ($app) {
   $contact_groups = new PBXContactGroups();
 
   $filter = $request->getParam('filter', "");
@@ -305,72 +300,72 @@ $app->get('/contact_groups/list', function (Request $request, Response $response
   $count = $request->getParam('count', 20);
 
   return $response->withJson([
-      "data" => $contact_groups->fetchList($filter, $start, $count, 0),
-      "total_count" => $contact_groups->fetchList($filter, $start, $count, 1),
-      "pos" => $start
+    "data" => $contact_groups->fetchList($filter, $start, $count, 0),
+    "total_count" => $contact_groups->fetchList($filter, $start, $count, 1),
+    "pos" => $start
   ]);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
 
-$app->post('/contact_groups/{id}/save', function (Request $request, Response $response, array $args) use($app) {
-  $id = intval($args["id"]);  
+$app->post('/contact_groups/{id}/save', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args["id"]);
   $contact_groups = new PBXContactGroups($id);
 
-  $name = $request->getParam("name", "");    
+  $name = $request->getParam("name", "");
   $queues = $request->getParam("queues", "");
   $items_users = $request->getParam("items_users", "");
   $items_queues = $request->getParam("items_queues", "");
 
   return $response->withJson($contact_groups->save($name, $queues, $items_users, $items_queues));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
-  
-$app->post('/contact_groups/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
+
+$app->post('/contact_groups/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
   $id = intval($args["id"]);
   $contact_groups = new PBXContactGroups($id);
-  
-  return $response->withJson($contact_groups->remove($id));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
-$app->post('/contact_groups/{id}', function (Request $request, Response $response, array $args) use($app) {
-  $id = intval($args["id"]);  
+  return $response->withJson($contact_groups->remove($id));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
+
+$app->post('/contact_groups/{id}', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args["id"]);
   $contact_groups = new PBXContactGroups($id);
 
   return $response->withJson($contact_groups->getFullInfo());
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
 
-$app->get('/auth/info', function (Request $request, Response $response, array $args) use($app) {    
+$app->get('/auth/info', function (Request $request, Response $response, array $args) use ($app) {
   $data = $app->getContainer()['auth']->getInfo();
   $data['instance'] =  $app->getContainer()['instance_id'];
   return $response->withJson($data);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/auth/logout', function (Request $request, Response $response, array $args) use($app) {    
-    return $response->withJson([ "error" => !$app->getContainer()['auth']->logout() ]);
+$app->get('/auth/logout', function (Request $request, Response $response, array $args) use ($app) {
+  return $response->withJson(["error" => !$app->getContainer()['auth']->logout()]);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/auth/settings', function (Request $request, Response $response, array $args) use($app) { 
-  return $response->withJson(["data"=>$app->getContainer()['auth']->getAuthUserSettings()]);   
+$app->get('/auth/settings', function (Request $request, Response $response, array $args) use ($app) {
+  return $response->withJson(["data" => $app->getContainer()['auth']->getAuthUserSettings()]);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/phones/list', function (Request $request, Response $response, array $args) use($app) {
-    $phone = new PBXPhone();
+$app->get('/phones/list', function (Request $request, Response $response, array $args) use ($app) {
+  $phone = new PBXPhone();
 
-    $filter = $request->getParam('filter', "");
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
-    $sort = $request->getParam('sort', "");
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+  $sort = $request->getParam('sort', "");
 
-    $data = $phone->fetchList($filter, $start, $count, 0,true, $sort);
+  $data = $phone->fetchList($filter, $start, $count, 0, true, $sort);
 
-    $phone->appendRealtime($data);
+  $phone->appendRealtime($data);
 
-    return $response->withJson([
-        "data" => $data,
-        "total_count" => $phone->fetchList($filter, $start, $count, 1),
-        "pos" => $start
-    ]);
+  return $response->withJson([
+    "data" => $data,
+    "total_count" => $phone->fetchList($filter, $start, $count, 1),
+    "pos" => $start
+  ]);
 })->add("\App\Middleware\OnlyAdmin");
 
-$app->get('/phones/list/short', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/phones/list/short', function (Request $request, Response $response, array $args) use ($app) {
   $phone = new PBXPhone();
 
   $filter = $request->getParam('filter', "");
@@ -378,233 +373,232 @@ $app->get('/phones/list/short', function (Request $request, Response $response, 
 
   foreach ($phone->fetchList($filter) as $item) {
     $result[] = [
-      'id' => $item['id'], 'phone' => $item['phone'], 'model' =>$item['model']
-      ];
+      'id' => $item['id'], 'phone' => $item['phone'], 'model' => $item['model']
+    ];
   }
 
   return $response->withJson($result);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->post('/phones/{phone_id}/save', function (Request $request, Response $response, array $args) use($app) {
-    $phone = new PBXPhone();
+$app->post('/phones/{phone_id}/save', function (Request $request, Response $response, array $args) use ($app) {
+  $phone = new PBXPhone();
 
-    $values = $request->getParams();
-    $res = $phone->addUpdate($values);
-    return $response->withJson($res);
+  $values = $request->getParams();
+  $res = $phone->addUpdate($values);
+  return $response->withJson($res);
 })->add('\App\Middleware\OnlyAuthUser');
-  
-  $app->post('/phones/{phone_id}/remove', function (Request $request, Response $response, array $args) use($app) {
-    $phone = new PBXPhone();
-  
-    $id = intval($args["phone_id"]);
-    $res = $phone ->remove($id);
-    return $response->withJson($res);
-  })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/queues/list', function (Request $request, Response $response, array $args) use($app) {
-    $queue = new PBXQueue();
-    $filter = $request->getParam('filter', "");
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
+$app->post('/phones/{phone_id}/remove', function (Request $request, Response $response, array $args) use ($app) {
+  $phone = new PBXPhone();
 
-    return $response->withJson([
-        "data" => $queue->fetchList($filter, $start, $count, 0),
-        "total_count" => $queue->fetchList($filter, $start, $count, 1),
-        "pos" => $start
-    ]);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
+  $id = intval($args["phone_id"]);
+  $res = $phone->remove($id);
+  return $response->withJson($res);
+})->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/queues/list/short', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/queues/list', function (Request $request, Response $response, array $args) use ($app) {
+  $queue = new PBXQueue();
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+
+  return $response->withJson([
+    "data" => $queue->fetchList($filter, $start, $count, 0),
+    "total_count" => $queue->fetchList($filter, $start, $count, 1),
+    "pos" => $start
+  ]);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
+
+$app->get('/queues/list/short', function (Request $request, Response $response, array $args) use ($app) {
   $queue = new PBXQueue();
   $count = $queue->fetchList("", 0, 0, 1);
   $nameAsValue = intval($request->getParam('nameasvalue', 0));
 
-  return $response->withJson($queue->fetchList("", 0, $count, 0,$nameAsValue));
+  return $response->withJson($queue->fetchList("", 0, $count, 0, $nameAsValue));
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->post('/queues/{queues_id}/save', function (Request $request, Response $response, array $args) use($app) {
-    $queue = new PBXQueue();
-
-    $values = $request->getParams();
-    $res = $queue->addUpdate($values);
-    
-    return $response->withJson($res);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
-
-$app->post('/queues/{queues_id}/remove', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/queues/{queues_id}/save', function (Request $request, Response $response, array $args) use ($app) {
   $queue = new PBXQueue();
-  
+
+  $values = $request->getParams();
+  $res = $queue->addUpdate($values);
+
+  return $response->withJson($res);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
+
+$app->post('/queues/{queues_id}/remove', function (Request $request, Response $response, array $args) use ($app) {
+  $queue = new PBXQueue();
+
   $id = intval($args["queues_id"]);
   $res = $queue->remove($id);
-  
-  return $response->withJson($res);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
-$app->get('/queues/code', function (Request $request, Response $response, array $args) use($app) {
+  return $response->withJson($res);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
+
+$app->get('/queues/code', function (Request $request, Response $response, array $args) use ($app) {
   $queue = new PBXQueue();
 
   $name = $request->getParam("name");
   $res = $queue->getCode($name);
-  
-  return $response->withJson([
-    "result"=> true,
-    "message"=>$res
-    ]);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin','erpico.admin']));
 
-$app->get('/channels/code', function (Request $request, Response $response, array $args) use($app) {
+  return $response->withJson([
+    "result" => true,
+    "message" => $res
+  ]);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
+
+$app->get('/channels/code', function (Request $request, Response $response, array $args) use ($app) {
   $channels = new PBXChannel();
 
   $name = $request->getParam("name");
   $res = $channels->getCode($name);
   return $response->withJson([
-    "result"=> true,
-    "message"=>$res
-    ]);
+    "result" => true,
+    "message" => $res
+  ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/channels/list', function (Request $request, Response $response, array $args) use($app) {
-    $channels = new PBXChannel();
+$app->get('/channels/list', function (Request $request, Response $response, array $args) use ($app) {
+  $channels = new PBXChannel();
 
-    $filter = $request->getParam('filter', "");
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
 
-    return $response->withJson([
-        "data" => $channels->fetchList($filter, $start, $count, 0),
-        "total_count" => $channels->fetchList($filter, $start, $count, 1),
-        "pos" => $start
-    ]);
+  return $response->withJson([
+    "data" => $channels->fetchList($filter, $start, $count, 0),
+    "total_count" => $channels->fetchList($filter, $start, $count, 1),
+    "pos" => $start
+  ]);
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->post('/channels/{channels_id}/save', function (Request $request, Response $response, array $args) use($app) {
-    $channels = new PBXChannel();
+$app->post('/channels/{channels_id}/save', function (Request $request, Response $response, array $args) use ($app) {
+  $channels = new PBXChannel();
 
-    $values = $request->getParams();
-    $res = $channels->addUpdate($values);
-    return $response->withJson($res);
+  $values = $request->getParams();
+  $res = $channels->addUpdate($values);
+  return $response->withJson($res);
 })->add('\App\Middleware\OnlyAuthUser');
-  
-  $app->post('/channels/{channels_id}/remove', function (Request $request, Response $response, array $args) use($app) {
-    $channels = new PBXChannel();
-    
-    $id = intval($args["channels_id"]);
-    $res = $channels->remove($id);
-    return $response->withJson($res);
-  })->add('\App\Middleware\OnlyAuthUser');
- 
-$app->get('/outgoingcampaign/list', function (Request $request, Response $response, array $args) use($app) {
-    $outgoingcampaign = new PBXOutgoingCampaign();
 
-    $filter = $request->getParam('filter', "");
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
+$app->post('/channels/{channels_id}/remove', function (Request $request, Response $response, array $args) use ($app) {
+  $channels = new PBXChannel();
 
-    return $response->withJson([
-        "data" => $outgoingcampaign->fetchList($filter, $start, $count, 0),
-        "total_count" => $outgoingcampaign->fetchList($filter, $start, $count, 1),
-        "pos" => $start
-    ]);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
+  $id = intval($args["channels_id"]);
+  $res = $channels->remove($id);
+  return $response->withJson($res);
+})->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/outgoingcampaign/{id}/queues', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/outgoingcampaign/list', function (Request $request, Response $response, array $args) use ($app) {
+  $outgoingcampaign = new PBXOutgoingCampaign();
+
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+
+  return $response->withJson([
+    "data" => $outgoingcampaign->fetchList($filter, $start, $count, 0),
+    "total_count" => $outgoingcampaign->fetchList($filter, $start, $count, 1),
+    "pos" => $start
+  ]);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
+$app->get('/outgoingcampaign/{id}/queues', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
 
   return $response->withJson(
     $outgoingcampaign->getContacts(intval($args["id"]))
   );
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
-$app->get('/outgoingcampaign/{id}/results', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/outgoingcampaign/{id}/results', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
 
   return $response->withJson(
     $outgoingcampaign->getContactsResults(intval($args["id"]))
   );
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
-$app->get('/outgoingcampaign/result/{id}/calls', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/outgoingcampaign/result/{id}/calls', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
 
   return $response->withJson($outgoingcampaign->getContactCalls(intval($args["id"])));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
-$app->post('/outgoingcampaign/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/outgoingcampaign/{id}/save', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $values = $request->getParams();
-  
-  return $response->withJson($outgoingcampaign->addUpdate($values));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
 
-$app->post('/outgoingcampaign/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+  return $response->withJson($outgoingcampaign->addUpdate($values));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
+$app->post('/outgoingcampaign/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $result = $outgoingcampaign->remove(intval($args["id"]));
   return $response->withJson([
     "result" => $result,
-    "message" => $result ? "Удаление прошло успешно!": 'Ошибка удаления',
+    "message" => $result ? "Удаление прошло успешно!" : 'Ошибка удаления',
   ]);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
-$app->get('/outgoingcampaign/{id}/state/{state}', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/outgoingcampaign/{id}/state/{state}', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
   $state = intval($args['state']);
-  
-  return $response->withJson($outgoingcampaign->setState($id, $state));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
 
-$app->get('/outgoingcampaign/{id}/settings', function (Request $request, Response $response, array $args) use($app) {
+  return $response->withJson($outgoingcampaign->setState($id, $state));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
+$app->get('/outgoingcampaign/{id}/settings', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
   $needTime = $request->getParam("needTime", 0);
-  
-  return $response->withJson($outgoingcampaign->getSettings($id, $needTime));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
 
-$app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, Response $response, array $args) use($app) {
+  return $response->withJson($outgoingcampaign->getSettings($id, $needTime));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
+$app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
   $settings = $request->getParam("settings", 0);
   $concurrent_calls_limit = $request->getParam("concurrent_calls_limit");
   $min_call_time = $request->getParam("min_call_time");
 
-  return $response->withJson(["result"=>$outgoingcampaign->updateSettings($id,$settings, $concurrent_calls_limit, $min_call_time)]);
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc','erpico.admin']));
+  return $response->withJson(["result" => $outgoingcampaign->updateSettings($id, $settings, $concurrent_calls_limit, $min_call_time)]);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
 // SMS messaging
 
-$app->get('/acd/sms', function (Request $request, Response $response, array $args) use($app) {
-    return $this->renderer->render($response, 'sms.phtml', $args);
+$app->get('/acd/sms', function (Request $request, Response $response, array $args) use ($app) {
+  return $this->renderer->render($response, 'sms.phtml', $args);
 });
-  
+
 // RULES 
 
-$app->get('/rules/list', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/rules/list', function (Request $request, Response $response, array $args) use ($app) {
   $rule = new PBXRules();
 
   return $response->withJson($rule->fetchList());
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->post('/rules/groups/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/rules/groups/{id}/save', function (Request $request, Response $response, array $args) use ($app) {
   $rule = new PBXRules();
   $rules = $request->getParam("rules", "");
 
   $res = $rule->saveGroup($rules, intval($args['id']));
   return $response->withJson(["result" => $res]);
-  
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->post('/rules/users/{id}/save', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/rules/users/{id}/save', function (Request $request, Response $response, array $args) use ($app) {
   $rule = new PBXRules();
   $rules = $request->getParam("rules", "");
 
   $res = $rule->saveUser($rules, intval($args['id']));
-  
+
   return $response->withJson(["result" => $res]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
 
-$app->get('/phones/groups/list', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/phones/groups/list', function (Request $request, Response $response, array $args) use ($app) {
   $phone = new PBXPhone();
 
   $filter = $request->getParam('filter', "");
@@ -612,24 +606,24 @@ $app->get('/phones/groups/list', function (Request $request, Response $response,
   $count = $request->getParam('count', 20);
 
   return $response->withJson([
-      "data" => $phone->fetchGroupsList($filter, $start, $count, 0),
-      "total_count" => $phone->fetchGroupsList($filter, $start, $count, 1),
-      "pos" => $start
+    "data" => $phone->fetchGroupsList($filter, $start, $count, 0),
+    "total_count" => $phone->fetchGroupsList($filter, $start, $count, 1),
+    "pos" => $start
   ]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->get('/phones/groups/code', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/phones/groups/code', function (Request $request, Response $response, array $args) use ($app) {
   $phone = new PBXPhone();
 
   $name = $request->getParam("name");
   $res = $phone->getGroupCode($name);
   return $response->withJson([
-    "result"=> true,
-    "message"=>$res
-    ]);
+    "result" => true,
+    "message" => $res
+  ]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->get('/phones/groups/list/short', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/phones/groups/list/short', function (Request $request, Response $response, array $args) use ($app) {
   $phone = new PBXPhone();
 
   $filter = $request->getParam('filter', "");
@@ -637,69 +631,69 @@ $app->get('/phones/groups/list/short', function (Request $request, Response $res
   return $response->withJson($phone->fetchGroupsList($filter));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->post('/phones/groups/{id}/save', function (Request $request, Response $response, array $args) use($app) {
-  $id = intval($args["id"]);  
+$app->post('/phones/groups/{id}/save', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args["id"]);
   $phone = new PBXPhone();
   $params = $request->getParams();
 
   return $response->withJson($phone->addUpdatePhoneGroup($params));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
-  
-$app->post('/phones/groups/{id}/remove', function (Request $request, Response $response, array $args) use($app) {
+
+$app->post('/phones/groups/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
   $id = intval($args["id"]);
   $phone = new PBXPhone();
-  
+
   return $response->withJson($phone->removePhoneFroup($id));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->any('/config/sip', function (Request $request, Response $response, array $args) use($app) {
+$app->any('/config/sip', function (Request $request, Response $response, array $args) use ($app) {
   $helper = new PBXConfigHelper();
-  
+
   return $response->withJson($helper->getOptions(PBXConfigHelper::SIP_FILE));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
 
-$app->any('/config/queues', function (Request $request, Response $response, array $args) use($app) {
+$app->any('/config/queues', function (Request $request, Response $response, array $args) use ($app) {
   $helper = new PBXConfigHelper();
 
   return $response->withJson($helper->getOptions(PBXConfigHelper::QUEUES_FILE));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
 
-$app->any('/config/extensions', function (Request $request, Response $response, array $args) use($app) {
+$app->any('/config/extensions', function (Request $request, Response $response, array $args) use ($app) {
   $helper = new PBXConfigHelper();
 
   return $response->withJson($helper->getOptions(PBXConfigHelper::RULES_FILE));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
 
-$app->get('/extended_calls/list', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/extended_calls/list', function (Request $request, Response $response, array $args) use ($app) {
   $oldCdr = new PBXOldCdr();
   $filter = $request->getParam("filter", []);
 
   return $response->withJson($oldCdr->fetchList($filter));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports', 'erpico.admin']));
 
-$app->get('/extended_calls/list/trafic', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/extended_calls/list/trafic', function (Request $request, Response $response, array $args) use ($app) {
   $oldCdr = new PBXOldCdr();
   $filter = $request->getParam("filter", []);
 
   return $response->withJson($oldCdr->getTrafic($filter));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports', 'erpico.admin']));
 
-$app->get('/extended_contact_calls/list', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/extended_contact_calls/list', function (Request $request, Response $response, array $args) use ($app) {
   $oldContactCdr = new PBXOldContactCdr();
   $filter = $request->getParam("filter", []);
 
   return $response->withJson($oldContactCdr->fetchList($filter));
-})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports', 'erpico.admin']));
 
-$app->any('/config/phone/{mac}', function (Request $request, Response $response, array $args) use($app) {
-  global $app;    
+$app->any('/config/phone/{mac}', function (Request $request, Response $response, array $args) use ($app) {
+  global $app;
   $container = $app->getContainer();
 
   $mac = strtoupper(str_replace(".cfg", "", $args['mac']));
 
   if (strlen($mac) == 12) {
     // Add dashes
-    $nmac = "";    
+    $nmac = "";
     for ($i = 0; $i < strlen($mac); $i++) {
       $nmac .= $mac[$i];
       if ($i % 2) $nmac .= ":";
@@ -712,59 +706,57 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
   $list = $po->fetchList(["mac" => $mac]);
   if (count($list) == 0) {
     return $response->withStatus(404)
-          ->withHeader('Content-Type', 'text/plain')
-          ->write('No configuration file for this phone');
+      ->withHeader('Content-Type', 'text/plain')
+      ->write('No configuration file for this phone');
   }
 
   $data = $list[0];
 
   $data['server'] = $container['server_host'];
 
-  $template = file_get_contents(__DIR__."/../templates/phones/yealink-t.tpl");
+  $template = file_get_contents(__DIR__ . "/../templates/phones/yealink-t.tpl");
 
   foreach ($data as $k => $v) {
     $template = str_replace("#$k#", $v, $template);
   }
 
   return $response->withStatus(200)
-          ->withHeader('Content-Type', 'text/plain')
-          ->write($template);
-  
-});//->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
+    ->withHeader('Content-Type', 'text/plain')
+    ->write($template);
+}); //->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->any('/config/contacts', function (Request $request, Response $response, array $args) use($app) {
+$app->any('/config/contacts', function (Request $request, Response $response, array $args) use ($app) {
 
   $user = new User();
-  $users = $user->fetchList([ "state" => 1], 0, 1000, 0);
+  $users = $user->fetchList(["state" => 1], 0, 1000, 0);
 
-  $result = '<YeastarIPPhoneDirectory>'."\n";
+  $result = '<YeastarIPPhoneDirectory>' . "\n";
 
   foreach ($users as $e) {
     if (!strlen($e['phone'])) continue;
-    $result .= '<DirectoryEntry><Name>'.$e['fullname'].'</Name><Telephone>'.$e['phone'].'</Telephone></DirectoryEntry>'."\n";        
+    $result .= '<DirectoryEntry><Name>' . $e['fullname'] . '</Name><Telephone>' . $e['phone'] . '</Telephone></DirectoryEntry>' . "\n";
   }
 
   $result .= "</YeastarIPPhoneDirectory>";
 
   $response->getBody()->write($result);
   return $response->withStatus(200)
-          ->withHeader('Content-Type', 'text/xml');          
-
+    ->withHeader('Content-Type', 'text/xml');
 });
 
-$app->post('/phones/provisioning/start', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/phones/provisioning/start', function (Request $request, Response $response, array $args) use ($app) {
   $data = $request->getParams();
 
   $ip_phone  = $data['ip'];
   $mac       =  $data['mac'];
-  $port_phone= 5060;
+  $port_phone = 5060;
   $ip_pbx    = "192.168.139.210";
   $port_pbx  = "5060";
 
   $phone_user = 'autoprovision_user';
   $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
 
-  $url = "http://tns-e-main.clients.tlc.local/config/phone/80:5E:C0:18:09:E9";//http://$ip_pbx/config/phone/$mac";
+  $url = "http://tns-e-main.clients.tlc.local/config/phone/80:5E:C0:18:09:E9"; //http://$ip_pbx/config/phone/$mac";
 
   /*$msg =  "NOTIFY sip:{$phone_user}@{$ip_phone}:{$port_phone};ob SIP/2.0\r\n".
         "Via: SIP/2.0/UDP {$ip_pbx}:{$port_pbx};branch=z9hG4bK12fd4e5c;rport\r\n".
@@ -785,32 +777,31 @@ $app->post('/phones/provisioning/start', function (Request $request, Response $r
   socket_sendto($sock, $msg, $len, 0, $ip_phone, $port_phone);
   */
 
-  $msg =  "NOTIFY sip:{$phone_user}@{$ip_phone}:{$port_phone};ob SIP/2.0\r\n".
-      "Via: SIP/2.0/UDP {$ip_pbx}:{$port_pbx};branch=z9hG4bK12fd4e5c;rport\r\n".
-      "Max-Forwards: 70\r\n".
-      "From: \"asterisk\" <sip:asterisk@{$ip_pbx}>;tag=as54cd2be9\r\n".
-      "To: <sip:{$phone_user}@{$ip_phone}:{$port_phone};ob>\r\n".
-      "Contact: <sip:asterisk@{$ip_pbx}:{$port_pbx}>\r\n".
-      "Call-ID: 4afab6ce2bff0be11a4af41064340242@{$ip_pbx}:{$port_pbx}\r\n".
-      //"CSeq: 102 NOTIFY\r\n".
-      "User-Agent: mikopbx\r\n".
-      "Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE\r\n".
-      "Supported: replaces, timer\r\n".
-      "Subscription-State: terminated\r\n".
-      "Event: check-sync;reboot=true\r\n".
-      "Content-Length: 0\r\n\n";
+  $msg =  "NOTIFY sip:{$phone_user}@{$ip_phone}:{$port_phone};ob SIP/2.0\r\n" .
+    "Via: SIP/2.0/UDP {$ip_pbx}:{$port_pbx};branch=z9hG4bK12fd4e5c;rport\r\n" .
+    "Max-Forwards: 70\r\n" .
+    "From: \"asterisk\" <sip:asterisk@{$ip_pbx}>;tag=as54cd2be9\r\n" .
+    "To: <sip:{$phone_user}@{$ip_phone}:{$port_phone};ob>\r\n" .
+    "Contact: <sip:asterisk@{$ip_pbx}:{$port_pbx}>\r\n" .
+    "Call-ID: 4afab6ce2bff0be11a4af41064340242@{$ip_pbx}:{$port_pbx}\r\n" .
+    //"CSeq: 102 NOTIFY\r\n".
+    "User-Agent: mikopbx\r\n" .
+    "Allow: INVITE, ACK, CANCEL, OPTIONS, BYE, REFER, SUBSCRIBE, NOTIFY, INFO, PUBLISH, MESSAGE\r\n" .
+    "Supported: replaces, timer\r\n" .
+    "Subscription-State: terminated\r\n" .
+    "Event: check-sync;reboot=true\r\n" .
+    "Content-Length: 0\r\n\n";
 
   $len = strlen($msg);
   socket_sendto($sock, $msg, $len, 0, $ip_phone, $port_phone);
   socket_close($sock);
 
   return $response->withStatus(200)
-          ->withHeader('Content-Type', 'text/plain')
-          ->write("Something happen: $url");
-  
+    ->withHeader('Content-Type', 'text/plain')
+    ->write("Something happen: $url");
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->get('/aliases/list', function (Request $request, Response $response, array $args) use($app) {
+$app->get('/aliases/list', function (Request $request, Response $response, array $args) use ($app) {
   $filter = $request->getParam('filter', "");
   $start = $request->getParam('start', 0);
   $count = $request->getParam('count', 20);
@@ -818,19 +809,19 @@ $app->get('/aliases/list', function (Request $request, Response $response, array
   $aliases = new PBXAliases();
 
   return $response->withJson([
-      "data" => $aliases->fetchList($filter, $start, $count, 0),        
-      "pos" => (int)$start,
-      "total_count" => $aliases->fetchList($filter, $start, $count, 1)
+    "data" => $aliases->fetchList($filter, $start, $count, 0),
+    "pos" => (int)$start,
+    "total_count" => $aliases->fetchList($filter, $start, $count, 1)
   ]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->get('/aliases/type/short', function (Request $request, Response $response, array $args) use($app) {
-  $aliases = new PBXAliases();    
-  
+$app->get('/aliases/type/short', function (Request $request, Response $response, array $args) use ($app) {
+  $aliases = new PBXAliases();
+
   return $response->withJson($aliases->getType());
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->post('/aliases/{alias_id}/save', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/aliases/{alias_id}/save', function (Request $request, Response $response, array $args) use ($app) {
   $aliases = new PBXAliases();
 
   $values = $request->getParams();
@@ -838,7 +829,7 @@ $app->post('/aliases/{alias_id}/save', function (Request $request, Response $res
   return $response->withJson($res);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->post('/aliases/{alias_id}/remove', function (Request $request, Response $response, array $args) use($app) {
+$app->post('/aliases/{alias_id}/remove', function (Request $request, Response $response, array $args) use ($app) {
   $aliases = new PBXAliases();
   $id = intval($args["alias_id"]);
   $res = $aliases->remove($id);
@@ -846,56 +837,56 @@ $app->post('/aliases/{alias_id}/remove', function (Request $request, Response $r
   return $response->withJson($res);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->any('/user/exten/save', function (Request $request, Response $response, array $args) use($app) {
+$app->any('/user/exten/save', function (Request $request, Response $response, array $args) use ($app) {
   $user = $app->getContainer()['auth'];
 
   $ext = $request->getParam('ext', '');
   if (strlen($ext) == 0) {
-    return $response->withJson([ "error" => 1, "message" => "No extension provided" ]);
+    return $response->withJson(["error" => 1, "message" => "No extension provided"]);
   }
 
   $result = $user->saveExt($ext);
 
-  return $response->withJson( [ "error" => $result ]);
+  return $response->withJson(["error" => $result]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['erpico.admin']));
 
-$app->get('/blacklist', function (Request $request, Response $response, array $args) use($app){
+$app->get('/blacklist', function (Request $request, Response $response, array $args) use ($app) {
 
-    if (!($filter = $request->getParam('filter', ""))){
-        $filter = [];
-    }
-    $filter["deleted"] = 0;
-    $start = $request->getParam('start', 0);
-    $count = $request->getParam('count', 20);
+  if (!($filter = $request->getParam('filter', ""))) {
+    $filter = [];
+  }
+  $filter["deleted"] = 0;
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
 
-    $blacklist = new PBXBlacklist($app->getContainer());
+  $blacklist = new PBXBlacklist($app->getContainer());
 
-    return $response->withJson([
-        "data" => $blacklist->fetchList($filter, $start, $count, 0),
-        "filter" => $filter
-    ]);
+  return $response->withJson([
+    "data" => $blacklist->fetchList($filter, $start, $count, 0),
+    "filter" => $filter
+  ]);
 })->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
 
-$app->post('/blacklist/add', function (Request $request, Response $response, array $args) use($app){
-    $blacklist = new PBXBlacklist($app->getContainer());
-    $result = $blacklist->saveBlacklistItem($request->getParams());
+$app->post('/blacklist/add', function (Request $request, Response $response, array $args) use ($app) {
+  $blacklist = new PBXBlacklist($app->getContainer());
+  $result = $blacklist->saveBlacklistItem($request->getParams());
 
-    return $response->withJson([
-        "result" => $result,
-        "message" => $result ? "Сохранение прошло успешно!" : "Ошибка сохранения"
-    ]);
+  return $response->withJson([
+    "result" => $result,
+    "message" => $result ? "Сохранение прошло успешно!" : "Ошибка сохранения"
+  ]);
 })->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
 
-$app->post('/blacklist/{id}/update', function (Request $request, Response $response, array $args) use($app){
-    $id = intval($args["id"]);
-    $blacklist = new PBXBlacklist($app->getContainer());
-    if ($id) {
-        $result = $blacklist->updateBlacklistItem($id, $request->getParams());
-        return $response->withJson([
-            "result" => $result,
-            "message" => $result ? "Изменение прошло успешно!" : "Ошибка изменения"
-            ]);
-    }
+$app->post('/blacklist/{id}/update', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args["id"]);
+  $blacklist = new PBXBlacklist($app->getContainer());
+  if ($id) {
+    $result = $blacklist->updateBlacklistItem($id, $request->getParams());
+    return $response->withJson([
+      "result" => $result,
+      "message" => $result ? "Изменение прошло успешно!" : "Ошибка изменения"
+    ]);
+  }
 })->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
 
 /*
@@ -910,55 +901,56 @@ $app->delete('/blacklist/{id}/delete', function (Request $request, Response $res
         ]);
 })->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));*/
 
-$app->post('/blacklist/{id}/remove', function (Request $request, Response $response, array $args) use($app){
-    $id = intval($args["id"]);
-    $blacklist = new PBXBlacklist($app->getContainer());
-    $result = $blacklist->remove($id);
+$app->post('/blacklist/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
+  $id = intval($args["id"]);
+  $blacklist = new PBXBlacklist($app->getContainer());
+  $result = $blacklist->remove($id);
 
-    return $response->withJson([
-        "result" => $result,
-        "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
-    ]);
+  return $response->withJson([
+    "result" => $result,
+    "message" => $result ? "Удаление прошло успешно!" : "Ошибка удаления"
+  ]);
 })->add('\App\Middleware\OnlyAuthUser')->add(new SetRoles(['erpico.admin']));
 
 $app->get('/vm/email', function (Request $request, Response $response, array $args) {
 
-    $_email = $request->getParam("to", "rp@erpico.ru");//"rp@erpico.ru";
-    $_subj  = "ErpicoPBX: пропущенный звонок";
-    $_text  = "Звонок с номера ".$request->getParam("tel")." в ".date("d.m.Y H:i:s");
+  $_email = $request->getParam("to", "rp@erpico.ru"); //"rp@erpico.ru";
+  $_subj  = "ErpicoPBX: пропущенный звонок";
+  $_text  = "Звонок с номера " . $request->getParam("tel") . " в " . date("d.m.Y H:i:s");
 
-    $mail = new PHPMailer;
-         
-    $mail->Mailer = "smtp";
-    $mail->Host = 'mail.erpico.ru';  // Specify main and backup SMTP servers
-    //$mail->Port = 25;
-    $mail->SMTPAuth = true;                               // Enable SMTP authentication
-    $mail->Username = 'noreply';                 // SMTP username
-    $mail->Password = 'oL(H&LVrh7lnyef';
-    $mail->SMTPOptions = array(
-      'ssl' => array(
-          'verify_peer' => false,
-          'verify_peer_name' => false,
-          'allow_self_signed' => true
-          )
-    );
+  $mail = new PHPMailer;
 
-    $msg = "";
+  $mail->Mailer = "smtp";
+  $mail->Host = 'mail.erpico.ru';  // Specify main and backup SMTP servers
+  //$mail->Port = 25;
+  $mail->SMTPAuth = true;                               // Enable SMTP authentication
+  $mail->Username = 'noreply';                 // SMTP username
+  $mail->Password = 'oL(H&LVrh7lnyef';
+  $mail->SMTPOptions = array(
+    'ssl' => array(
+      'verify_peer' => false,
+      'verify_peer_name' => false,
+      'allow_self_signed' => true
+    )
+  );
 
-    $mail->setFrom('noreply@erpicopbx.ru', 'Erpico PBX');
-    $mail->addAddress($_email);      
-    
-    $mail->Subject = $_subj;
-    $mail->IsHTML(true);
-    $mail->CharSet = 'UTF-8';    
+  $msg = "";
 
-    $mail->AltBody = $_text;
-    $mail->Body = $_text;    
+  $mail->setFrom('noreply@erpicopbx.ru', 'Erpico PBX');
+  $mail->addAddress($_email);
 
-    return $response->withJson([
+  $mail->Subject = $_subj;
+  $mail->IsHTML(true);
+  $mail->CharSet = 'UTF-8';
+
+  $mail->AltBody = $_text;
+  $mail->Body = $_text;
+
+  return $response->withJson(
+    [
       "result" => $mail->send()
     ]
-    );
+  );
 });
 
 $app->get('/system/services', function (Request $request, Response $response, array $args) {
@@ -968,23 +960,22 @@ $app->get('/system/services', function (Request $request, Response $response, ar
 
   // Pass the url and the guzzle client to the fXmlRpc Client
   $client = new \fXmlRpc\Client(
-      'http://127.0.0.1:9001/RPC2',
-      new \fXmlRpc\Transport\HttpAdapterTransport(
-          new \Http\Message\MessageFactory\GuzzleMessageFactory(),
-          new \Http\Adapter\Guzzle6\Client($guzzleClient)
-      )
+    'http://127.0.0.1:9001/RPC2',
+    new \fXmlRpc\Transport\HttpAdapterTransport(
+      new \Http\Message\MessageFactory\GuzzleMessageFactory(),
+      new \Http\Adapter\Guzzle6\Client($guzzleClient)
+    )
   );
 
   // Pass the client to the Supervisor library.
   $supervisor = new \Supervisor\Supervisor($client);
 
-  $processes = $supervisor->getAllProcessInfo();  
+  $processes = $supervisor->getAllProcessInfo();
 
   return $response->withJson([
     "result" => true,
-    "processes" =>$processes
+    "processes" => $processes
   ]);
-
 });
 
 $app->get('/[{name}]', function (Request $request, Response $response, array $args) {
@@ -995,7 +986,7 @@ $app->get('/[{name}]', function (Request $request, Response $response, array $ar
   return $this->renderer->render($response, 'index.phtml', $args);
 });
 
-$app->post('/import', function  (Request $request, Response $response, array $args) use ($app) {
+$app->post('/import', function (Request $request, Response $response, array $args) use ($app) {
 
   $result = null;
   $filename = $request->getParam('filename');
@@ -1018,7 +1009,7 @@ $app->post('/import', function  (Request $request, Response $response, array $ar
   return $result;
 });
 
-$app->post('/export', function  (Request $request, Response $response, array $args) use ($app) {
+$app->post('/export', function (Request $request, Response $response, array $args) use ($app) {
   $filename = $args['filename'];
   $exportImport = new \App\ExportImport($filename);
   return $exportImport->export();
