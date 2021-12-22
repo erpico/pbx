@@ -70,8 +70,14 @@ class Ext_outgoing {
     $extens = $this->auth->allow_extens();
     $sql.= $utils->sql_allow_extens($extens);
 
+    if (is_array($filter) && isset($filter["total"]) && strlen($filter["total"])) {
+      $tsql .= "HAVING count(*) ".trim(addslashes($filter["total"]))." ";
+    } else {
+      $tsql = "";
+    }
+
     if (!$onlycount) {
-      $sql.= "GROUP BY src, fullname ORDER BY src ";
+      $sql.= "GROUP BY src, fullname ".$tsql." ORDER BY src ";
     }
     
 
