@@ -26,7 +26,7 @@ class Analysis_outgoing_calls
       };
   */
 
-  public function getTraffic_for_period($filter, $pos, $count = 20, $onlycount = 0)
+  public function getTraffic_for_period($filter, $pos, $count = 20, $onlycount = 0, $src = 0)
   {
     $utils = new Utils();
 
@@ -42,6 +42,10 @@ class Analysis_outgoing_calls
     $extens = $utils->sql_allow_extens($ext);
     $sql .= $extens;
 
+    if($src) {
+      $sql .= ' AND src = '.$src;
+    }
+
     $total_arr = [];
     $result = $this->db->query($sql);
     $myrow = $result->fetch(\PDO::FETCH_ASSOC);
@@ -55,6 +59,10 @@ class Analysis_outgoing_calls
 
     $sql .= $extens;
 
+    if($src) {
+      $sql .= ' AND src = '.$src;
+    }
+
     $result = $this->db->query($sql);
     $myrow = $result->fetch(\PDO::FETCH_ASSOC);
     $total_arr[1]['name'] = "Городские";
@@ -66,6 +74,10 @@ class Analysis_outgoing_calls
             WHERE LENGTH(src) IN (2,3,4) AND LENGTH(dst) > 9 AND dst LIKE '89%' AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
     $sql .= $extens;
+
+    if($src) {
+      $sql .= ' AND src = '.$src;
+    }
 
     $result = $this->db->query($sql);
     $myrow = $result->fetch(\PDO::FETCH_ASSOC);
@@ -79,6 +91,10 @@ class Analysis_outgoing_calls
 
     $sql .= $extens;
 
+    if($src) {
+      $sql .= ' AND src = '.$src;
+    }
+
     $result = $this->db->query($sql);
     $myrow = $result->fetch(\PDO::FETCH_ASSOC);
     $total_arr[3]['name'] = "Межгород";
@@ -89,6 +105,10 @@ class Analysis_outgoing_calls
             FROM cdr 
             WHERE LENGTH(src) IN (2,3,4) AND LENGTH(dst) > 9 AND dst LIKE '810%' AND calldate >= '" .  $filter['t1'] . "' AND calldate <= '" . $filter['t2'] . "'";
 
+    if($src) {
+      $sql .= ' AND src = '.$src;
+    }
+    
     $result = $this->db->query($sql);
     $myrow = $result->fetch(\PDO::FETCH_ASSOC);
     $total_arr[4]['name'] = "Международные";
