@@ -67,6 +67,33 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   $obB24User = new \Bitrix24\User\User($obB24App);
   $arCurrentB24User = $obB24User->current();
 
+  // Create and auth user
+  $u = new User();
+  $user = $u->trustedLogin($arCurrentB24User['result']['UF_PHONE_INNER'], $request->getAttribute('ip_address'));
+
+  setcookie("token", "%22".$user['token']."%22");
+
+  ?>
+  Auth success. Please wait.
+  <script>
+      if (typeof window.JsonRequest !== 'function') {
+          document.location.href = "/";
+      } else {
+          // Auth in app
+          var req = {
+              "action": "login",
+              "token": "<?=$user['token']?>";
+          };
+          window.JsonRequest(JSON.stringify(req), function (response) {
+            window.close();
+            return 1;
+          });
+      }
+  </script>
+  <?
+
+  die();
+
   return $response->withJson($arCurrentB24User);
 });
 

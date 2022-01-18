@@ -138,6 +138,31 @@ class User
     }
   }
 
+  public function trustedLogin($login, $ip) {
+    $sql = "SELECT id, name, fullname
+	          FROM acl_user
+	          WHERE name='".addslashes($login)."'";
+    $res = $this->db->query($sql);
+    if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {
+      $token = substr(sha1(sprintf("%s%d", $row['name'], round(microtime(1) * 1000))), 0, 32); 
+      $sql = "INSERT INTO acl_auth_token (acl_user_id,token,pcode,version,ip,hwid,issued,updated,expire)
+              VALUES ('" . $row['id'] . "','" . $token . "','web','3.0','" . $ip . "','',Now(),Now(),DATE_ADD(Now(), INTERVAL 24 HOUR))";
+      if (!$this->db->query($sql)) return 0;
+      $this->token = $token;
+      return [
+        'error' => 0,
+        'token' => $token,
+        'fullname' => $row['fullname'],
+        'ip' => $ip
+      ];
+    } else {
+      return [
+        'error' => 1,
+        'message' => 'Bad login or password'
+      ];
+    }
+  }
+
   private function updateToken() {
     $sql = "UPDATE acl_auth_token SET updated = Now(), expire = Now() + INTERVAL 5 DAY WHERE id = '".$this->token_id."' LIMIT 1";
     $this->db->query($sql);

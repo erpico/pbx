@@ -25,7 +25,9 @@
         "http-interop/http-factory-guzzle": "^1.0",
         "php-http/httplug": "^2.2",
         "php-http/message": "^1.11",
-        "supervisorphp/supervisor": "^4.0"
+        "supervisorphp/supervisor": "^4.0",
+        "mesilov/bitrix24-php-sdk": "^1.2",
+        "symfony/http-client": "^5.4"
     },
     "require-dev": {
         "phpunit/phpunit": ">=4.8 < 6.0"
