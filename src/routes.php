@@ -48,7 +48,7 @@ $app->get('/cdr/list', function (Request $request, Response $response, array $ar
 
 $app->get('/cdr/list/{id}', function (Request $request, Response $response, array $args) use ($app) {
   // $id = $request->getParam('id', 0);
-  $id = (float)$args["id"];
+  $id = $args["id"];
   // die(var_dump($id));
   $key = $request->getParam('key', 0);
   $status = $request->getParam('status', 0);
