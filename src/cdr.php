@@ -35,14 +35,19 @@ class PBXCdr {
           holdtime AS hold, 
           talktime AS talk, 
           uniqid, 
-          agentname,
+          fullname as agentname,
           queue,
           channel,
-          dstchannel
-    FROM queue_cdr WHERE uniqid = '{$id}' 
+          dstchannel,
+          userfield
+    FROM queue_cdr 
+    LEFT JOIN acl_user on (agentname = acl_user.name)
+    WHERE uniqid = '{$id}' 
      UNION ALL
-    SELECT calldate AS time, src, dst, name, disposition AS reason, duration - billsec AS hold , billsec AS talk, uniqueid AS uniqid, '', '', channel, dstchannel
-    FROM cdr WHERE uniqueid = '{$id}'";
+    SELECT calldate AS time, src, dst, cdr.name, disposition AS reason, duration - billsec AS hold , billsec AS talk, uniqueid AS uniqid, fullname as agentname, '', channel, dstchannel, userfield
+    FROM cdr 
+    LEFT JOIN acl_user on (SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) = acl_user.name)
+    WHERE uniqueid = '{$id}'";
     $result_cdr = $this->db->query($sql);      
     $cdr = $result_cdr->fetchAll(\PDO::FETCH_ASSOC);
 
