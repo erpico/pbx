@@ -37,6 +37,7 @@ $container['server_host'] = function ($c) {
 };
 $container['errorHandler'] = function ($c) {
   return function ($request, $response, $exception) use ($c) {
+    $c['logger']->error('Exception: ' . $exception->getMessage() . " ON " . $exception->getFile() . ":" . $exception->getLine() . " Trace: " . $exception->getTraceAsString());
     return $response->withStatus(500)->withJson([
      'result' => false, 'message' => $exception->getMessage()
    ]);
@@ -44,6 +45,7 @@ $container['errorHandler'] = function ($c) {
 };
 $container['phpErrorHandler'] = function ($c) {
   return function ($request, $response, $exception) use ($c) {
+    $c['logger']->error('Exception: ' . $exception->getMessage() . " ON " . $exception->getFile() . ":" . $exception->getLine() . " Trace: " . $exception->getTraceAsString());
     return $response->withStatus(500)->withJson([
      'result' => false, 'message' => $exception->getMessage()
      ]);

@@ -7,6 +7,8 @@ use Monolog\Handler\StreamHandler;
 use Symfony\Component\HttpClient\HttpClient;
 use Erpico\User;
 
+require_once __DIR__."/Bitrix24/CMBitrix.php";
+
 $app->get('/bitrix24/app', function (Request $request, Response $response, array $args) {
   $appId = 'local.61e590d62b7ba6.89031548';
   $secret = 'WiFTIjUADydAIJI2U7ZGPasRFnqckZrFhHUC12II5vAseO3e1f';
@@ -171,4 +173,44 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
   }
 
   return $response->withJson($users);
+});
+
+$app->get('/bitrix24/call/add', function (Request $request, Response $response, array $args) {
+    $intnum = $request->getParam('intnum', '');
+    $extnum = $request->getParam('extnum', '');
+    $type = $request->getParam('type', '');
+    $crm_create = $request->getParam('crm_create', '');
+    $line_number = $request->getParam('line_number', '');
+    $channel = $request->getParam('channel', '');
+
+    $helper = new CMBitrix($channel);
+
+    $resultFromB24 = $helper->runInputCall($intnum, 
+                                           $extnum,
+                                           $type,
+                                           $crm_create,
+                                           $line_number); 
+
+    print $resultFromB24;
+
+    die();
+});
+
+$app->get('/bitrix24/call/record', function (Request $request, Response $response, array $args) {
+    $call_id = $request->getParam('call_id', '');
+    $FullFname = $request->getParam('FullFname', '');
+    $CallIntNum = $request->getParam('CallIntNum', '');
+    $CallDuration = $request->getParam('CallDuration', '');
+    $CallDisposition = $request->getParam('CallDisposition', '');
+    $channel = $request->getParam('channel', '');
+
+    $helper = new CMBitrix($channel);
+
+    $resultFromB24 = $helper->uploadRecordedFile($call_id,
+                                                 $FullFname,
+                                                 $CallIntNum,
+                                                 $CallDuration,
+                                                 $CallDisposition); 
+
+    return $response->withJson($resultFromB24);
 });
