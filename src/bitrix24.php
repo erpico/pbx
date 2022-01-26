@@ -50,6 +50,7 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   }
 
   // create a log channel
+ 
   $log = new Logger('bitrix24');
   $log->pushHandler(new StreamHandler(__DIR__."/../logs/bitrix24.log", Logger::DEBUG));
 
@@ -66,14 +67,31 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   $obB24App->setRefreshToken($_SESSION['refresh_token']);
   
   // get information about current user from bitrix24
-  $obB24User = new \Bitrix24\User\User($obB24App);
-  $arCurrentB24User = $obB24User->current();
+  while (1) {
+  try {
+    $obB24User = new \Bitrix24\User\User($obB24App);
+    $arCurrentB24User = $obB24User->current();
+  } catch (\Bitrix24\Exceptions\Bitrix24TokenIsExpiredException $e) {
+    $obB24App->setRedirectUri("https://".$_SERVER['HTTP_HOST']."/bitrix24/app");
+    $newToken = $obB24App->getNewAccessToken();
+    $_SESSION['access_token'] = $newToken['access_token'];
+    $_SESSION['refresh_token'] = $newToken['refresh_token'];
+    $obB24App->setAccessToken($newToken['access_token']);
+    $obB24App->setRefreshToken($newToken['refresh_token']);
+    continue;
+  }
+  break;
+  }
 
+  if (!strlen($arCurrentB24User['result']['UF_PHONE_INNER'])) {
+    die("Cannot login user without phone.");
+  }
   // Create and auth user
   $u = new User();
   $user = $u->trustedLogin($arCurrentB24User['result']['UF_PHONE_INNER'], $request->getAttribute('ip_address'));
 
-  setcookie("token", "%22".$user['token']."%22");
+  if (!$user['id']) die("Auth failed");
+  setcookie("token", '"'.$user['token'].'"', 0, '/');
 
   ?>
   Auth success. Please wait.
@@ -84,7 +102,10 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
           // Auth in app
           var req = {
               "action": "login",
-              "token": "<?=$user['token']?>";
+              "token": "<?=$user['token']?>",
+              "id": "<?=$user['id']?>",
+              "name": "<?=$user['name']?>",
+              "fullname": "<?=$user['fullname']?>"
           };
           window.JsonRequest(JSON.stringify(req), function (response) {
             window.close();
@@ -196,7 +217,7 @@ $app->get('/bitrix24/call/add', function (Request $request, Response $response, 
     die();
 });
 
-$app->get('/bitrix24/call/record', function (Request $request, Response $response, array $args) {
+$app->any('/bitrix24/call/record', function (Request $request, Response $response, array $args) {
     $call_id = $request->getParam('call_id', '');
     $FullFname = $request->getParam('FullFname', '');
     $CallIntNum = $request->getParam('CallIntNum', '');
