@@ -62,6 +62,15 @@ class CMBitrix {
     
 	}
 
+	public function getLeadLinkByPhone($phone){ 
+	$result = $this->getBitrixApi(array('FILTER' => array ('PHONE' => $phone)), 'crm.lead.list');
+	    if ($result){
+			return $result['result'][0]['ID'];
+	    } else {
+	        return false;
+	    }
+	}
+
 	/**
 	 * Upload recorded file to Bitrix24.
 	 *
@@ -382,7 +391,7 @@ class CMBitrix {
 	        ));
 	    $result = curl_exec($curl);
 	    curl_close($curl);
-	    $this->logRequest($queryUrl,$queryData, $result);
+	    // $this->logRequest($queryUrl,$queryData, $result);
 	    if ($this->isJson($result)){
 	        $result = json_decode($result, true);
 	        return $result;

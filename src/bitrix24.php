@@ -235,3 +235,22 @@ $app->any('/bitrix24/call/record', function (Request $request, Response $respons
 
     return $response->withJson($resultFromB24);
 });
+
+$app->get('/bitrix24/lead/search', function (Request $request, Response $response, array $args) {
+    $phone = $request->getParam('phone', '');
+    $redirect = $request->getParam('redirect', 0);
+    $helper = new CMBitrix($channel);
+    $domain = 'portal.trend-spb.ru';
+
+    $res = $helper->getLeadLinkByPhone($phone);
+    if ($res) {
+        if ($redirect) {
+            header("Location: https://$domain/crm/lead/details/$res/");
+            die();
+        } else {
+            return $response->withJson(['link' => "https://$domain/crm/lead/details/$res/"]);
+        }
+    } else {
+        return $response->withJson(['res'=> false]);
+    }
+});
