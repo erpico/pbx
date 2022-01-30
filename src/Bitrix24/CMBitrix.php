@@ -8,10 +8,8 @@
 
 class CMBitrix {
 
-	protected $apiUrl = "https://portal.trend-spb.ru/rest/483/kscciuq0czx12mth/";
-
 	protected $db;
-  	protected $ami;
+  protected $ami;
 
 	protected $channel = "";
 
@@ -26,6 +24,7 @@ class CMBitrix {
 		$this->user = $container['auth'];//new Erpico\User($this->db);
 		$this->utils = new Erpico\Utils();
 		$this->channel = $channel;
+		$this->settings = PBXSettings::class;
     }
 
 	/**
@@ -63,9 +62,9 @@ class CMBitrix {
 	}
 
 	public function getLeadLinkByPhone($phone){ 
-	$result = $this->getBitrixApi(array('FILTER' => array ('PHONE' => $phone)), 'crm.lead.list');
-	    if ($result){
-			return $result['result'][0]['ID'];
+	$result = $this->getBitrixApi(array('ORDER' => ["DATE_CREATE" => "DESC"], 'FILTER' => array ('PHONE' => $phone, 'ACTIVE' => 'Y')), 'crm.lead.list');
+	    if ($result && isset($result['result'])){
+			  if (count($result['result']) > 0) return $result['result'][0]['ID'];
 	    } else {
 	        return false;
 	    }
@@ -107,7 +106,7 @@ class CMBitrix {
 		}
 
 	    $result = $this->getBitrixApi(array(
-    			    'USER_PHONE_INNER' => $intNum,
+          'USER_PHONE_INNER' => $intNum,
 					'USER_ID' => $this->getUSER_IDByIntNum($intNum),
 					'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
 					'STATUS_CODE' => $sipcode,
@@ -376,7 +375,7 @@ class CMBitrix {
 	 */
 
 	public function getBitrixApi($data, $method){
-		$url = $this->apiUrl;
+		$url = $this->settings->getSettingByHandle('bitrix.api_url');
 		if (!$url) return false;
 	    $queryUrl = $url.$method.'.json';
 	    $queryData = http_build_query($data);

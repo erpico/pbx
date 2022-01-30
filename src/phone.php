@@ -259,6 +259,16 @@ class PBXPhone
     return ["result" => false, "message" => "Произошла ошибка выполнения операции"];
   }
 
+  public function setPhoneUser(array $values) {
+    try {
+      if ($this->db->query("UPDATE ".self::getTableName()." SET user_id =".$values['user_id'].", model = 'erpico' WHERE id = ".$values['id'])) {
+        return ["result" => true, "message" => "Телефон успешно привязался"];
+      }
+    } catch (Exception $ex) {
+      return ["result" => false, "message" => "Произошла ошибка привязки телефона"];
+    }
+  }
+
   /**
    * @param $id
    *

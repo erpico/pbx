@@ -639,12 +639,10 @@ class User
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
       }
 
-      if (!$disable_rules) {
-        if (isset($params['state']) && intval($params['state'])) {
-          $sql .= "`state` = '" . intval($params['state']) . "',";
-        } else {
-          return ["result" => false, "message" => "state can`t be empty"];
-        }
+      if (isset($params['state']) && intval($params['state'])) {
+        $sql .= "`state` = '" . intval($params['state']) . "',";
+      } else {
+        return ["result" => false, "message" => "state can`t be empty"];
       }
       
       if (!intval($params['id'])) {
@@ -720,7 +718,7 @@ class User
       return ["result" => false, "message" => "Произошла ошибка выполнения операции", "info" => $th];
     }
 
-    return ["result" => true, "message" => "Операция прошла успешно"];
+    return ["result" => true, "message" => $params['id'] ? "Пользователь успешно обновлен" : "Пользователь успешно добавлен", "id" => $id];
 
   }
   

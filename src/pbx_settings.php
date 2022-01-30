@@ -169,7 +169,7 @@ class PBXSettings {
     return false;
   }
 
-  private function getSettingByHandle($handle) {
+  public function getSettingByHandle($handle) {
     $sql = "SELECT id, handle, val FROM cfg_setting WHERE handle ='".trim(addslashes($handle))."'";
     // die($sql);
     $res = $this->db->query($sql);

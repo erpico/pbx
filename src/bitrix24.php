@@ -10,9 +10,11 @@ use Erpico\User;
 require_once __DIR__."/Bitrix24/CMBitrix.php";
 
 $app->get('/bitrix24/app', function (Request $request, Response $response, array $args) {
-  $appId = 'local.61e590d62b7ba6.89031548';
-  $secret = 'WiFTIjUADydAIJI2U7ZGPasRFnqckZrFhHUC12II5vAseO3e1f';
-  $domain = 'portal.trend-spb.ru';
+  $settings = new PBXSettings();
+  $appId = $settings->getSettingByHandle('bitrix.app_id')['val'];
+  $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
+  $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
+  $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
 
   $client = HttpClient::create(['http_version' => '2.0']);
 
@@ -39,12 +41,10 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 
     $content = $result->toArray();
 
-    $_SESSION['member_id'] = $content['member_id'];
-    $_SESSION['access_token'] = $content['access_token'];
-    $_SESSION['refresh_token'] = $content['refresh_token'];
+    setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $content['member_id'], 'access_token' => $content['access_token'], 'refresh_token' => $content['refresh_token']]))), 0, '/');
   }
 
-  if (!isset($_SESSION['member_id'])) {
+  if (!isset($bitrix24_token['member_id'])) {
       header("Location: https://$domain/oauth/authorize/?client_id=$appId");
       die();
   }
@@ -62,9 +62,9 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 
   // set user-specific settings
   $obB24App->setDomain($domain);
-  $obB24App->setMemberId($_SESSION['member_id']);
-  $obB24App->setAccessToken($_SESSION['access_token']);
-  $obB24App->setRefreshToken($_SESSION['refresh_token']);
+  $obB24App->setMemberId($bitrix24_token['member_id']);
+  $obB24App->setAccessToken($bitrix24_token['access_token']);
+  $obB24App->setRefreshToken($bitrix24_token['refresh_token']);
   
   // get information about current user from bitrix24
   while (1) {
@@ -74,23 +74,36 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   } catch (\Bitrix24\Exceptions\Bitrix24TokenIsExpiredException $e) {
     $obB24App->setRedirectUri("https://".$_SERVER['HTTP_HOST']."/bitrix24/app");
     $newToken = $obB24App->getNewAccessToken();
-    $_SESSION['access_token'] = $newToken['access_token'];
-    $_SESSION['refresh_token'] = $newToken['refresh_token'];
+    setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $bitrix24_token['member_id'], 'access_token' => $newToken['access_token'], 'refresh_token' => $newToken['refresh_token']]))), 0, '/');
     $obB24App->setAccessToken($newToken['access_token']);
     $obB24App->setRefreshToken($newToken['refresh_token']);
     continue;
   }
   break;
   }
-
   if (!strlen($arCurrentB24User['result']['UF_PHONE_INNER'])) {
     die("Cannot login user without phone.");
   }
   // Create and auth user
   $u = new User();
   $user = $u->trustedLogin($arCurrentB24User['result']['UF_PHONE_INNER'], $request->getAttribute('ip_address'));
-
-  if (!$user['id']) die("Auth failed");
+  if (!$user['fullname']) {
+      $arCurrentB24User = $arCurrentB24User['result'];
+      $userInfo = [
+            "state" => 1,
+            "name" => trim($arCurrentB24User['UF_PHONE_INNER']),
+            "fullname" => (strlen(trim($arCurrentB24User['LAST_NAME'])) ? trim($arCurrentB24User['LAST_NAME']) . " " : "") . $arCurrentB24User['NAME'],
+            "phone" => trim($arCurrentB24User['UF_PHONE_INNER']),
+            "description" => "email=" . $arCurrentB24User['EMAIL'] . ";mobile=" . $arCurrentB24User['WORK_PHONE'] . ";title=" . $arCurrentB24User['WORK_POSITION']
+        ];
+    $res = $u->addUpdate($userInfo);
+    if ($res['result'] == true) {
+      $user = $u->trustedLogin($arCurrentB24User['UF_PHONE_INNER'], $request->getAttribute('ip_address'));
+      if (!$user['fullname']) die(['res' => false, 'text' => 'Произошла ошибка']);
+    } else {
+        die(['res' => $res]);
+    }
+  }
   setcookie("token", '"'.$user['token'].'"', 0, '/');
 
   ?>
@@ -121,9 +134,11 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 });
 
 $app->get('/bitrix24/sync', function (Request $request, Response $response, array $args) {
-    $appId = 'local.61e590d62b7ba6.89031548';
-    $secret = 'WiFTIjUADydAIJI2U7ZGPasRFnqckZrFhHUC12II5vAseO3e1f';
-    $domain = 'portal.trend-spb.ru';
+  $settings = new PBXSettings();
+  $appId = $settings->getSettingByHandle('bitrix.app_id')['val'];
+  $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
+  $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
+  $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
 
     // create a log channel
   $log = new Logger('bitrix24');
@@ -137,9 +152,9 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
 
   // set user-specific settings
   $obB24App->setDomain($domain);
-  $obB24App->setMemberId($_SESSION['member_id']);
-  $obB24App->setAccessToken($_SESSION['access_token']);
-  $obB24App->setRefreshToken($_SESSION['refresh_token']);
+  $obB24App->setMemberId($bitrix24_token['member_id']);
+  $obB24App->setAccessToken($bitrix24_token['access_token']);
+  $obB24App->setRefreshToken($bitrix24_token['refresh_token']);
 
   $i = 0;
   $users = [];
@@ -171,6 +186,7 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
 
   // Import users
   $user = new User();
+  $phone = new PBXPhone();
   $ulist = $user->fetchList("", 0, 100000, 0, 1);
   $eusers = [];
   foreach ($ulist as $u) {
@@ -190,7 +206,11 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
       $uinfo['fullname'] = (strlen($u['last_name']) ? $u['last_name']." " : "").$u['name'];
       $uinfo['phone'] = $u['phone'];
       $uinfo['description'] = "email=".$u['email'].";mobile=".$u['mobile'].";title=".$u['title'];
-      $u['result'] = $user->addUpdate($uinfo);
+      $u['result'] = $user->addUpdate($uinfo, $disable_rules = 1);
+      $p = $phone->fetchList(['phone' => $u['phone'], "active" => 1], 0, 3, 0, 0);
+      if($p && $u['result']['id']) {
+          $res = $phone->setPhoneUser(["id" => $p[0]['id'], "user_id" => $u['result']['id']]);
+      }
   }
 
   return $response->withJson($users);
