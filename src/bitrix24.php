@@ -259,7 +259,7 @@ $app->any('/bitrix24/call/record', function (Request $request, Response $respons
 $app->get('/bitrix24/lead/search', function (Request $request, Response $response, array $args) {
     $phone = $request->getParam('phone', '');
     $redirect = $request->getParam('redirect', 0);
-    $helper = new CMBitrix($channel);
+    $helper = new CMBitrix();
     $settings = new PBXSettings();
     $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
 
@@ -274,4 +274,18 @@ $app->get('/bitrix24/lead/search', function (Request $request, Response $respons
     } else {
         return $response->withJson(['res'=> false]);
     }
+});
+
+$app->get('/bitrix24/lead/import', function (Request $request, Response $response, array $args) {
+  $helper = new CMBitrix();
+  $settings = new PBXSettings();
+  $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
+  $filters = $request->getParam('filters');
+
+  $res = $helper->getLeadsByFilters($filters);
+  if ($res) {
+    return $response->withJson(['res'=> true, 'total' => count($res), 'data' => $res, ]);
+  } else {
+    return $response->withJson(['res'=> false]);
+  }
 });
