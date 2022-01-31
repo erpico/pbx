@@ -153,6 +153,7 @@ class User
         'error' => 0,
         'token' => $token,
         'fullname' => $row['fullname'],
+        'name'     => $row['name'],
         'ip' => $ip
       ];
     } else {
