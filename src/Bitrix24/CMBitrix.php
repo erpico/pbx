@@ -419,7 +419,7 @@ class CMBitrix {
 	        ));
 	    $result = curl_exec($curl);
 	    curl_close($curl);
-	     $this->logRequest($queryUrl,$queryData, $result);
+      $this->logRequest($queryUrl,$queryData, $result);
 	    if ($this->isJson($result)){
 	        $result = json_decode($result, true);
 	        return $result;
