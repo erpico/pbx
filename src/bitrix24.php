@@ -209,7 +209,7 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
       $u['result'] = $user->addUpdate($uinfo, $disable_rules = 1);
       $p = $phone->fetchList(['phone' => $u['phone'], "active" => 1], 0, 3, 0, 0);
       if($p && $u['result']['id']) {
-          $res = $phone->setPhoneUser(["id" => $p[0]['id'], "user_id" => $u['result']['id']]);
+        $res = $phone->setPhoneUser(["id" => $p[0]['id'], "login" => $u['phone'], "password" => $p[0]['password'],"phone" => $u['phone'], "model" => "erpico", "user_id" => $u['result']['id']]);
       }
   }
 
@@ -260,7 +260,8 @@ $app->get('/bitrix24/lead/search', function (Request $request, Response $respons
     $phone = $request->getParam('phone', '');
     $redirect = $request->getParam('redirect', 0);
     $helper = new CMBitrix($channel);
-    $domain = 'portal.trend-spb.ru';
+    $settings = new PBXSettings();
+    $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
 
     $res = $helper->getLeadLinkByPhone($phone);
     if ($res) {

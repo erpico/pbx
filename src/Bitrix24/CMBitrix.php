@@ -24,7 +24,7 @@ class CMBitrix {
 		$this->user = $container['auth'];//new Erpico\User($this->db);
 		$this->utils = new Erpico\Utils();
 		$this->channel = $channel;
-		$this->settings = PBXSettings::class;
+		$this->settings = new PBXSettings();
     }
 
 	/**
@@ -375,7 +375,7 @@ class CMBitrix {
 	 */
 
 	public function getBitrixApi($data, $method){
-		$url = $this->settings->getSettingByHandle('bitrix.api_url');
+		$url = $this->settings->getSettingByHandle('bitrix.api_url')['val'];
 		if (!$url) return false;
 	    $queryUrl = $url.$method.'.json';
 	    $queryData = http_build_query($data);
@@ -390,7 +390,7 @@ class CMBitrix {
 	        ));
 	    $result = curl_exec($curl);
 	    curl_close($curl);
-	    // $this->logRequest($queryUrl,$queryData, $result);
+      $this->logRequest($queryUrl,$queryData, $result);
 	    if ($this->isJson($result)){
 	        $result = json_decode($result, true);
 	        return $result;

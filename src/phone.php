@@ -262,6 +262,8 @@ class PBXPhone
   public function setPhoneUser(array $values) {
     try {
       if ($this->db->query("UPDATE ".self::getTableName()." SET user_id =".$values['user_id'].", model = 'erpico' WHERE id = ".$values['id'])) {
+        $this->setCfgSettings($this->server_host, $values["login"], $values["password"], $values["phone"], $values["model"] == "erpico" ? 1 : 0);
+        $this->setUserConfig($values['user_id'], $values['user_id']);
         return ["result" => true, "message" => "Телефон успешно привязался"];
       }
     } catch (Exception $ex) {
