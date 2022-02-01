@@ -150,11 +150,12 @@ class User
       if (!$this->db->query($sql)) return 0;
       $this->token = $token;
       return [
-        'error' => 0,
-        'token' => $token,
+        'error'    => 0,
+        'token'    => $token,
         'fullname' => $row['fullname'],
         'name'     => $row['name'],
-        'ip' => $ip
+        'id'       => $row['id'],
+        'ip'       => $ip
       ];
     } else {
       return [
