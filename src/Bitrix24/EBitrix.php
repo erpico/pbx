@@ -16,7 +16,11 @@ class EBitrix {
         $appId = $settings->getSettingByHandle('bitrix.app_id')['val'];
         $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
         $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
+
         $bitrix24_token = json_decode(gzdecode(base64_decode($request->getCookieParam('bitrix24_token'))), true);
+        if(!isset($bitrix24_token['member_id'])) $bitrix24_token['member_id'] = $settings->getSettingByHandle('bitrix24.member_id')['val'];
+        if(!isset($bitrix24_token['access_token'])) $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
+        if(!isset($bitrix24_token['refresh_token'])) $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
 
         // create a log channel
         $log = new Logger('bitrix24');
@@ -38,6 +42,7 @@ class EBitrix {
             $this->obB24App->setRedirectUri("https://".$_SERVER['HTTP_HOST']."/bitrix24/app");
             $newToken = $this->obB24App->getNewAccessToken();
             setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $bitrix24_token['member_id'], 'access_token' => $newToken['access_token'], 'refresh_token' => $newToken['refresh_token']]))), 0, '/');
+            $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $bitrix24_token['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $newToken['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $newToken['refresh_token']]]));
             $this->obB24App->setAccessToken($newToken['access_token']);
             $this->obB24App->setRefreshToken($newToken['refresh_token']);
         }

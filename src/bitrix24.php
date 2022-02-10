@@ -15,11 +15,11 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   $appId = $settings->getSettingByHandle('bitrix.app_id')['val'];
   $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
   $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
-  $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
 
   $client = HttpClient::create(['http_version' => '2.0']);
 
   $code = $request->getParam("code");
+  $master = $request->getParam("master");
 
   if (strlen($code)) {
     $result = $client->request(
@@ -43,9 +43,17 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
     $content = $result->toArray();
 
     setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $content['member_id'], 'access_token' => $content['access_token'], 'refresh_token' => $content['refresh_token']]))), 0, '/');
+    $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $content['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $content['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $content['refresh_token']]]));
   }
 
-  if (!isset($bitrix24_token['member_id'])) {
+  $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
+  if(!isset($bitrix24_token['member_id'])) $bitrix24_token['member_id'] = $settings->getSettingByHandle('bitrix24.member_id')['val'];
+  if(!isset($bitrix24_token['access_token'])) $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
+  if(!isset($bitrix24_token['refresh_token'])) $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
+
+
+  if (!intval($bitrix24_token['member_id'])) {
+      if ($master) return $response->withJson(['link' => "https://$domain/oauth/authorize/?client_id=$appId"]);
       header("Location: https://$domain/oauth/authorize/?client_id=$appId");
       die();
   }
@@ -63,6 +71,7 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 
   // set user-specific settings
   $obB24App->setDomain($domain);
+  if ($bitrix24_token['member_id'] == null) return $response->withJson(['res' => false, 'message' => 'Отуствует member_id']);
   $obB24App->setMemberId($bitrix24_token['member_id']);
   $obB24App->setAccessToken($bitrix24_token['access_token']);
   $obB24App->setRefreshToken($bitrix24_token['refresh_token']);
@@ -76,6 +85,7 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
     $obB24App->setRedirectUri("https://".$_SERVER['HTTP_HOST']."/bitrix24/app");
     $newToken = $obB24App->getNewAccessToken();
     setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $bitrix24_token['member_id'], 'access_token' => $newToken['access_token'], 'refresh_token' => $newToken['refresh_token']]))), 0, '/');
+    $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $bitrix24_token['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $newToken['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $newToken['refresh_token']]]));
     $obB24App->setAccessToken($newToken['access_token']);
     $obB24App->setRefreshToken($newToken['refresh_token']);
     continue;
@@ -139,7 +149,11 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
   $appId = $settings->getSettingByHandle('bitrix.app_id')['val'];
   $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
   $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
+
   $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
+  if(!isset($bitrix24_token['member_id'])) $bitrix24_token['member_id'] = $settings->getSettingByHandle('bitrix24.member_id')['val'];
+  if(!isset($bitrix24_token['access_token'])) $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
+  if(!isset($bitrix24_token['refresh_token'])) $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
 
     // create a log channel
   $log = new Logger('bitrix24');
@@ -153,9 +167,19 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
 
   // set user-specific settings
   $obB24App->setDomain($domain);
+  if ($bitrix24_token['member_id'] == null) return $response->withJson(['res' => false, 'message' => 'Отуствует member_id']);
   $obB24App->setMemberId($bitrix24_token['member_id']);
   $obB24App->setAccessToken($bitrix24_token['access_token']);
   $obB24App->setRefreshToken($bitrix24_token['refresh_token']);
+
+  if ($obB24App->isAccessTokenExpire()) {
+      $obB24App->setRedirectUri("https://".$_SERVER['HTTP_HOST']."/bitrix24/app");
+      $newToken = $obB24App->getNewAccessToken();
+      setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $bitrix24_token['member_id'], 'access_token' => $newToken['access_token'], 'refresh_token' => $newToken['refresh_token']]))), 0, '/');
+      $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $bitrix24_token['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $newToken['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $newToken['refresh_token']]]));
+      $obB24App->setAccessToken($newToken['access_token']);
+      $obB24App->setRefreshToken($newToken['refresh_token']);
+  }
 
   $i = 0;
   $users = [];
@@ -214,7 +238,7 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
       }
   }
 
-  return $response->withJson($users);
+  return $response->withJson(['res' => true, 'users' => $users]);
 });
 
 $app->get('/bitrix24/call/add', function (Request $request, Response $response, array $args) {
