@@ -9,7 +9,7 @@
 class CMBitrix {
 
 	protected $db;
-  protected $ami;
+    protected $ami;
 
 	protected $channel = "";
 
@@ -71,138 +71,34 @@ class CMBitrix {
 	}
 
   public function getLeadsByFilters($filters) {
-    $finish = false;
+    $i = 0;
     $leads = [];
-    $filters = json_decode($filters, true);
-    while (!$finish) {
+    $filters = is_string($filters) ? json_decode($filters, true) : $filters;
+    while (1) {
       $result = $this->getBitrixApi(array(
-        'ORDER' => ["DATE_CREATE" => "ASC"],
+        'ORDER' => ["DATE_CREATE" => "DESC"],
         'FILTER' => $filters,
         'SELECT' => array('ID', 'ASSIGNED_BY_ID'),
-        'start' => -1
+        'start' => $i
       ), 'crm.lead.list');
-      if (count($result['result']) > 0) {
-        foreach ($result['result'] as $lead) {
-          $leadInfo = $this->getBitrixApi(['ID' => $lead['ID']], 'crm.lead.get');
-          $phone = $leadInfo['result']['PHONE'][0]['VALUE'];
+      if (!count($result['result'])) break;
+      foreach ($result['result'] as $lead) {
+        $leadInfo = $this->getBitrixApi(['ID' => $lead['ID']], 'crm.lead.get');
+        $phone = $leadInfo['result']['PHONE'][0]['VALUE'];
 
-          $userInfo = $this->getBitrixApi(array("ID" => $lead['ASSIGNED_BY_ID']), 'user.get');
-          $fio = trim($userInfo['result'][0]['LAST_NAME'] . " " . $userInfo['result'][0]['NAME'] . " " . $userInfo['result'][0]['SECOND_NAME']);
+        $userInfo = $this->getBitrixApi(array("ID" => $lead['ASSIGNED_BY_ID']), 'user.get');
+        $fio = trim($userInfo['result'][0]['LAST_NAME'] . " " . $userInfo['result'][0]['NAME'] . " " . $userInfo['result'][0]['SECOND_NAME']);
 
-          array_push($leads, ['ID' => $lead['ID'], 'PHONE' => $phone, 'FIO' => $fio]);
-          $filters['>ID'] = $lead['ID'];
-        }
-      } else {
-        $finish = true;
+        array_push($leads, ['ID' => $lead['ID'], 'PHONE' => $phone, 'FIO' => $fio]);
       }
+      if (!isset($result['next'])) {
+        break;
+      }
+      $i = $result['next'];
     }
-    return array_reverse($leads);
+    return $leads;
   }
 
-	/**
-	 * Upload recorded file to Bitrix24.
-	 *
-	 * @param string $call_id
-	 * @param string $recordingfile
-	 * @param string $duration
-	 * @param string $intNum
-	 *
-	 * @return int internal user number
-	 */
-	public function uploadRecordedFile($call_id,$recordedfile,$intNum,$duration,$disposition){
-		switch ($disposition) {
-		 	case 'ANSWERED':
-		 	case 'COMPLETECALLER':
-		 	case 'COMPLETEAGENT':
-		    case 'TRANSFER':	
-		 		$sipcode = 200; // успешный звонок
-		 		break;
-		 	case 'NO ANSWER':
-		 	case 'ABANDON':
-		 	case 'EXITEMPTY':
-		 	case 'RINGNOANSWER':
-		 	case 'EXITWITHTIMEOUT':
-		 		$sipcode = 304; // нет ответа
-		 		$duration = 0; // Set duration to zero for missed calls
-		 		break;
-		 	case 'BUSY':
-				$sipcode =  486; //  занято
-		 		$duration = 0; // Set duration to zero for missed calls
-		 	default:
-		 		if(empty($disposition)) $sipcode = 304; //если пустой пришел, то поставим неотвечено
-				else $sipcode = 603; // отклонено, когда все остальное
-		 		break;
-		}
-
-	    $result = $this->getBitrixApi(array(
-          'USER_PHONE_INNER' => $intNum,
-					'USER_ID' => $this->getUSER_IDByIntNum($intNum),
-					'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
-					'STATUS_CODE' => $sipcode,
-					//'CALL_START_DATE' => date("Y-m-d H:i:s"),
-					'DURATION' => $duration, //длительность звонка в секундах
-					'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
-					), 'telephony.externalcall.finish');
-		
-	    if ($result){
-	        return $result;
-	    } else {
-	        return false;
-	    }
-    
-	}
-
-	/**
-	 * Run Bitrix24 REST API method telephony.externalcall.register.json  
-	 *
-	 * @param int $exten (${EXTEN} from the Asterisk server, i.e. internal number)
-	 * @param int $callerid (${CALLERID(num)} from the Asterisk server, i.e. number which called us)
-	 *
-	 * @return array  like this:
-	 * Array
-	 *	(
-	 *	    [result] => Array
-	 *	        (
-	 *	            [CALL_ID] => externalCall.cf1649fa0f4479870b76a0686f4a7058.1513888745
-	 *	            [CRM_CREATED_LEAD] => 
-	 *	            [CRM_ENTITY_TYPE] => LEAD
-	 *	            [CRM_ENTITY_ID] => 24
-	 *	        )
-	 *	)
-	 * We need only CALL_ID
-	 */
-	public function runInputCall($exten, $callerid, $type=2, $crmCreate=1, $lineNumber = "") {
-	    $userId = $this->getUSER_IDByIntNum($exten);
-	    switch ($lineNumber) {
-		case '0110747':
-		case '0111535':
-		case '4499999':
-		    $userId = 812;
-		    break;
-		case '0110748':
-		case '0111712':
-		case '74957750440':
-		    $userId = 4121;
-		    break;
-	    }
-	    $result = $this->getBitrixApi(array(
-			'USER_PHONE_INNER' => $exten,
-			'USER_ID' => $userId,
-			'PHONE_NUMBER' => $callerid,
-			'TYPE' => $type,
-			'CALL_START_DATE' => date("Y-m-d H:i:s"),
-			'CRM_CREATE' => $crmCreate,
-			'LINE_NUMBER' => $lineNumber,
-			'SHOW' => 0,
-			), 'telephony.externalcall.register');
-
-	    if ($result){
-	        return $result['result']['CALL_ID'];
-	    } else {
-	        return false;
-	    }
-    
-	}
 
 	/**
 	 * Run Bitrix24 REST API method user.get.json return only online users array

@@ -21,7 +21,8 @@ class PBXOutgoingCampaign  {
     "action_value" => 0,
     "min_call_time"=> 1,
     "concurrent_calls_limit" => 1,
-    "dial_context" => 0
+    "dial_context" => 0,
+    "lead_filters" => 0
   ];
 
   const WEEK_DAYS = [
@@ -132,6 +133,14 @@ class PBXOutgoingCampaign  {
       }
     }
       return $result;
+  }
+
+  public function getContactById($id) {
+    $sql = "SELECT id, updated, outgouing_company_id, `order`, phone, name, description, state, tries, last_call, dial_result, scheduled_time FROM outgouing_company_contacts WHERE id = '".intval($id)."'";
+    $res = $this->db->query($sql);
+    $row = $res->fetch();
+
+    return $row;
   }
 
   public function getContactsResults($id) {
@@ -301,28 +310,31 @@ class PBXOutgoingCampaign  {
   }
 
   private function savePhone($id, $campaning_id, $phone, $name, $description, $state) {
-    //try {
-      if (strlen($id) >= 8) {
+    $contact = $this->getContactById($id);
+    if ($contact && (!$phone || $phone == '')) {
+      $sql = " DELETE FROM outgouing_company_contacts WHERE id = '" . intval($id) . "'";
+      $res = $this->db->query($sql);
+    } else if (!$phone || $phone == '') {
+      return ;
+    } else {
+      if (!$contact) {
         $sql = " INSERT INTO outgouing_company_contacts SET ";
       } else {
         $sql = " UPDATE outgouing_company_contacts SET ";
-        $sql_end = " WHERE id = '".intval($id)."'";
+        $sql_end = " WHERE id = '" . intval($id) . "'";
       }
-      $sql .= "`phone` = '".trim(addslashes($phone))."',
-      `name` = '".trim(addslashes($name))."',
-      `description` = '".trim(addslashes($description))."',
+      $sql .= "`phone` = '" . trim(addslashes($phone)) . "',
+      `name` = '" . trim(addslashes($name)) . "',
+      `description` = '" . trim(addslashes($description)) . "',
       `updated` = NOW(),
-      `outgouing_company_id` = '".intval($campaning_id)."',
-      `state` = '".intval($state)."'
+      `outgouing_company_id` = '" . intval($campaning_id) . "',
+      `state` = '" . intval($state) . "'
       ";
       if (isset($sql_end)) $sql .= $sql_end;
-      
+
       $res = $this->db->query($sql);
-      // echo $sql."\n";
-    //} catch (\Throwable $th) {
-      // echo $sql."\n\n";
-    //}    
-   }
+    }
+  }
 
   public function addUpdate($values) {
     $errors = [];    
@@ -357,11 +369,9 @@ class PBXOutgoingCampaign  {
       if (isset($values['phones'])) {
         $phones = json_decode($values['phones']);
         foreach ($phones as $phone) {
-          if (intval($phone->phone)) {
-            $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
-            if (isset($resPhone)) {
-              $errors[] = $resPhone;
-            }
+          $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
+          if (isset($resPhone)) {
+            $errors[] = $resPhone;
           }
         }
       }
@@ -463,6 +473,4 @@ class PBXOutgoingCampaign  {
     $this->db->query($sql);
     return true;    
   }
-
-  
 }

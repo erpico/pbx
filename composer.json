@@ -16,6 +16,7 @@
         "slim/slim": "^3.1",
         "slim/php-view": "^2.0",
         "monolog/monolog": "^1.17",
+        "lulco/phoenix": "^1.8",
         "akrabat/rka-ip-address-middleware": "^0.6.0",
         "tkhamez/slim-role-auth": "1.0.0",
         "marcelog/pami": "^2.0",

@@ -59,24 +59,30 @@ $container['notAllowedHandler'] = function ($c) {
   };
 };
 
-$container['db'] = function ($c)  use ($container, $app) {
-  $db = $c->get('settings')['db'];
+$container['dbConfig'] = function ($c) {
   $filename = "/etc/erpico.conf";
   if (file_exists($filename)) {
     $fcfg = fopen($filename, "r");
     $config = [];
     while ($s = fgets($fcfg)) {
-      list($key,$value) = explode("=", $s, 2);
+      list($key, $value) = explode("=", $s, 2);
       $key = trim($key);
       $value = trim($value, " \"\t\n\r\0\x0B");
       $config[$key] = $value;
     };
     fclose($fcfg);
-    $db['host'] = $config['db_host'];
-    $db['user'] = $config['db_user'];
-    $db['password'] = $config['db_password'];
-    $db['schema'] = $config['db_schema'];
-    $container['instance_id'] = $config['vpn_name'];
+  }
+  return $config;
+};
+
+$container['db'] = function ($c)  use ($container, $app) {
+  $db = $c->get('settings')['db'];
+  if ($container['dbConfig']) {
+    $db['host'] = $container['dbConfig']['db_host'];
+    $db['user'] = $container['dbConfig']['db_user'];
+    $db['password'] = $container['dbConfig']['db_password'];
+    $db['schema'] = $container['dbConfig']['db_schema'];
+    $container['instance_id'] = $container['dbConfig']['vpn_name'];
   }
   try {
     $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['schema'].";charset=UTF8", $db['user'], $db['password']);
