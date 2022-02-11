@@ -51,17 +51,11 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   if(!isset($bitrix24_token['access_token'])) $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
   if(!isset($bitrix24_token['refresh_token'])) $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
 
-
   if (!intval($bitrix24_token['member_id'])) {
       if ($master) return $response->withJson(['link' => "https://$domain/oauth/authorize/?client_id=$appId"]);
       header("Location: https://$domain/oauth/authorize/?client_id=$appId");
       die();
   }
-
-  // create a log channel
- 
-  $log = new Logger('bitrix24');
-  $log->pushHandler(new StreamHandler(__DIR__."/../logs/bitrix24.log", Logger::DEBUG));
 
   // init lib
   $obB24App = new \Bitrix24\Bitrix24(false, $log);
@@ -71,11 +65,17 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 
   // set user-specific settings
   $obB24App->setDomain($domain);
-  if ($bitrix24_token['member_id'] == null) return $response->withJson(['res' => false, 'message' => 'Отуствует member_id']);
   $obB24App->setMemberId($bitrix24_token['member_id']);
   $obB24App->setAccessToken($bitrix24_token['access_token']);
   $obB24App->setRefreshToken($bitrix24_token['refresh_token']);
-  
+
+  if ($master && isset($bitrix24_token['member_id']) && !($obB24App->isAccessTokenExpire())) return $response->withJson(['res' => true]);
+
+  // create a log channel
+ 
+  $log = new Logger('bitrix24');
+  $log->pushHandler(new StreamHandler(__DIR__."/../logs/bitrix24.log", Logger::DEBUG));
+
   // get information about current user from bitrix24
   while (1) {
   try {
