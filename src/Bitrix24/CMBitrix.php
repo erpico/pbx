@@ -70,19 +70,18 @@ class CMBitrix {
 	    }
 	}
 
-  public function getLeadsByFilters($filters) {
-    $i = 0;
+  public function getLeadsByFilters($filters, $next) {
     $leads = [];
     $filters = is_string($filters) ? json_decode($filters, true) : $filters;
-    while (1) {
-      $result = $this->getBitrixApi(array(
+
+    $result = $this->getBitrixApi(array(
         'ORDER' => ["DATE_CREATE" => "DESC"],
         'FILTER' => $filters,
         'SELECT' => array('ID', 'ASSIGNED_BY_ID'),
-        'start' => $i
-      ), 'crm.lead.list');
-      if (!count($result['result'])) break;
-      foreach ($result['result'] as $lead) {
+        'start' => $next
+    ), 'crm.lead.list');
+    if (!count($result['result'])) return false;
+    foreach ($result['result'] as $lead) {
         $leadInfo = $this->getBitrixApi(['ID' => $lead['ID']], 'crm.lead.get');
         $phone = $leadInfo['result']['PHONE'][0]['VALUE'];
 
@@ -90,13 +89,10 @@ class CMBitrix {
         $fio = trim($userInfo['result'][0]['LAST_NAME'] . " " . $userInfo['result'][0]['NAME'] . " " . $userInfo['result'][0]['SECOND_NAME']);
 
         array_push($leads, ['ID' => $lead['ID'], 'PHONE' => $phone, 'FIO' => $fio]);
-      }
-      if (!isset($result['next'])) {
-        break;
-      }
-      $i = $result['next'];
     }
-    return $leads;
+    $result['result'] = $leads;
+
+    return $result;
   }
 
 
@@ -315,7 +311,7 @@ class CMBitrix {
 	        ));
 	    $result = curl_exec($curl);
 	    curl_close($curl);
-      $this->logRequest($queryUrl,$queryData, $result);
+      	$this->logRequest($queryUrl,$queryData, $result);
 	    if ($this->isJson($result)){
 	        $result = json_decode($result, true);
 	        return $result;

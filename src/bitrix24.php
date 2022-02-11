@@ -392,10 +392,11 @@ $app->get('/bitrix24/lead/import', function (Request $request, Response $respons
   $settings = new PBXSettings();
   $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
   $filters = $request->getParam('filters');
+  $next = $request->getParam('next');
 
-  $res = $helper->getLeadsByFilters($filters);
+  $res = $helper->getLeadsByFilters($filters, $next);
   if ($res) {
-    return $response->withJson(['res'=> true, 'total' => count($res), 'leads' => $res, ]);
+    return $response->withJson(['res'=> true, 'data' => $res]);
   } else {
     return $response->withJson(['res'=> false]);
   }
