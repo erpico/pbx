@@ -192,6 +192,17 @@ class PBXOutgoingCampaign  {
     return $result;
   }
 
+    public function getContactByPhone($phone) {
+        $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
+    state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE phone = {$phone}";
+        $res = $this->db->query($sql);
+        $result = [];
+        while ($row = $res->fetch()) {
+            $result[] = $row;
+        }
+        return $result;
+    }
+
   private function getSipStatusText($code) {
     $status_list[100] = "100 - Запрос обрабатывается"; // Trying
 
@@ -369,6 +380,8 @@ class PBXOutgoingCampaign  {
       if (isset($values['phones'])) {
         $phones = json_decode($values['phones']);
         foreach ($phones as $phone) {
+          if ($phone->phone) $res = $this->getContactByPhone($phone->phone);
+          if ($res && $res['id'] != $phone->id) continue;
           $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
           if (isset($resPhone)) {
             $errors[] = $resPhone;

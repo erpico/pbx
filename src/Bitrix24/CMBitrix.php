@@ -77,7 +77,7 @@ class CMBitrix {
     $result = $this->getBitrixApi(array(
         'ORDER' => ["DATE_CREATE" => "DESC"],
         'FILTER' => $filters,
-        'SELECT' => array('ID', 'ASSIGNED_BY_ID'),
+        'SELECT' => array('ID', 'CONTACT_ID'),
         'start' => $next
     ), 'crm.lead.list');
     if (!count($result['result'])) return false;
@@ -85,8 +85,8 @@ class CMBitrix {
         $leadInfo = $this->getBitrixApi(['ID' => $lead['ID']], 'crm.lead.get');
         $phone = $leadInfo['result']['PHONE'][0]['VALUE'];
 
-        $userInfo = $this->getBitrixApi(array("ID" => $lead['ASSIGNED_BY_ID']), 'user.get');
-        $fio = trim($userInfo['result'][0]['LAST_NAME'] . " " . $userInfo['result'][0]['NAME'] . " " . $userInfo['result'][0]['SECOND_NAME']);
+        $userInfo = $this->getBitrixApi(array("ID" => $lead['CONTACT_ID']), 'crm.contact.get');
+        $fio = trim($userInfo['result']['LAST_NAME'] . " " . $userInfo['result']['NAME'] . " " . $userInfo['result']['SECOND_NAME']);
 
         array_push($leads, ['ID' => $lead['ID'], 'PHONE' => $phone, 'FIO' => $fio]);
     }
