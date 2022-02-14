@@ -1058,7 +1058,7 @@ class User
 
   public function getNameById($id) {
     $result = null;
-    if (!empty($name)) {
+    if (!empty($id)) {
       $sql = "SELECT name FROM acl_user WHERE id = {$id}";
       $stmt = $this->db->prepare($sql);
       $stmt->execute();

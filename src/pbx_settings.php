@@ -64,6 +64,18 @@ class PBXSettings {
     return $result;
   }
 
+  public function deleteAllQueues() {
+      try {
+          $sql = "SET SQL_SAFE_UPDATES = 0; DELETE FROM cfg_setting WHERE handle REGEXP '^[0-9]+$'; SET SQL_SAFE_UPDATES = 1;";
+          $this->db->query($sql);
+          $result = ['result' => true, 'message' => ''];
+      } catch (\Throwable $th) {
+          $result = ['result' => false, 'message' => $th->getMessage()];
+      }
+
+      return $result;
+  }
+
   private function getGroupSettingByHandle($handle = "", $group_id) {
     $sql = "SELECT id, handle, val FROM cfg_group_setting WHERE handle = '".trim(addslashes($handle))."' AND acl_user_group_id = '".intval($group_id)."' LIMIT 1";
     $res = $this->db->query($sql);
@@ -149,6 +161,7 @@ class PBXSettings {
     if (is_string($settings)) {
       if (strlen($settings)) {
         $settings = json_decode($settings);
+        $this->deleteAllQueues();
         foreach($settings as $setting) {
           $s = $this->getSettingByHandle($setting->handle);
           if (isset($s['id']) && intval($s['id']) && $s['handle'] == $setting->handle) {

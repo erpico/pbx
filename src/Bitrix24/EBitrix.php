@@ -1,6 +1,7 @@
 <?php
 
 
+use Erpico\User;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
 
@@ -79,9 +80,24 @@ class EBitrix {
         $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
         $userId = $userInfo['result'][0]['ID'];
 
-        $settings = new PBXSettings();
-        $result = $settings->getDefaultSettingsByHandle('line.'.$lineNumber)['value'];
-        if ($result) $userId = $result;
+        $userId = 0;
+
+        if (!$userId) {
+            $settings = new PBXSettings();
+            $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
+            if ($result) {
+                $user = new User();
+                $result = $user->getNameById($result);
+                if ($result && ctype_digit($result)) $exten = $result;
+                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
+                $userId = $userInfo['result'][0]['ID'];
+            } else {
+                $result = $settings->getDefaultSettingsByHandle('default_user')['value'];
+                if ($result) $exten = $result;
+                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
+                $userId = $userInfo['result'][0]['ID'];
+            }
+        }
 
         $result = $this->obB24App->call('telephony.externalcall.register', [
             'USER_PHONE_INNER' => $exten,
@@ -115,9 +131,22 @@ class EBitrix {
         $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
         $userId = $userInfo['result'][0]['ID'];
 
-        $settings = new PBXSettings();
-        $result = $settings->getDefaultSettingsByHandle('line.'.$lineNumber)['value'];
-        if ($result) $userId = $result;
+        if (!$userId) {
+            $settings = new PBXSettings();
+            $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
+            if ($result) {
+                $user = new User();
+                $result = $user->getNameById($result);
+                if ($result && ctype_digit($result)) $intNum = $result;
+                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
+                $userId = $userInfo['result'][0]['ID'];
+            } else {
+                $result = $settings->getDefaultSettingsByHandle('default_user')['value'];
+                if ($result) $intNum = $result;
+                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
+                $userId = $userInfo['result'][0]['ID'];
+            }
+        }
 
         switch ($disposition) {
             case 'ANSWERED':
