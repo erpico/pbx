@@ -80,15 +80,19 @@ class CMBitrix {
         'SELECT' => array('ID', 'CONTACT_ID'),
         'start' => $next
     ), 'crm.lead.list');
+    if (isset($result['res']) && $result['res'] == false) return $result;
     if (!count($result['result'])) return false;
     foreach ($result['result'] as $lead) {
         $leadInfo = $this->getBitrixApi(['ID' => $lead['ID']], 'crm.lead.get');
         $phone = $leadInfo['result']['PHONE'][0]['VALUE'];
 
         $userInfo = $this->getBitrixApi(array("ID" => $lead['CONTACT_ID']), 'crm.contact.get');
-        $fio = trim($userInfo['result']['LAST_NAME'] . " " . $userInfo['result']['NAME'] . " " . $userInfo['result']['SECOND_NAME']);
+        $fio = '';
+        if (isset($userInfo['result']['LAST_NAME'])) $fio .= $userInfo['result']['LAST_NAME']." ";
+        if (isset($userInfo['result']['NAME'])) $fio .= $userInfo['result']['NAME']." ";
+        if (isset($userInfo['result']['SECOND_NAME'])) $fio .= $userInfo['result']['SECOND_NAME'];
 
-        array_push($leads, ['ID' => $lead['ID'], 'PHONE' => $phone, 'FIO' => $fio]);
+      array_push($leads, ['ID' => $lead['ID'], 'PHONE' => $phone, 'FIO' => trim($fio)]);
     }
     $result['result'] = $leads;
 
@@ -297,7 +301,7 @@ class CMBitrix {
 
 	public function getBitrixApi($data, $method){
 		$url = $this->settings->getSettingByHandle('bitrix.api_url')['val'];
-		if (!$url) return false;
+		if (!$url) return ['res' => false, 'message' => 'Отсутсвует URL входящего вебхука Битрикс24'];
 	    $queryUrl = $url.$method.'.json';
 	    $queryData = http_build_query($data);
 	    $curl = curl_init();

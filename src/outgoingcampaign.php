@@ -364,8 +364,10 @@ class PBXOutgoingCampaign  {
         $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
       }  
     }
-    if (isset($values['id']) && intval($values['id'])) {
+    if (!isset($values['id']) || $values['id'] == 0) {
       $ssql .= ", `tm_created` = NOW() ";
+    } else {
+      $ssql .= ", `updated` = NOW() ";
     }
     $sql .= $ssql;
     if (isset($values['id']) && intval($values['id'])) {
@@ -392,10 +394,8 @@ class PBXOutgoingCampaign  {
       if (isset($values['days'])) {
         $this->updateWeekDays($id, $values['days']);
       }
-      if (isset($values['settings']) && is_string($values['settings']) && $values['settings'] != "[]") {
-        $this->updateSettings($id, $values['settings']);
-      } else {
-        $this->bindDefaultSettings($id);
+      if (!isset($values['settings']) || $values['settings'] == "[]") {
+          $this->bindDefaultSettings($id);
       }
       return [ "result" => true, "message" => "Операция прошла успешно", "errors"=>$errors];
     }
@@ -424,12 +424,12 @@ class PBXOutgoingCampaign  {
       if ($concurrent_calls_limit || $min_call_time){
         $sql = "UPDATE outgouing_company SET ";
         $ssql = "";
-        if (min_call_time)
+        if ($min_call_time)
           $ssql .= "`min_call_time`= $min_call_time";
-        if (concurrent_calls_limit)
+        if ($concurrent_calls_limit)
         if (strlen($ssql)) $ssql .= ",";
           $ssql .= "`concurrent_calls_limit`= $concurrent_calls_limit";
-        $sql .= $ssql." WHERE id = $id";  
+        $sql .= $ssql." WHERE id = $id";
         $this->db->query($sql);
       }
       return true;

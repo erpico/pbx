@@ -45,23 +45,16 @@ function importLeads($filters, $next, $helper) {
 
 $sql = 'SELECT id, lead_filters FROM outgouing_company';
 $res = $db->query($sql);
+
+$outgoingCompany = new PBXOutgoingCampaign();
+
 while ($row = $res->fetch()) {
     if (isset($row['lead_filters']) || $row['lead_filters'] != '') {
         $row['lead_filters'] = json_decode("{".$row['lead_filters']."}", true);
         $leadsFromBitrix = importLeads($row['lead_filters'], 0, $helper);
-        $leadsFromDB = [];
-
-        $ocsql =  'SELECT id, phone FROM outgouing_company_contacts';
-        $ocres = $db->query($ocsql);
-        while ($ocrow = $ocres->fetch()) {
-            $leadsFromDB[] =  $ocrow;
-        }
 
         foreach ($leadsFromBitrix as $btxLead) {
-            $exist = 0;
-            foreach ($leadsFromDB as $dbLead) {
-                if ($dbLead['phone'] == $btxLead['PHONE']) $exist = 1;
-            }
+            $exist = $outgoingCompany->getContactByPhone($btxLead['PHONE']);
             if (!$exist) {
                 $addSql = "INSERT INTO outgouing_company_contacts 
                            SET `updated` = NOW(), 

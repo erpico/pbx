@@ -390,14 +390,15 @@ $app->get('/bitrix24/lead/search', function (Request $request, Response $respons
 $app->get('/bitrix24/lead/import', function (Request $request, Response $response, array $args) {
   $helper = new CMBitrix($channel);
   $settings = new PBXSettings();
-  $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
+  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
   $filters = $request->getParam('filters');
   $next = $request->getParam('next');
 
   $res = $helper->getLeadsByFilters($filters, $next);
   if ($res) {
+    if (isset($res['res']) && $res['res'] == false) return $response->withJson($res);
     return $response->withJson(['res'=> true, 'data' => $res]);
   } else {
-    return $response->withJson(['res'=> false]);
+    return $response->withJson(['res'=> false, "message" => 'Лиды с указаными фильтрами не найдены!']);
   }
 });
