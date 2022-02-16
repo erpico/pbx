@@ -105,6 +105,110 @@ class CMBitrix {
     return $result;
   }
 
+    /**
+     * Upload recorded file to Bitrix24.
+     *
+     * @param string $call_id
+     * @param string $recordingfile
+     * @param string $duration
+     * @param string $intNum
+     *
+     * @return int internal user number
+     */
+    public function uploadRecordedFile($call_id,$recordedfile,$intNum,$duration,$disposition){
+        switch ($disposition) {
+            case 'ANSWERED':
+            case 'COMPLETECALLER':
+            case 'COMPLETEAGENT':
+            case 'TRANSFER':
+                $sipcode = 200; // успешный звонок
+                break;
+            case 'NO ANSWER':
+            case 'ABANDON':
+            case 'EXITEMPTY':
+            case 'RINGNOANSWER':
+            case 'EXITWITHTIMEOUT':
+                $sipcode = 304; // нет ответа
+                $duration = 0; // Set duration to zero for missed calls
+                break;
+            case 'BUSY':
+                $sipcode =  486; //  занято
+                $duration = 0; // Set duration to zero for missed calls
+            default:
+                if(empty($disposition)) $sipcode = 304; //если пустой пришел, то поставим неотвечено
+                else $sipcode = 603; // отклонено, когда все остальное
+                break;
+        }
+
+        $result = $this->getBitrixApi(array(
+            'USER_PHONE_INNER' => $intNum,
+            'USER_ID' => $this->getUSER_IDByIntNum($intNum),
+            'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
+            'STATUS_CODE' => $sipcode,
+            //'CALL_START_DATE' => date("Y-m-d H:i:s"),
+            'DURATION' => $duration, //длительность звонка в секундах
+            'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
+        ), 'telephony.externalcall.finish');
+
+        if ($result){
+            return $result;
+        } else {
+            return false;
+        }
+
+    }
+
+    /**
+     * Run Bitrix24 REST API method telephony.externalcall.register.json
+     *
+     * @param int $exten (${EXTEN} from the Asterisk server, i.e. internal number)
+     * @param int $callerid (${CALLERID(num)} from the Asterisk server, i.e. number which called us)
+     *
+     * @return array  like this:
+     * Array
+     *	(
+     *	    [result] => Array
+     *	        (
+     *	            [CALL_ID] => externalCall.cf1649fa0f4479870b76a0686f4a7058.1513888745
+     *	            [CRM_CREATED_LEAD] =>
+     *	            [CRM_ENTITY_TYPE] => LEAD
+     *	            [CRM_ENTITY_ID] => 24
+     *	        )
+     *	)
+     * We need only CALL_ID
+     */
+    public function runInputCall($exten, $callerid, $type=2, $crmCreate=1, $lineNumber = "") {
+        $userId = $this->getUSER_IDByIntNum($exten);
+        switch ($lineNumber) {
+            case '0110747':
+            case '0111535':
+            case '4499999':
+                $userId = 812;
+                break;
+            case '0110748':
+            case '0111712':
+            case '74957750440':
+                $userId = 4121;
+                break;
+        }
+        $result = $this->getBitrixApi(array(
+            'USER_PHONE_INNER' => $exten,
+            'USER_ID' => $userId,
+            'PHONE_NUMBER' => $callerid,
+            'TYPE' => $type,
+            'CALL_START_DATE' => date("Y-m-d H:i:s"),
+            'CRM_CREATE' => $crmCreate,
+            'LINE_NUMBER' => $lineNumber,
+            'SHOW' => 0,
+        ), 'telephony.externalcall.register');
+
+        if ($result){
+            return $result['result']['CALL_ID'];
+        } else {
+            return false;
+        }
+
+    }
 
 	/**
 	 * Run Bitrix24 REST API method user.get.json return only online users array

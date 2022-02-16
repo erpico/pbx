@@ -242,7 +242,7 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
 });
 
 $app->get('/bitrix24/call/add', function (Request $request, Response $response, array $args) {
-    $helper = new EBitrix($request);
+//    $helper = new EBitrix($request);
 
     $intnum = $request->getParam('intnum', ''); //номер сотрудника внт битрикс 1998
     $extnum = $request->getParam('extnum', ''); // номер пользователя кому звоним
@@ -250,6 +250,8 @@ $app->get('/bitrix24/call/add', function (Request $request, Response $response, 
     $crm_create = $request->getParam('crm_create', 1); // создание сущности в срм
     $line_number = $request->getParam('line_number', ''); //Номер внешней линии, через который совершался звонок
     $channel = $request->getParam('channel', '');
+
+    $helper = new CMBitrix($channel);
 
     $result = $helper->runInputCall($intnum, $extnum, $type, $crm_create, $line_number);
 
@@ -259,8 +261,8 @@ $app->get('/bitrix24/call/add', function (Request $request, Response $response, 
 });
 
 $app->any('/bitrix24/call/record', function (Request $request, Response $response, array $args) {
-    $helper = new EBitrix($request);
-    $obB24App = $helper->getobB24App();
+//    $helper = new EBitrix($request);
+//    $obB24App = $helper->getobB24App();
 
     $call_id = $request->getParam('call_id', '');//id звонка из метода выше
     $FullFname = $request->getParam('FullFname', '');//URL файла (желательно mp3) с записью звонка
@@ -268,6 +270,7 @@ $app->any('/bitrix24/call/record', function (Request $request, Response $respons
     $CallDuration = $request->getParam('CallDuration', '');//продолжительность разгововра, всего ли?
     $CallDisposition = $request->getParam('CallDisposition', '');//код вызова
     $channel = $request->getParam('channel', '');
+    $helper = new CMBitrix($channel);
 
     $result = $helper->uploadRecordedFile($call_id, $FullFname, $CallIntNum, $CallDuration, $CallDisposition);
 
