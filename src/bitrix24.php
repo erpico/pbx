@@ -51,7 +51,7 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   if(!isset($bitrix24_token['access_token'])) $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
   if(!isset($bitrix24_token['refresh_token'])) $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
 
-  if (!intval($bitrix24_token['member_id'])) {
+  if (!strlen($bitrix24_token['member_id'])) {
       if ($master) return $response->withJson(['link' => "https://$domain/oauth/authorize/?client_id=$appId"]);
       header("Location: https://$domain/oauth/authorize/?client_id=$appId");
       die();
