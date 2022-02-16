@@ -54,15 +54,21 @@ while ($row = $res->fetch()) {
         $leadsFromBitrix = importLeads($row['lead_filters'], 0, $helper);
 
         foreach ($leadsFromBitrix as $btxLead) {
-            $exist = $outgoingCompany->getContactByPhone($btxLead['PHONE']);
+            $exist = $outgoingCompany->getContactByPhone($btxLead['PHONE'], $row['id']);
             if (!$exist) {
-                $addSql = "INSERT INTO outgouing_company_contacts 
-                           SET `updated` = NOW(), 
-                           `outgouing_company_id` = '".$row['id']."', 
-                           `phone` = '".$btxLead['PHONE']."', 
-                           `name` = '".$btxLead['FIO']."', 
-                           `description` = '".$btxLead['ID']."'";
-                $db->exec($addSql);
+                $outgoingCompany->addUpdate([
+                    'id' => $row['id'],
+                    'phones' => json_encode([
+                            [
+                                'id' => 0,
+                                'phone' => $btxLead['PHONE'],
+                                'name' => $btxLead['FIO'],
+                                'description' => $btxLead['ID'],
+                                'state' => 0
+                            ]
+                        ]),
+                    'settings' => 1
+                ]);
             }
         }
     }

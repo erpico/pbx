@@ -77,7 +77,7 @@ class CMBitrix {
     $result = $this->getBitrixApi(array(
         'ORDER' => ["DATE_CREATE" => "DESC"],
         'FILTER' => $filters,
-        'SELECT' => array('ID', 'CONTACT_ID'),
+        'SELECT' => array('ID', 'CONTACT_ID', 'NAME', 'SECOND_NAME', 'LAST_NAME'),
         'start' => $next
     ), 'crm.lead.list');
     if (isset($result['res']) && $result['res'] == false) return $result;
@@ -86,11 +86,17 @@ class CMBitrix {
         $leadInfo = $this->getBitrixApi(['ID' => $lead['ID']], 'crm.lead.get');
         $phone = $leadInfo['result']['PHONE'][0]['VALUE'];
 
-        $userInfo = $this->getBitrixApi(array("ID" => $lead['CONTACT_ID']), 'crm.contact.get');
         $fio = '';
-        if (isset($userInfo['result']['LAST_NAME'])) $fio .= $userInfo['result']['LAST_NAME']." ";
-        if (isset($userInfo['result']['NAME'])) $fio .= $userInfo['result']['NAME']." ";
-        if (isset($userInfo['result']['SECOND_NAME'])) $fio .= $userInfo['result']['SECOND_NAME'];
+        if (!isset($lead['CONTACT_ID'])) {
+            if (isset($lead['LAST_NAME'])) $fio .= $lead['LAST_NAME']." ";
+            if (isset($lead['NAME'])) $fio .= $lead['NAME']." ";
+            if (isset($lead['SECOND_NAME'])) $fio .= $lead['SECOND_NAME'];
+        } else {
+            $userInfo = $this->getBitrixApi(array("ID" => $lead['CONTACT_ID']), 'crm.contact.get');
+            if (isset($userInfo['result']['LAST_NAME'])) $fio .= $userInfo['result']['LAST_NAME'] . " ";
+            if (isset($userInfo['result']['NAME'])) $fio .= $userInfo['result']['NAME'] . " ";
+            if (isset($userInfo['result']['SECOND_NAME'])) $fio .= $userInfo['result']['SECOND_NAME'];
+        }
 
       array_push($leads, ['ID' => $lead['ID'], 'PHONE' => $phone, 'FIO' => trim($fio)]);
     }
