@@ -26,7 +26,7 @@ class Interval_reports {
     }
 
     $demand = " SELECT ";
-    $demand.= " SUBSTRING(calldate,1,10) AS calldate_day, ";
+      $demand.= isset($filter['groupByUuid']) ? "SUBSTRING(a.calldate,1,10) AS calldate_day, " : " SUBSTRING(calldate,1,10) AS calldate_day, ";
 
 // Interval reports hour=3 / day=else(in use) / week=2 / month=4
 /*
@@ -40,7 +40,23 @@ class Interval_reports {
             SUBSTRING(calldate,1,10) AS calldate_day, ";
 */
 
-    $demand.= "	
+    $demand.= isset($filter['groupByUuid']) ? "count(*) AS count_calls, 
+SUM(a.talktime) AS sum_talktime, 
+SUM(a.holdtime) AS sum_holdtime, 
+count(IF(a.reason = 'COMPLETEAGENT',1,NULL)) AS completeagent_calls, 
+count(IF(a.reason = 'COMPLETECALLER',1,NULL)) AS completecaller_calls, 
+count(IF(a.reason = 'TRANSFER',1,NULL)) AS transfer_calls, 
+count(IF(a.reason = 'ABANDON',1,NULL)) AS abandon_calls, 
+count(IF(a.reason = 'EXITEMPTY',1,NULL)) AS exitempty_calls, 
+count(IF(a.reason = 'EXITWITHTIMEOUT',1,NULL)) AS exitwithtimeout_calls, 
+count(IF(a.reason = 'EXITWITHKEY',1,NULL)) AS exitwithkey_calls, 
+count(IF(a.reason = 'SYSCOMPAT',1,NULL)) AS syscompat_calls, 
+MAX(a.holdtime) AS holdtime_max, 
+MAX(a.talktime) AS talktime_max, 
+MIN(a.holdtime) AS holdtime_min, 
+MIN(IF(a.talktime,a.talktime,NULL)) AS talktime_min 
+FROM queue_cdr a
+LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id " : "	
             count(*) AS count_calls,
             SUM(talktime) AS sum_talktime,
             SUM(holdtime) AS sum_holdtime,
@@ -60,30 +76,59 @@ class Interval_reports {
 
 //  Time settings
 
-    if(isset($filter['t1']) && isset($filter['t2'])) $demand = $demand."
-        WHERE calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
-    else $demand = $demand."
-        WHERE Now()-calldate < 86400 ";
+    if(isset($filter['t1']) && isset($filter['t2'])) {
+        $demand = isset($filter['groupByUuid'])
+            ? $demand . "WHERE a.calldate>'".$filter['t1']."' AND a.calldate<'".$filter['t2']."' "
+            : $demand . "WHERE calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
+    } else {
+        $demand = isset($filter['groupByUuid'])
+            ? $demand . " WHERE Now()-a.calldate < 86400 "
+            : $demand . " WHERE Now()-calldate < 86400 ";
+    }
+    if (isset($filter['groupByUuid'])) $demand .= "AND b.uniqid IS NULL ";
 
     // $demand = $demand." WHERE UNIX_TIMESTAMP(calldate)>UNIX_TIMESTAMP('".$t1."') AND UNIX_TIMESTAMP(calldate)<UNIX_TIMESTAMP('".$t2."') ";
 
 //  Filters
 
     if(isset($filter['filter'])) {
-      if($filter['filter']==2) $demand = $demand."
-        AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND !outgoing ";
-      else if($filter['filter']==3) $demand = $demand."
-        AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') AND !outgoing ";
-      else if($filter['filter']==4) $demand = $demand."
-        AND outgoing=1 ";
-      else $demand = $demand."
-        AND !outgoing AND reason != 'RINGNOANSWER' ";
+      if($filter['filter']==2) {
+          $demand = isset($filter['groupByUuid'])
+              ? $demand . " AND (a.reason = 'COMPLETEAGENT' OR a.reason = 'COMPLETECALLER' OR a.reason = 'TRANSFER') AND !a.outgoing "
+              : $demand . " AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND !outgoing ";
+      }
+      else if($filter['filter']==3) {
+          $demand = isset($filter['groupByUuid'])
+          ? $demand . " AND (a.reason = 'ABANDON' OR a.reason = 'EXITWITHTIMEOUT' OR a.reason = 'EXITEMPTY' OR a.reason = 'EXITWITHTKEY') AND !a.outgoing "
+          : $demand . " AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') AND !outgoing ";
+      }
+      else if($filter['filter']==4) {
+          $demand = isset($filter['groupByUuid'])
+              ? $demand . "AND a.outgoing=1 "
+              : $demand . "AND outgoing=1 ";
+      }
+      else {
+          $demand = isset($filter['groupByUuid'])
+            ? $demand . " AND !a.outgoing AND a.reason != 'RINGNOANSWER' "
+            : $demand . " AND !outgoing AND reason != 'RINGNOANSWER' ";
+      }
+    } else {
+        $demand = isset($filter['groupByUuid'])
+            ? $demand . " AND !a.outgoing AND a.reason != 'RINGNOANSWER' "
+            : $demand . " AND !outgoing AND reason != 'RINGNOANSWER' ";
     }
-    else $demand = $demand."
-        AND !outgoing AND reason != 'RINGNOANSWER' ";
 
-    if(isset($filter['src'])) $demand = $demand.
-      "	AND src LIKE '%".$filter['src']."%' ";
+    if(isset($filter['src'])) {
+        $demand = isset($filter['groupByUuid'])
+        ? $demand ." AND a.src LIKE '%" . $filter['src'] . "%' "
+        : $demand ." AND src LIKE '%" . $filter['src'] . "%' ";
+    }
+
+    if(isset($filter['queue'])) {
+        $demand = isset($filter['groupByUuid'])
+            ? $demand ." AND a.queue = " . $filter['queue'] . " "
+            : $demand ." AND queue = " . $filter['queue'] . " ";
+    }
 
     $que = $this->auth->allowed_queues();
     $queues = $utils->sql_allowed_queues($que);
@@ -92,16 +137,23 @@ class Interval_reports {
 
 // Interval reports hour=3 / day=else(in use) / week=2 / month=4
 
-    if($filter['type']==2) $demand.= "
-			GROUP BY DAYOFWEEK(calldate) ";
-    else if($filter['type']==3) $demand.= "
-        GROUP BY SUBSTRING(calldate,12,2) ";
-    else if($filter['type']==4) $demand.= "
-        GROUP BY SUBSTRING(calldate,1,7) ";
-    else $demand.= "
-        GROUP BY SUBSTRING(calldate,1,10) ";
-
-
+    if($filter['type']==2) {
+        $demand .= isset($filter['groupByUuid'])
+        ? " GROUP BY DAYOFWEEK(a.calldate) "
+        : " GROUP BY DAYOFWEEK(calldate) ";
+    } else if($filter['type']==3) {
+        $demand .= isset($filter['groupByUuid'])
+        ? " GROUP BY SUBSTRING(a.calldate,12,2) "
+        : " GROUP BY SUBSTRING(calldate,12,2) ";
+    } else if($filter['type']==4) {
+        $demand .= isset($filter['groupByUuid'])
+            ? " GROUP BY SUBSTRING(a.calldate,1,7) "
+            : " GROUP BY SUBSTRING(calldate,1,7) ";
+    } else {
+        $demand .= isset($filter['groupByUuid'])
+        ? "GROUP BY SUBSTRING(a.calldate,1,10) "
+        : "GROUP BY SUBSTRING(calldate,1,10) ";
+    }
     $result = $this->db->query($demand);
     $cdr_report = [];
     $i = -1;

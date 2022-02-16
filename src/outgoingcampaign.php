@@ -145,7 +145,7 @@ class PBXOutgoingCampaign  {
 
   public function getContactsResults($id) {
     $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
-    state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} AND `state` IN (4,6,7)";
+    state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} AND `state` IN (3,4,6,7)";
     $res = $this->db->query($sql);
     $result = [];
     while ($row = $res->fetch()) {
