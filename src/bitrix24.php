@@ -245,7 +245,7 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
 });
 
 $app->get('/bitrix24/call/add', function (Request $request, Response $response, array $args) {
-//    $helper = new EBitrix($request);
+    $helper = new EBitrix($request);
 
     $intnum = $request->getParam('intnum', ''); //номер сотрудника внт битрикс 1998
     $extnum = $request->getParam('extnum', ''); // номер пользователя кому звоним
@@ -254,9 +254,7 @@ $app->get('/bitrix24/call/add', function (Request $request, Response $response, 
     $line_number = $request->getParam('line_number', ''); //Номер внешней линии, через который совершался звонок
     $channel = $request->getParam('channel', '');
 
-    $helper = new CMBitrix($channel);
-
-    $result = $helper->runInputCall($intnum, $extnum, $type, $crm_create, $line_number);
+    $result = $helper->runInputCall($intnum, $extnum, $type, $crm_create, $line_number, '', $channel);
 
     print $result;
 
@@ -264,29 +262,26 @@ $app->get('/bitrix24/call/add', function (Request $request, Response $response, 
 });
 
 $app->any('/bitrix24/call/record', function (Request $request, Response $response, array $args) {
-//    $helper = new EBitrix($request);
-//    $obB24App = $helper->getobB24App();
+    $helper = new EBitrix($request);
 
-    $call_id = $request->getParam('call_id', '');//id звонка из метода выше
+    $call_id = $request->getParam('call_id', '');//id звонка из BTX
     $FullFname = $request->getParam('FullFname', '');//URL файла (желательно mp3) с записью звонка
-    $CallIntNum = $request->getParam('CallIntNum', '');//номер внутр сотрудника
+    $CallIntNum = $request->getParam('CallIntNum', 0);//номер внутр сотрудника
     $CallDuration = $request->getParam('CallDuration', '');//продолжительность разгововра, всего ли?
     $CallDisposition = $request->getParam('CallDisposition', '');//код вызова
+    $lineNumber = $request->getParam('line_number', '');
     $channel = $request->getParam('channel', '');
-    $helper = new CMBitrix($channel);
 
-    $result = $helper->uploadRecordedFile($call_id, $FullFname, $CallIntNum, $CallDuration, $CallDisposition);
+    $result = $helper->uploadRecordedFile($call_id, $FullFname, $CallIntNum, $CallDuration, $CallDisposition, $lineNumber, $channel);
+    if ($result != false) {
+        $helper->logSync($channel, $CallDuration, $CallIntNum, $result['result']['CALL_FAILED_CODE'], json_encode($result));
+    }
 
     return $response->withJson($result);
 });
 
 $app->any('/bitrix24/call/sync', function (Request $request, Response $response, array $args) {
-    $currentDatetime = new DateTime();
-    $yesterdayDatetime = new DateTime();
-    $yesterdayDatetime->modify('-1 day');
-
     $helper = new EBitrix($request);
-    $obB24App = $helper->getobB24App();
 
     $callId = $request->getParam('callId', '');
     $cdr = new PBXCdr();
@@ -296,80 +291,29 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
 
     if ($callId) {
         $crmCalls = $cdr->getReportsByUid($callId);
-
-        if (count($crmCalls)) {
-            foreach ($crmCalls as $crmCall) {
-                $crmCall['suid'] = explode('.', $crmCall['uniqid'])[0];
-
-                if ($helper->checkSynchronizedCall($crmCall)) continue;
-
-                $exist = 0;
-                $createTime = new DateTime($crmCall['time']);
-                $createTime->modify('-10 minute');
-                $result = $obB24App->call('voximplant.statistic.get', [
-                    'ORDER' => ['CALL_START_DATE' => 'ASC'],
-                    'FILTER' => [
-                        ">CALL_START_DATE" => $createTime->format('Y-m-d H:i:00')
-                    ]
-                ]);
-                if($result['result']) {
-                    foreach($result['result'] as $btxCall) {
-                        $btxCall['CALL_ID'] = explode('.', $btxCall['CALL_ID'])[2];
-                        if ($btxCall['CALL_ID'] == $crmCall['suid'] || $btxCall['CALL_ID'] == ($crmCall['suid'] + 1)) {
-                            $exist = 1;
-                            break;
-                        }
-                    }
-                    if ($exist == 0) {
-                        $result = $helper->addCall($crmCall);
-                        isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
-                    }
-                }
-            }
-        }
     } else {
-        $filter['time'] = '{"start":"'.$yesterdayDatetime->format('Y-m-d H:i:00').'","end":"'.$currentDatetime->format('Y-m-d H:i:59').'"}';
-//        $filter['time'] = '{"start":"2021-12-23 14:00:00","end":"2021-12-23 14:00:00"}';
-        $crmCalls = $cdr->getReport($filter, $start, 1000000);
+        $currentDatetime = new DateTime();
+        $yesterdayDatetime = new DateTime();
+        $yesterdayDatetime->modify('-1 day');
 
-        $i = 0;
-        $btxCalls = [];
-        while(1) {
-            $result = $obB24App->call('voximplant.statistic.get', [
-                'ORDER' => ['CALL_START_DATE' => 'ASC'],
-                'FILTER' => [
-                    ">CALL_START_DATE" => $yesterdayDatetime->format('Y-m-d H:i:00')
-                ],
-                'start' => $i
-            ]);
-            if (!count($result['result'])) break;
-            foreach ($result['result'] as $btxCall) {
-                $btxCalls[] = $btxCall;
-            }
-            if (!isset($result['next'])) break;
-            $i = $result['next'];
-        }
-        if (count($crmCalls)) {
-            foreach ($crmCalls as $crmCall) {
-                $crmCall['suid'] = explode('.', $crmCall['uid'])[0];
+        $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
+//        $filter['time'] = '{"start":"2021-12-23 08:00:00","end":"2021-12-23 09:00:00"}';
+        $crmCalls = $cdr->getReport($filter, 0, 1000000);
+    }
 
-                if ($helper->checkSynchronizedCall($crmCall)) continue;
-
-                $exist = 0;
-                foreach ($btxCalls as $btxCall) {
-                    $btxCall['CALL_ID'] = explode('.', $btxCall['CALL_ID'])[2];
-                    if ($btxCall['CALL_ID'] == $crmCall['suid'] || $btxCall['CALL_ID'] == ($crmCall['suid'] + 1)) {
-                        $exist = 1;
-                        break;
-                    }
-                }
-                if ($exist == 0) {
-                    $result = $helper->addCall($crmCall);
-                    isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
-                }
-            }
+    if (count($crmCalls)) {
+        foreach ($crmCalls as $crmCall) {
+            if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
+            if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
+            if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
+            $int_num = $crmCall['dst'] == 11 ? $crmCall['src'] : $crmCall['dst'];
+            $status_code = $helper->getStatusCodeByReason($crmCall['talk']);
+            if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $status_code)) continue;
+            $result = $helper->addCall($crmCall);
+            isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
         }
     }
+
     return $response->withJson(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 });
 

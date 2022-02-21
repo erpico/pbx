@@ -76,13 +76,162 @@ class EBitrix {
      *	)
      * We need only CALL_ID
      */
-    public function runInputCall($exten, $callerid, $type=2, $crmCreate=1, $lineNumber = "", $createTime = '') {
-        $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
-        $userId = $userInfo['result'][0]['ID'];
+    public function runInputCall($exten, $callerid, $type=2, $crmCreate=1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
+        $userId = $this->getUserInnerIdByPhone($exten, $lineNumber);
 
-        $userId = 0;
+        $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
+        try {
+            $result = $this->obB24App->call('telephony.externalcall.register', [
+                'USER_PHONE_INNER' => $exten,
+                'USER_ID' => $userId,
+                'PHONE_NUMBER' => $callerid,
+                'TYPE' => $type,
+                'CALL_START_DATE' => $createTime,
+                'CRM_CREATE' => $crmCreate,
+                'LINE_NUMBER' => $lineNumber,
+                'SHOW' => 0
+            ]);
+            return $result['result']['CALL_ID'];
+        } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
+            $e = '"'.$e.'"';
+            if ($channel == "" && $crmCall) {
+                $channel = $crmCall['uid'];
+            }
+            $this->logSync($channel, 0, 0, 0, $e);
+            if (!$crmCall) {
+                return false;
+            } else {
+                return ['exception' => $e, 'uid' => $crmCall['uid']];
+            }
+        }
+    }
 
-        if (!$userId) {
+    /**
+     * Upload recorded file to Bitrix24.
+     *
+     * @param string $call_id
+     * @param string $recordingfile
+     * @param string $duration
+     * @param string $intNum
+     *
+     * @return array|int
+     */
+    public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber, $channel = "", $crmCall = null){
+        $userId = $this->getUserInnerIdByPhone($intNum, $lineNumber);
+        $statusCode = $this->getStatusCodeByReason($disposition);
+        $sipcode = $statusCode;
+        if ($sipcode == 304 || $sipcode == 486) {
+            $duration = 0;
+        }
+
+        try {
+            $result = $this->obB24App->call('telephony.externalcall.finish', [
+                'USER_PHONE_INNER' => $intNum,
+                'USER_ID' => $userId,
+                'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
+                'STATUS_CODE' => $sipcode,
+                'DURATION' => $duration, //длительность звонка в секундах
+                'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
+            ]);
+            return $result;
+        } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
+            $e = '"'.$e.'"';
+            if ($crmCall) {
+                $channel = $crmCall['uid'];
+            }
+            $this->logSync($channel, 0, 0, 0, $e);
+
+            if ($channel && !$crmCall) {
+                return false;
+            } else {
+                return ['exception' => $e, 'uid' => $crmCall['uid']];
+            }
+        }
+    }
+
+
+
+    public function logSync($crmCallUid, $duration, $userId, $status_code, $result) {
+        if (!$duration || $duration == '') $duration = 0;
+        if (!$userId || $userId == '') $userId = 0;
+        if (!$status_code || $status_code == '') $status_code = 0;
+
+        $sql = "INSERT INTO btx_call_sync SET sync_time = now()".
+", u_id = '".$crmCallUid.
+"', duration = '".$duration.
+"', int_number = '".$userId.
+"', status_code = '".$status_code.
+"', result = '".$result."'";
+        $this->db->query($sql);
+    }
+
+    public function getSynchronizedCalls($u_id, $duration, $int_number, $status_code) {
+        $sql = "SELECT id, sync_time, u_id, duration, int_number, status_code, result 
+                FROM btx_call_sync 
+                WHERE u_id = '".$u_id."' 
+                AND duration = '".$duration."' 
+                AND int_number = '".$int_number."' 
+                AND status_code = '".$status_code."'";
+        $res = $this->db->query($sql);
+
+        return $res->fetch();
+    }
+
+    public function addCall($crmCall) {
+        if (mb_strlen($crmCall['dst']) == 11) {
+            $type = 1;
+            $intnum = $crmCall['src'];
+            $extnum = $crmCall['dst'];
+        } else {
+            $type = 2;
+            $intnum = $crmCall['dst'];
+            $extnum = $crmCall['src'];
+        }
+        $crm_create = 1;
+        $callId = $this->runInputCall($intnum, $extnum, $type, $crm_create, $crmCall['userfield'], $crmCall['time'], "", $crmCall);
+        if (isset($callId['exception'])) {
+            return $callId;
+        } else {
+            $result = $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], "", $crmCall);
+            $this->logSync($crmCall['uid'], $crmCall['talk'], $intnum, $result['result']['CALL_FAILED_CODE'], json_encode($result));
+            return $result;
+        }
+    }
+
+    public function getStatusCodeByReason($reason) {
+        switch ($reason) {
+            case 'ANSWERED':
+            case 'COMPLETECALLER':
+            case 'COMPLETEAGENT':
+            case 'TRANSFER':
+                $sipcode = 200; // успешный звонок
+                break;
+            case 'NO ANSWER':
+            case 'ABANDON':
+            case 'EXITEMPTY':
+            case 'RINGNOANSWER':
+            case 'EXITWITHTIMEOUT':
+                $sipcode = 304; // нет ответа
+                break;
+            case 'BUSY':
+                $sipcode =  486; //  занято
+                break;
+            default:
+                if(empty($reason)) $sipcode = 304; //если пустой пришел, то поставим неотвечено
+                else $sipcode = 603; // отклонено, когда все остальное
+                break;
+        }
+
+        return $sipcode;
+    }
+
+    public function getUserInnerIdByPhone($exten, $lineNumber = "") {
+        if ($exten) {
+            $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
+            $userId = $userInfo['result'][0]['ID'];
+        }
+
+        if ($userId == null) {
             $settings = new PBXSettings();
             $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
             if ($result) {
@@ -99,164 +248,6 @@ class EBitrix {
             }
         }
 
-        $result = $this->obB24App->call('telephony.externalcall.register', [
-            'USER_PHONE_INNER' => $exten,
-            'USER_ID' => $userId,
-            'PHONE_NUMBER' => $callerid,
-            'TYPE' => $type,
-            'CALL_START_DATE' => (new DateTime($createTime))->format('Y-m-d\TH:i:s+03:00'),
-            'CRM_CREATE' => $crmCreate,
-            'LINE_NUMBER' => $lineNumber,
-            'SHOW' => 0
-        ]);
-        if (isset($result['result'])) {
-            return $result['result']['CALL_ID'];
-        } else {
-            return false;
-        }
-
-    }
-
-    /**
-     * Upload recorded file to Bitrix24.
-     *
-     * @param string $call_id
-     * @param string $recordingfile
-     * @param string $duration
-     * @param string $intNum
-     *
-     * @return int internal user number
-     */
-    public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber){
-        $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
-        $userId = $userInfo['result'][0]['ID'];
-
-        if (!$userId) {
-            $settings = new PBXSettings();
-            $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
-            if ($result) {
-                $user = new User();
-                $result = $user->getNameById($result);
-                if ($result && ctype_digit($result)) $intNum = $result;
-                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
-                $userId = $userInfo['result'][0]['ID'];
-            } else {
-                $result = $settings->getDefaultSettingsByHandle('default_user')['value'];
-                if ($result) $intNum = $result;
-                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
-                $userId = $userInfo['result'][0]['ID'];
-            }
-        }
-
-        switch ($disposition) {
-            case 'ANSWERED':
-            case 'COMPLETECALLER':
-            case 'COMPLETEAGENT':
-            case 'TRANSFER':
-                $sipcode = 200; // успешный звонок
-                break;
-            case 'NO ANSWER':
-            case 'ABANDON':
-            case 'EXITEMPTY':
-            case 'RINGNOANSWER':
-            case 'EXITWITHTIMEOUT':
-                $sipcode = 304; // нет ответа
-                $duration = 0; // Set duration to zero for missed calls
-                break;
-            case 'BUSY':
-                $sipcode =  486; //  занято
-                $duration = 0; // Set duration to zero for missed calls
-            default:
-                if(empty($disposition)) $sipcode = 304; //если пустой пришел, то поставим неотвечено
-                else $sipcode = 603; // отклонено, когда все остальное
-                break;
-        }
-
-        $result = $this->obB24App->call('telephony.externalcall.finish', [
-            'USER_PHONE_INNER' => $intNum,
-            'USER_ID' => $userId,
-            'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
-            'STATUS_CODE' => $sipcode,
-            'DURATION' => $duration, //длительность звонка в секундах
-            'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
-        ]);
-
-        if ($result){
-            return $result;
-        } else {
-            return false;
-        }
-    }
-
-
-
-    public function logSync($crmCallUid, $src, $dst, $duration, $call_start_time, $reason, $result) {
-        $sql = "INSERT INTO btx_call_sync SET sync_time = now()".
-", u_id = '".$crmCallUid.
-"', src = '".$src.
-"', dst = '".$dst.
-"', duration = '".$duration.
-"', call_start_time = '".$call_start_time.
-"', reason = '".$reason.
-"', result = '".$result."'";
-
-        $this->db->query($sql);
-    }
-
-    public function getSynchronizedCalls($u_id) {
-        $sql = "SELECT id, sync_time, u_id, src, dst, duration, call_start_time, reason, result FROM btx_call_sync WHERE u_id = '".$u_id."'";
-        $res = $this->db->query($sql);
-
-        $calls = [];
-        while ($row = $res->fetch()) {
-            $calls[] = $row;
-        }
-
-        return $calls;
-    }
-
-    public function checkSynchronizedCall($crmCall) {
-        $synchronizedCallsLog = $this->getSynchronizedCalls($crmCall['suid']);
-        $synchronized = 0;
-        if ($synchronizedCallsLog) {
-            foreach ($synchronizedCallsLog as $synchronizedCall) {
-                if (
-                    $synchronizedCall['u_id'] == $crmCall['suid'] &&
-                    $synchronizedCall['src'] == $crmCall['src'] &&
-                    $synchronizedCall['dst'] == $crmCall['dst'] &&
-                    $synchronizedCall['duration'] == $crmCall['talk'] &&
-                    $synchronizedCall['call_start_time'] == $crmCall['time'] &&
-                    $synchronizedCall['reason'] == $crmCall['reason']
-                ) {
-                    $synchronized = 1;
-                }
-            }
-        }
-        return $synchronized;
-    }
-
-    public function addCall($crmCall) {
-        if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
-        if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
-        if (mb_strlen($crmCall['dst']) == 11){
-            $type = 1;
-            $intnum = $crmCall['src'];
-            $extnum = $crmCall['dst'];
-        } else {
-            $type = 2;
-            $intnum = $crmCall['dst'];
-            $extnum = $crmCall['src'];
-        }
-        $crm_create = 1;
-        try {
-            $callId = $this->runInputCall($intnum, $extnum, $type, $crm_create, $crmCall['userfield'], $crmCall['time']);
-            $result = $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield']);
-            $this->logSync($crmCall['suid'], $crmCall['src'], $crmCall['dst'], $crmCall['talk'], $crmCall['time'], $crmCall['reason'],  json_encode($result));
-            return $result;
-        } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
-            $e = '"'.$e.'"';
-            $this->logSync($crmCall['suid'], 0, 0, 0, $crmCall['time'], 0, $e);
-            return ['exception' => $e, 'uid' => $crmCall['suid']];
-        }
+        return $userId;
     }
 }
