@@ -566,6 +566,32 @@ class User
     return $result;
   }
 
+  public function fetchChatList(): array
+  {
+      global $app;
+      $container = $app->getContainer();
+
+      /** @var \App\Chat\ChatMessageRepository $chatMessageRepository */
+      $chatMessageRepository = $container->get(\App\Chat\ChatMessageRepository::class);
+
+      $sql = "SELECT U.id, U.fullname as name, '' as email FROM acl_user as U";
+      $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
+      $result = [];
+      $rules = new PBXRules();
+
+      while ($row = $res->fetch()) {
+          $result[] = [
+              'id' => $row['id'],
+              'name' => $row['name'],
+              'email' => $row['email'],
+              'users' => [$row['id'], $this->id],
+              'unread_count' => $chatMessageRepository->getUnreadCount($row['id'], $this->id),
+          ];
+      }
+
+      return $result;
+  }
+
   public function getUserGroups($id)
   {
     $sql = "SELECT

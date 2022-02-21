@@ -979,7 +979,7 @@ $app->get('/system/services', function (Request $request, Response $response, ar
   ]);
 });
 
-$app->get('/[{name}]', function (Request $request, Response $response, array $args) {
+$app->get('/', function (Request $request, Response $response, array $args) {
   // Sample log message
   $this->logger->info("Loading WebApp");
 
@@ -1025,3 +1025,76 @@ $app->post('/export', function (Request $request, Response $response, array $arg
 
   return $response->withJson($result);
 });*/
+
+//$app->group('/chat', function ($app) use ($app) {
+    $user = new Erpico\User();
+    $app->any('/chat', function (Request $request, Response $response, array $args) {
+        $user = new Erpico\User($this->db);
+
+        return $response->withJson(
+            [
+                'api' => [
+                    "call" => [
+
+                    ],
+                    "chat" => [
+                    ],
+                    "message" => [
+                        "Add" => 1,
+                        "GetAll" => 1,
+                        "Remove" => 1,
+                        "ResetCounter" => 1,
+                    ]
+                ],
+                'data' => [
+                    'chats' => $user->fetchChatList(),
+                    'user' => $user->getId(),
+                    'users' => $user->fetchChatList()
+                ],
+                'websocket' => false
+            ]
+        );
+    });
+    $app->get('/chat/users',  function (Request $request, Response $response, array $args) {
+        $user = new Erpico\User($this->db);
+
+        return $response->withJson($user->fetchChatList());
+    });
+    $app->get('/chat/chats',  function (Request $request, Response $response, array $args) {
+        $user = new Erpico\User($this->db);
+
+        return $response->withJson($user->fetchChatList());
+    });
+    $app->get('/chat/users/{id}/messages',  function (Request $request, Response $response, array $args) use ($user) {
+        /** @var \App\Chat\ChatMessageRepository $chatMessageRepository */
+        $chatMessageRepository = $this->get(\App\Chat\ChatMessageRepository::class);
+
+        return $response->withJson($chatMessageRepository->getAllByRecipientIdAndSenderId($args['id'], $user->getId()));
+    });
+    $app->post('/chat/users/{id}/messages',  function (Request $request, Response $response, array $args) use ($user) {
+        /** @var \App\Chat\ChatMessageRepository $chatMessageRepository */
+        $chatMessageRepository = $this->get(\App\Chat\ChatMessageRepository::class);
+        $requestBody = $request->getParsedBody();
+
+        $message = new \App\Chat\ChatMessage(
+            null,
+            $user->getId(),
+            $requestBody['recipient_id'],
+            false,
+            $requestBody['content'],
+            new DateTimeImmutable()
+        );
+
+        $chatMessageRepository->save($message);
+
+       return $response->withJson($message);
+    });
+    $app->post('/chat/users/{id}/counter',  function (Request $request, Response $response, array $args) use ($app, $user) {
+        /** @var \App\Chat\ChatMessageRepository $chatMessageRepository */
+        $chatMessageRepository = $this->get(\App\Chat\ChatMessageRepository::class);
+
+        return $response->withJson(
+            $chatMessageRepository->resetUnreadCount($user->getId(), $args['id'])
+        );
+    });
+//});

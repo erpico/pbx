@@ -141,6 +141,9 @@ $container[RequestTypeService::class] = function ($container) {
   
   return $requestTypeService;
 };
+$container[\App\Chat\ChatMessageRepository::class] = function ($container) {
+    return new \App\Chat\MySQLChatMessageRepository($container['db']);
+};
 
 require_once( __DIR__ . "/legacy/utils.php");
 require_once( __DIR__ . "/user.php");
