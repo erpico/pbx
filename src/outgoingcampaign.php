@@ -21,7 +21,7 @@ class PBXOutgoingCampaign  {
     "action_value" => 0,
     "min_call_time"=> 1,
     "concurrent_calls_limit" => 1,
-    "max_day_calls_limit" => 1,
+    "max_day_calls_limit" => 0,
     "dial_context" => 0,
     "lead_filters" => 0
   ];
@@ -407,7 +407,7 @@ class PBXOutgoingCampaign  {
     return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
-  public function updateSettings($id, $settings, $concurrent_calls_limit = 1, $min_call_time = 1, $max_day_calls_limit = 1) {
+  public function updateSettings($id, $settings, $concurrent_calls_limit = 1, $min_call_time = 1, $max_day_calls_limit = 0) {
       // if (is_string($settings) && strlen($settings)) {
       $js = json_decode($settings);
       $this->deleteAllSettings($id);
@@ -425,21 +425,15 @@ class PBXOutgoingCampaign  {
           $this->db->query($sql);
         }
       }
-      
-      if ($concurrent_calls_limit || $min_call_time || $max_day_calls_limit){
-        $sql = "UPDATE outgouing_company SET ";
-        $ssql = "";
-        if ($min_call_time)
-          $ssql .= "`min_call_time`= $min_call_time";
-        if ($concurrent_calls_limit)
-        if (strlen($ssql)) $ssql .= ",";
-          $ssql .= "`concurrent_calls_limit`= $concurrent_calls_limit";
-        if ($max_day_calls_limit)
-            if (strlen($ssql)) $ssql .= ",";
-        $ssql .= "`max_day_calls_limit`= $max_day_calls_limit";
-        $sql .= $ssql." WHERE id = $id";
-        $this->db->query($sql);
-      }
+      if ($min_call_time == 0) $min_call_time = 1;
+      if ($concurrent_calls_limit == 0) $concurrent_calls_limit = 1;
+      $sql = "UPDATE outgouing_company SET 
+      `min_call_time`= $min_call_time,
+      `concurrent_calls_limit`= $concurrent_calls_limit,
+      `max_day_calls_limit`= $max_day_calls_limit
+       WHERE id = $id";
+      $this->db->query($sql);
+
       return true;
     // }
     // return false;
