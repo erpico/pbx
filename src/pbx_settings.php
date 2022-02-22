@@ -157,11 +157,11 @@ class PBXSettings {
     return false;
   }
 
-  public function setDefaultSettings ($settings) {
+  public function setDefaultSettings ($settings, $queues = 0) {
     if (is_string($settings)) {
       if (strlen($settings)) {
         $settings = json_decode($settings);
-        $this->deleteAllQueues();
+        if ($queues) $this->deleteAllQueues();
         foreach($settings as $setting) {
           $s = $this->getSettingByHandle($setting->handle);
           if (isset($s['id']) && intval($s['id']) && $s['handle'] == $setting->handle) {

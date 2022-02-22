@@ -243,10 +243,11 @@ $app->get('/settings/default', function (Request $request, Response $response, a
 
 $app->post('/settings/default/save', function (Request $request, Response $response, array $args) use ($app) {
   $params = $request->getParam("settings", "");
+  $queues = $request->getParam("queues", 0);
   $set = new PBXSettings();
 
   if (isset($params)) {
-    return $response->withJson(["result" => $set->setDefaultSettings($params)]);
+    return $response->withJson(["result" => $set->setDefaultSettings($params, $queues)]);
   }
   return $response->withJson(["result" => FALSE]);
 });
