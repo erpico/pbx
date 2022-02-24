@@ -54,13 +54,16 @@ class PBXCdr {
     return $cdr;      
   }
 
-  public function getReport($filter, $start = 0, $limit = 20, $onlyCount = 0, $serverFooter = 0, $_lcd = 0) {
-    $ext = $this->user->allow_extens();
-    $extens = $this->utils->sql_allow_extens($ext);
+  public function getReport($filter, $start = 0, $limit = 20, $onlyCount = 0, $serverFooter = 0, $_lcd = 0)
+  {
+    if ($_SERVER['REMOTE_ADDR']) {
+      $ext = $this->user->allow_extens();
+      $extens = $this->utils->sql_allow_extens($ext);
 
-    $que = $this->user->allowed_queues();
-    $queues = $this->utils->sql_allowed_queues_for_records($que);
 
+      $que = $this->user->allowed_queues();
+      $queues = $this->utils->sql_allowed_queues_for_records($que);
+    }
     $users_list = $this->user->getUsersList();
 
     $qwsql = "";
@@ -70,10 +73,11 @@ class PBXCdr {
     $userPhone = addslashes($this->user->getPhone($this->user->getId()));
     $userName = addslashes($this->user->getInfo()['name']);
     $isCanSeeOthers = in_array('phc.reports',$this->user->getUserRoles()) || in_array('erpico.admin',$this->user->getUserRoles());
-
-    if (!$isCanSeeOthers) {
-      $cwsql .= "	AND (cdr.src = '".$userPhone."' OR cdr.dst = '".$userPhone."') "; //Ignore CDR
-      $qwsql .= "	AND ( a.agentname = '".$userName."' OR a.src = '".$userPhone."' OR a.agentdev  = '".$userPhone."')";
+    if ($_SERVER['REMOTE_ADDR']) {
+      if (!$isCanSeeOthers) {
+        $cwsql .= "	AND (cdr.src = '" . $userPhone . "' OR cdr.dst = '" . $userPhone . "') "; //Ignore CDR
+        $qwsql .= "	AND ( a.agentname = '" . $userName . "' OR a.src = '" . $userPhone . "' OR a.agentdev  = '" . $userPhone . "')";
+      }
     }
 
     if (is_array($filter)) {
@@ -242,7 +246,7 @@ class PBXCdr {
         $sql .= " LIMIT ".intval($start).", ".intval($limit);
       }*/
       //$sql .= " LIMIT 100"; // No more for now
-      $cdr = [];                
+      $cdr = [];
       $res = $this->db->query($sql);
       //die(var_dump($res));
       $lcd -= 3600*24;

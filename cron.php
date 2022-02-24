@@ -92,8 +92,8 @@ $currentDatetime = new DateTime();
 $yesterdayDatetime = new DateTime();
 $yesterdayDatetime->modify('-1 day');
 
-  $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
-//$filter['time'] = '{"start":"2021-12-23 09:45:00","end":"2021-12-23 09:46:00"}'; // test for small range
+$filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
+//$filter['time'] = '{"start":"2021-12-23 09:40:00","end":"2021-12-23 09:50:00"}'; // test for small range
 $crmCalls = $cdr->getReport($filter, 0, 1000000);
 
 if (count($crmCalls)) {
