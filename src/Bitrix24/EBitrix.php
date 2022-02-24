@@ -18,7 +18,7 @@ class EBitrix {
         $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
         $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
 
-        $bitrix24_token = json_decode(gzdecode(base64_decode($request->getCookieParam('bitrix24_token'))), true);
+        if ($request) $bitrix24_token = json_decode(gzdecode(base64_decode($request->getCookieParam('bitrix24_token'))), true);
         if(!isset($bitrix24_token['member_id'])) $bitrix24_token['member_id'] = $settings->getSettingByHandle('bitrix24.member_id')['val'];
         if(!isset($bitrix24_token['access_token'])) $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
         if(!isset($bitrix24_token['refresh_token'])) $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
@@ -193,7 +193,7 @@ class EBitrix {
             return $callId;
         } else {
             $result = $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], "", $crmCall);
-            $this->logSync($crmCall['uid'], $crmCall['talk'], $intnum, $result['result']['CALL_FAILED_CODE'], json_encode($result));
+            $this->logSync($crmCall['uid'], $crmCall['talk'], $intnum, $crmCall['status_code'], json_encode($result));
             return $result;
         }
     }
@@ -226,9 +226,10 @@ class EBitrix {
     }
 
     public function getUserInnerIdByPhone($exten, $lineNumber = "") {
+      $userId = null;
         if ($exten) {
             $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
-            $userId = $userInfo['result'][0]['ID'];
+            if (isset($userInfo['result'][0]['ID'])) $userId = $userInfo['result'][0]['ID'];
         }
 
         if ($userId == null) {

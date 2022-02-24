@@ -16,8 +16,8 @@ class PBXCdr {
   
   private function normalizePhone(&$_phone) {
     $_phone = preg_replace("/[^\d]/", "", trim($_phone));
-    if ($_phone[0] == '7' && strlen($phone) > 8) $_phone = "8".substr($_phone, 1);
-    if (strlen($_phone) == 10) $_phone = "8".$_phone;
+    if (isset($_phone[0]) && $_phone[0] == '7' && strlen($_phone) > 8) $_phone = "8" . substr($_phone, 1);
+    if (strlen($_phone) == 10) $_phone = "8" . $_phone;
     return $_phone;
   }
 
@@ -75,7 +75,7 @@ class PBXCdr {
       $cwsql .= "	AND (cdr.src = '".$userPhone."' OR cdr.dst = '".$userPhone."') "; //Ignore CDR
       $qwsql .= "	AND ( a.agentname = '".$userName."' OR a.src = '".$userPhone."' OR a.agentdev  = '".$userPhone."')";
     }
-  
+
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
@@ -171,7 +171,7 @@ class PBXCdr {
       return $row[0]; 
     }
 
-    
+
     if (intval($serverFooter)) {
       if ($timeisset != 2) return []; // only with selected date
       $sql = "SELECT        
@@ -236,8 +236,8 @@ class PBXCdr {
         LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
         WHERE 1=1 $extens $cwsql 
         ".($limit != 1000000 ? "AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
-        ) AS c ORDER BY calldate DESC ";        
-      
+        ) AS c ORDER BY calldate DESC ";
+
       /*if (isset($start) && isset($limit)){
         $sql .= " LIMIT ".intval($start).", ".intval($limit);
       }*/

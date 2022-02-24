@@ -29,8 +29,7 @@ class PBXSettings {
     $res = $this->db->query($sql);
     $row = $res->fetch();
     
-    $res = strlen($row['val']) ? true : false;
-
+    $res = isset($row['val']);
     return ['result' => $res, 'value' => $row['val']];
   }
 

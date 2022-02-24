@@ -12,6 +12,7 @@ $app = new \Slim\App($settings);
 require __DIR__ . '/src/dependencies.php';
 
 require_once __DIR__."/src/Bitrix24/CMBitrix.php";
+require_once __DIR__."/src/Bitrix24/EBitrix.php";
 
 if (!$container['db'] instanceof \PDO) {
     printf("No database connection");
@@ -42,7 +43,7 @@ function importLeads($filters, $next, $helper) {
 
     return $leadsFromBitrix;
 }
-
+//LEADS IMPORT
 $sql = 'SELECT id, lead_filters FROM outgouing_company';
 $res = $db->query($sql);
 
@@ -73,3 +74,41 @@ while ($row = $res->fetch()) {
         }
     }
 }
+
+//CALL SYNC
+if (isset($argv[1])) {
+  $token = $argv[1];
+  $_COOKIE['token'] = $token;
+}
+
+$helper = new EBitrix(0);
+
+$cdr = new PBXCdr();
+
+$synchronizedCalls = [];
+$exceptions = [];
+
+$currentDatetime = new DateTime();
+$yesterdayDatetime = new DateTime();
+$yesterdayDatetime->modify('-1 day');
+
+  $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
+//$filter['time'] = '{"start":"2021-12-23 09:45:00","end":"2021-12-23 09:46:00"}'; // test for small range
+$crmCalls = $cdr->getReport($filter, 0, 1000000);
+
+if (count($crmCalls)) {
+  foreach ($crmCalls as $crmCall) {
+    if (!($crmCall['uid'] == "1640241987.15261")) continue;
+    if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
+    if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
+    if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
+    $int_num = mb_strlen($crmCall['dst']) == 11 ? $crmCall['src'] : $crmCall['dst'];
+    $status_code = $helper->getStatusCodeByReason($crmCall['talk']);
+    if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $status_code)) continue;
+    $crmCall['status_code'] = $status_code;
+    $result = $helper->addCall($crmCall);
+    isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+  }
+}
+
+var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
