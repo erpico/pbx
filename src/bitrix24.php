@@ -20,6 +20,7 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 
   $code = $request->getParam("code");
   $master = $request->getParam("master");
+  $state = $request->getParam("state");
 
   if (strlen($code)) {
     $result = $client->request(
@@ -43,22 +44,18 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
     $content = $result->toArray();
 
     setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $content['member_id'], 'access_token' => $content['access_token'], 'refresh_token' => $content['refresh_token']]))), 0, '/');
-    if ($settings->getDefaultSettingsByHandle('saveBitrixKeys')['value']) {
+    if ($state == "master") {
         $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $content['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $content['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $content['refresh_token']]]));
-        $settings->setDefaultSettings(json_encode([['handle' => 'saveBitrixKeys', 'val' => 0]]));
     }
   }
 
-  $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
+    $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
 
-  if (!strlen($bitrix24_token['member_id'])) {
-      if ($master) {
-          $settings->setDefaultSettings(json_encode([['handle' => 'saveBitrixKeys', 'val' => 1]]));
-          return $response->withJson(['link' => "https://$domain/oauth/authorize/?client_id=$appId"]);
-      }
+    if (!strlen($bitrix24_token['member_id'])) {
+      if ($master) return $response->withJson(['link' => "https://$domain/oauth/authorize/?client_id=$appId&state=master"]);
       header("Location: https://$domain/oauth/authorize/?client_id=$appId");
       die();
-  }
+    }
 
   // init lib
   $obB24App = new \Bitrix24\Bitrix24(false, $log);
@@ -75,7 +72,7 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   if ($master && isset($bitrix24_token['member_id']) && !($obB24App->isAccessTokenExpire())) return $response->withJson(['res' => true]);
 
   // create a log channel
- 
+
   $log = new Logger('bitrix24');
   $log->pushHandler(new StreamHandler(__DIR__."/../logs/bitrix24.log", Logger::DEBUG));
 
@@ -306,7 +303,7 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
             if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
             if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
             if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
-            $int_num = mb_strlen($crmCall['dst'] == 11) ? $crmCall['src'] : $crmCall['dst'];
+            $int_num = mb_strlen($crmCall['dst']) == 11 ? $crmCall['src'] : $crmCall['dst'];
             $status_code = $helper->getStatusCodeByReason($crmCall['talk']);
             if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $status_code)) continue;
             $crmCall['status_code'] = $status_code;
@@ -321,6 +318,7 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
 $app->get('/bitrix24/lead/search', function (Request $request, Response $response, array $args) {
     $phone = $request->getParam('phone', '');
     $redirect = $request->getParam('redirect', 0);
+    $channel = $request->getParam('channel', '');
     $helper = new CMBitrix($channel);
     $settings = new PBXSettings();
     $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
@@ -339,6 +337,7 @@ $app->get('/bitrix24/lead/search', function (Request $request, Response $respons
 });
 
 $app->get('/bitrix24/lead/import', function (Request $request, Response $response, array $args) {
+  $channel = $request->getParam('channel', '');
   $helper = new CMBitrix($channel);
   $settings = new PBXSettings();
   if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);

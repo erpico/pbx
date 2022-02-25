@@ -104,7 +104,6 @@ class CMBitrix {
 
     return $result;
   }
-
     /**
      * Upload recorded file to Bitrix24.
      *
@@ -210,7 +209,7 @@ class CMBitrix {
 
     }
 
-	/**
+  /**
 	 * Run Bitrix24 REST API method user.get.json return only online users array
 	 *
 	 *

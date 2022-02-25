@@ -98,7 +98,6 @@ $crmCalls = $cdr->getReport($filter, 0, 1000000);
 
 if (count($crmCalls)) {
   foreach ($crmCalls as $crmCall) {
-    if (!($crmCall['uid'] == "1640241987.15261")) continue;
     if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
     if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
     if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);

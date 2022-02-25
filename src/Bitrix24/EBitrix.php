@@ -63,7 +63,7 @@ class EBitrix {
      * @param int $exten (${EXTEN} from the Asterisk server, i.e. internal number)
      * @param int $callerid (${CALLERID(num)} from the Asterisk server, i.e. number which called us)
      *
-     * @return array  like this:
+     * @return array|false
      * Array
      *	(
      *	    [result] => Array
@@ -77,7 +77,7 @@ class EBitrix {
      * We need only CALL_ID
      */
     public function runInputCall($exten, $callerid, $type=2, $crmCreate=1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
-        $userId = $this->getUserInnerIdByPhone($exten, $lineNumber);
+        $userId = $this->getUserInnerIdByPhone($exten, $lineNumber, 'call/add');
 
         $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
         try {
@@ -117,7 +117,7 @@ class EBitrix {
      * @return array|int
      */
     public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber, $channel = "", $crmCall = null){
-        $userId = $this->getUserInnerIdByPhone($intNum, $lineNumber);
+        $userId = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record');
         $statusCode = $this->getStatusCodeByReason($disposition);
         $sipcode = $statusCode;
         if ($sipcode == 304 || $sipcode == 486) {
@@ -188,6 +188,10 @@ class EBitrix {
             $extnum = $crmCall['src'];
         }
         $crm_create = 1;
+        if ($crmCall['userfield'] == "") {
+          $settings = new PBXSettings();
+          $crmCall['userfield'] = $settings->getDefaultSettingsByHandle('default_line')['value'];
+        }
         $callId = $this->runInputCall($intnum, $extnum, $type, $crm_create, $crmCall['userfield'], $crmCall['time'], "", $crmCall);
         if (isset($callId['exception'])) {
             return $callId;
@@ -225,14 +229,14 @@ class EBitrix {
         return $sipcode;
     }
 
-    public function getUserInnerIdByPhone($exten, $lineNumber = "") {
-      $userId = null;
+    public function getUserInnerIdByPhone($exten, $lineNumber = "", $type) {
+        $userFromBtx = null;
         if ($exten) {
-            $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
-            if (isset($userInfo['result'][0]['ID'])) $userId = $userInfo['result'][0]['ID'];
+            $result = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
+            if (isset($result['result'][0]['ID'])) $userFromBtx = $result['result'][0]['ID'];
         }
-
-        if ($userId == null) {
+        $userFromLine = null;
+        if ($lineNumber != "") {
             $settings = new PBXSettings();
             $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
             if ($result) {
@@ -240,15 +244,27 @@ class EBitrix {
                 $result = $user->getNameById($result);
                 if ($result && ctype_digit($result)) $exten = $result;
                 $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
-                $userId = $userInfo['result'][0]['ID'];
+                $userFromLine = $userInfo['result'][0]['ID'];
             } else {
                 $result = $settings->getDefaultSettingsByHandle('default_user')['value'];
                 if ($result) $exten = $result;
                 $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
-                $userId = $userInfo['result'][0]['ID'];
+                $userFromLine = $userInfo['result'][0]['ID'];
             }
         }
 
-        return $userId;
+        if ($type == 'call/add') {
+            if ($userFromLine) {
+                return $userFromLine;
+            } else {
+                return $userFromBtx;
+            }
+        } elseif ($type == 'call/record') {
+            if ($userFromBtx) {
+                return $userFromBtx;
+            } else {
+                return $userFromLine;
+            }
+        }
     }
 }
