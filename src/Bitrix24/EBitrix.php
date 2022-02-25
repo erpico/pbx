@@ -25,7 +25,7 @@ class EBitrix {
 
         // create a log channel
         $log = new Logger('bitrix24');
-        $log->pushHandler(new StreamHandler(__DIR__."/../logs/bitrix24.log", Logger::DEBUG));
+        $log->pushHandler(new StreamHandler(__DIR__."/../../logs/bitrix24.log", Logger::DEBUG));
 
         // init lib
         $this->obB24App = new \Bitrix24\Bitrix24(false, $log);
