@@ -50,6 +50,10 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   }
 
     $bitrix24_token = json_decode(gzdecode(base64_decode($this->request->getCookieParam('bitrix24_token'))), true);
+    if ($master && $bitrix24_token['member_id'] && $bitrix24_token['access_token'] && $bitrix24_token['refresh_token']) {
+      $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $bitrix24_token['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $bitrix24_token['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $bitrix24_token['refresh_token']]]));
+      return $response->withJson(['res' => true]);
+    }
 
     if (!strlen($bitrix24_token['member_id'])) {
       if ($master) return $response->withJson(['link' => "https://$domain/oauth/authorize/?client_id=$appId&state=master"]);
@@ -92,24 +96,22 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
   }
   break;
   }
-  if (!strlen($arCurrentB24User['result']['UF_PHONE_INNER'])) {
-    die("Cannot login user without phone.");
-  }
+
   // Create and auth user
   $u = new User();
-  $user = $u->trustedLogin($arCurrentB24User['result']['UF_PHONE_INNER'], $request->getAttribute('ip_address'));
+  $user = $u->trustedLogin($arCurrentB24User['result']['UF_PHONE_INNER'] ?: $arCurrentB24User['ID'], $request->getAttribute('ip_address'));
   if (!$user['fullname']) {
       $arCurrentB24User = $arCurrentB24User['result'];
       $userInfo = [
             "state" => 1,
-            "name" => trim($arCurrentB24User['UF_PHONE_INNER']),
+            "name" => trim($arCurrentB24User['UF_PHONE_INNER']) ?: trim($arCurrentB24User['ID']),
             "fullname" => (strlen(trim($arCurrentB24User['LAST_NAME'])) ? trim($arCurrentB24User['LAST_NAME']) . " " : "") . $arCurrentB24User['NAME'],
-            "phone" => trim($arCurrentB24User['UF_PHONE_INNER']),
+            "phone" => trim($arCurrentB24User['UF_PHONE_INNER']) ?: trim($arCurrentB24User['ID']),
             "description" => "email=" . $arCurrentB24User['EMAIL'] . ";mobile=" . $arCurrentB24User['WORK_PHONE'] . ";title=" . $arCurrentB24User['WORK_POSITION']
         ];
     $res = $u->addUpdate($userInfo);
     if ($res['result'] == true) {
-      $user = $u->trustedLogin($arCurrentB24User['UF_PHONE_INNER'], $request->getAttribute('ip_address'));
+      $user = $u->trustedLogin($arCurrentB24User['UF_PHONE_INNER'] ?: $arCurrentB24User['ID'], $request->getAttribute('ip_address'));
       if (!$user['fullname']) die(['res' => false, 'text' => 'Произошла ошибка']);
     } else {
         die(['res' => $res]);
