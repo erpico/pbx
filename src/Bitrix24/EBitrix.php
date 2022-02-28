@@ -267,4 +267,24 @@ class EBitrix {
             }
         }
     }
+
+    public function getStatus() {
+      $result = $this->obB24App->call('crm.status.list', [
+        'FILTER' => ['ENTITY_ID' => 'STATUS'],
+      ]);
+      if ($result['result']) {
+        return $result['result'];
+      }
+    }
+
+    public function updateLeadState($leadId, $state)
+    {
+      try {
+        $state = $this->obB24App->call('crm.status.get', ['ID' => $state]);
+        $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state['result']['STATUS_ID']]]);
+        return $result['result'];
+      } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
+        return $e->getMessage();
+      }
+    }
 }
