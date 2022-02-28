@@ -85,11 +85,13 @@ class PBXPhone
     $sql .= $ssql . ", acl_user.fullname AS user_name, 
                      acl_group_phone.pattern AS group_pattern,
                      acl_group_phone.rules AS group_rules,
-                     acl_group_phone.id AS group_id
+                     acl_group_phone.id AS group_id,
+                     SP.val as 'sipphone.server'
                      FROM " . self::getTableName();
     $sql .= " LEFT JOIN acl_user ON (acl_user.id = acl_user_phone.user_id) ";
     $sql .= " LEFT JOIN acl_group_has_phone ON (acl_group_has_phone.phone_id = acl_user_phone.id) ";
     $sql .= " LEFT JOIN acl_group_phone ON (acl_group_has_phone.group_id = acl_group_phone.id) ";
+    $sql .= " LEFT JOIN cfg_user_setting AS SP ON (SP.acl_user_id = acl_user.id AND SP.handle = 'sipphone.server')";
     $wsql = "";
     if (is_array($filter)) {
       $fields = self::FIELDS;
@@ -250,7 +252,9 @@ class PBXPhone
         } else {
           $this->deletePhoneFromGroup($id);
         }
-
+        if (isset($values['sipphone_server'])) {
+          $this->server_host = $values['sipphone_server'];
+        }
         $this->setCfgSettings($this->server_host, $values["login"], $values["password"], $values["phone"], $values["model"] == "erpico" ? 1 : 0);
         $this->setUserConfig($new_user_id, $old_user_id);
         return ["result" => true, "message" => "Операция прошла успешно"];
