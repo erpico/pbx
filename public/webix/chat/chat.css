@@ -87,6 +87,7 @@
   background: #ceedf5;
   box-shadow: none;
   padding-left: 8px;
+  color: #475466;
 }
 .webix_chat_list .webix_list_item.webix_selected:hover {
   background: #ceedf5;
@@ -622,4 +623,10 @@ Glyphs list
 
 .webix_chat_add_button .webix_button {
   background: #f2f2f2;
+}
+
+.webix_primary .webix_button {
+  color: #FFFFFF;
+  background: #1ca1c1;
+  border: 0;
 }

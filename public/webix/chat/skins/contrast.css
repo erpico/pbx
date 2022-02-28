@@ -689,6 +689,7 @@ Glyphs list
 
 .webix_chat_toolbar {
   background: #393939;
+  border-width: 1px;
 }
 
 .webix_chat_add_button .webix_button {
