@@ -185,12 +185,6 @@ class PBXPhone
       } else {
         return ["result" => false, "message" => "Телефон не может быть пустым"];
       }
-      if (!intval($values['id'])) {
-        if (isset($values['password']) && strlen($values['password'])) {
-        } else {
-          return ["result" => false, "message" => "password can`t be empty"];
-        }
-      }
 
       if (isset($values['mac'])) {
         $mac = preg_replace("/[^0123456789ABCDEF]/", '', strtoupper($values['mac']));
@@ -218,6 +212,10 @@ class PBXPhone
       foreach (self::FIELDS as $field => $isInt) {
         if ((isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]))) || !strlen($values[$field])) {
           if (strlen($ssql)) $ssql .= ",";
+          if ($field == 'password' && trim($values['password']) == "") {
+            $ssql .= "`password`=LEFT (sha1(md5(concat(md5(md5(RAND())), ';Ej>]sjkip'))), 16) ";
+            continue;
+          };
           $ssql .= "`" . $field . "`=" . (strlen($values[$field]) ? "'" . ($isInt ? intval($values[$field]) . "'" : trim(addslashes($values[$field])) . "'") : 'NULL') . "";
         }
       }

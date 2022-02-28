@@ -1055,3 +1055,7 @@ a:hover {
     color: #22B7E1;;
     cursor: hand;
 }
+
+.wxi-eye, .wxi-eye-slash {
+    padding-right: 5px;
+}
