@@ -273,7 +273,7 @@ $app->any('/bitrix24/call/record', function (Request $request, Response $respons
 
     $result = $helper->uploadRecordedFile($call_id, $FullFname, $CallIntNum, $CallDuration, $CallDisposition, $lineNumber, $channel);
     if ($result != false) {
-        $helper->logSync($channel, $CallDuration, $CallIntNum, $result['result']['CALL_FAILED_CODE'], json_encode($result));
+        $helper->logSync($channel, $CallDuration, $CallIntNum, $CallDisposition, json_encode($result));
     }
 
     return $response->withJson($result);
@@ -306,8 +306,8 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
             if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
             if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
             $int_num = mb_strlen($crmCall['dst']) == 11 ? $crmCall['src'] : $crmCall['dst'];
-            $status_code = $helper->getStatusCodeByReason($crmCall['talk']);
-            if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $status_code)) continue;
+            $status_code = $helper->getStatusCodeByReason($crmCall['reason']);
+            if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $crmCall['reason'])) continue;
             $crmCall['status_code'] = $status_code;
             $result = $helper->addCall($crmCall);
             isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);

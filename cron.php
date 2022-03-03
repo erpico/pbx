@@ -102,8 +102,8 @@ if (count($crmCalls)) {
     if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
     if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
     $int_num = mb_strlen($crmCall['dst']) == 11 ? $crmCall['src'] : $crmCall['dst'];
-    $status_code = $helper->getStatusCodeByReason($crmCall['talk']);
-    if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $status_code)) continue;
+    $status_code = $helper->getStatusCodeByReason($crmCall['reason']);
+    if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $crmCall['reason'])) continue;
     $crmCall['status_code'] = $status_code;
     $result = $helper->addCall($crmCall);
     isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);

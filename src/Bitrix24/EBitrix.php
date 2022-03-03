@@ -117,7 +117,7 @@ class EBitrix {
      * @return array|int
      */
     public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber, $channel = "", $crmCall = null){
-        $userId = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record');
+        $userId = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record', $disposition);
         $statusCode = $this->getStatusCodeByReason($disposition);
         $sipcode = $statusCode;
         if ($sipcode == 304 || $sipcode == 486) {
@@ -197,7 +197,7 @@ class EBitrix {
             return $callId;
         } else {
             $result = $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], "", $crmCall);
-            $this->logSync($crmCall['uid'], $crmCall['talk'], $intnum, $crmCall['status_code'], json_encode($result));
+            $this->logSync($crmCall['uid'], $crmCall['talk'], $intnum, $crmCall['reason'], json_encode($result));
             return $result;
         }
     }
@@ -229,7 +229,7 @@ class EBitrix {
         return $sipcode;
     }
 
-    public function getUserInnerIdByPhone($exten, $lineNumber = "", $type) {
+    public function getUserInnerIdByPhone($exten, $lineNumber = "", $type, $disposition = null) {
         $userFromBtx = null;
         if ($exten) {
             $result = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
@@ -261,6 +261,9 @@ class EBitrix {
             }
         } elseif ($type == 'call/record') {
             if ($userFromBtx) {
+                if ($disposition == 'RINGNOANSWER') {
+                    return $userFromLine;
+                }
                 return $userFromBtx;
             } else {
                 return $userFromLine;
