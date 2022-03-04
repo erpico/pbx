@@ -25,30 +25,31 @@ class PBXCdr {
     return 'cdr';
   }
 
-  public function getReportsByUid($id) {
+  public function getReportsByUid($id, $main = null) {
     $sql =  "SELECT 
-          calldate AS time, 
-          src, 
-          agentdev AS dst, 
-          queue, 
-          reason, 
-          holdtime AS hold, 
-          talktime AS talk, 
-          uniqid, 
+          ".($main ? 'a.' : '')."calldate AS time,
+          ".($main ? 'a.' : '')."src, 
+          ".($main ? 'a.' : '')."agentdev AS dst,
+          ".($main ? 'a.' : '')."queue, 
+          ".($main ? 'a.' : '')."reason,
+          ".($main ? 'a.' : '')."holdtime AS hold, 
+          ".($main ? 'a.' : '')."talktime AS talk,
+          ".($main ? 'a.' : '')."uniqid, 
           fullname as agentname,
-          queue,
-          channel,
-          dstchannel,
-          userfield
-    FROM queue_cdr 
-    LEFT JOIN acl_user on (agentname = acl_user.name)
-    WHERE uniqid = '{$id}' 
+          ".($main ? 'a.' : '')."queue,
+          ".($main ? 'a.' : '')."channel,
+          ".($main ? 'a.' : '')."dstchannel,
+          ".($main ? 'a.' : '')."userfield 
+          FROM queue_cdr ".($main ? 'a ' : '')
+        .($main ? 'LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id ' : '')
+        ."LEFT JOIN acl_user on (".($main ? 'a.' : '')."agentname = acl_user.name)
+    WHERE ".($main ? 'a.' : '')."uniqid = '{$id}' ".($main ? 'AND b.uniqid IS NULL ' : '')."
      UNION ALL
     SELECT calldate AS time, src, dst, cdr.name, disposition AS reason, duration - billsec AS hold , billsec AS talk, uniqueid AS uniqid, fullname as agentname, '', channel, dstchannel, userfield
     FROM cdr 
     LEFT JOIN acl_user on (SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) = acl_user.name)
     WHERE uniqueid = '{$id}'";
-    $result_cdr = $this->db->query($sql);      
+    $result_cdr = $this->db->query($sql);
     $cdr = $result_cdr->fetchAll(\PDO::FETCH_ASSOC);
 
     return $cdr;      

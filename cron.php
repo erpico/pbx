@@ -97,17 +97,18 @@ $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '"
 $crmCalls = $cdr->getReport($filter, 0, 1000000);
 
 if (count($crmCalls)) {
-  foreach ($crmCalls as $crmCall) {
-    if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
-    if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
-    if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
-    $int_num = mb_strlen($crmCall['dst']) == 11 ? $crmCall['src'] : $crmCall['dst'];
-    $status_code = $helper->getStatusCodeByReason($crmCall['reason']);
-    if ($helper->getSynchronizedCalls($crmCall['uid'], $crmCall['talk'], $int_num, $crmCall['reason'])) continue;
-    $crmCall['status_code'] = $status_code;
-    $result = $helper->addCall($crmCall);
-    isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
-  }
+    foreach ($crmCalls as $crmCall) {
+        if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
+        if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
+            if ($callSync['status'] == 1 || $callSync['status'] == 3) {
+                $result = $helper->addCall($crmCall);
+                isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+            }
+        } else {
+            $result = $helper->addCall($crmCall);
+            isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+        }
+    }
 }
 
 var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
