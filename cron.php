@@ -44,7 +44,7 @@ function importLeads($filters, $next, $helper) {
     return $leadsFromBitrix;
 }
 //LEADS IMPORT
-$sql = 'SELECT id, lead_filters FROM outgouing_company';
+$sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status FROM outgouing_company';
 $res = $db->query($sql);
 
 $outgoingCompany = new PBXOutgoingCampaign();
@@ -70,6 +70,14 @@ while ($row = $res->fetch()) {
                         ]),
                     'settings' => 1
                 ]);
+
+                if ($row['lead_status_enabled'] == 1) {
+                    $eHelper = new EBitrix('');
+                    $settings = new PBXSettings();
+                    if ($settings->getDefaultSettingsByHandle('bitrix.enable')['value']) {
+                        $eHelper->updateLeadState($btxLead['ID'], $row['lead_status']);
+                    }
+                }
             }
         }
     }

@@ -23,7 +23,9 @@ class PBXOutgoingCampaign  {
     "concurrent_calls_limit" => 1,
     "max_day_calls_limit" => 0,
     "dial_context" => 0,
-    "lead_filters" => 0
+    "lead_filters" => 0,
+    "lead_status_enabled" => 0,
+    "lead_status" => 0
   ];
 
   const WEEK_DAYS = [

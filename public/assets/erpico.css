@@ -932,7 +932,10 @@ line-height: 114%;
 /* .webix_window .webix_form .webix_view, */
 .webix_window .webix_form .webix_multiview .webix_view{
     padding: 0 0 15px;
-} 
+}
+.lead_wnd {
+    padding: 0 !important;
+}
 .webix_window .webix_form .webix_control{
     /* padding: 0 0 15px; */
     /*margin-left: 0px !important;
