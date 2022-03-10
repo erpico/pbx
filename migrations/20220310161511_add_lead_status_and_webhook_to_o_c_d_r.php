@@ -8,7 +8,7 @@ class AddLeadStatusAndWebhookToOCDR extends AbstractMigration
     {
         $this->execute("ALTER TABLE `outgoing_campaign_dial_result_setting` 
 ADD COLUMN `lead_status_result` INT NULL DEFAULT NULL AFTER `postpone_to`,
-ADD COLUMN `webhook` VARCHAR(128) NULL DEFAULT NULL AFTER `lead_status`;
+ADD COLUMN `webhook` VARCHAR(128) NULL DEFAULT NULL AFTER `lead_status_result`;
 ");
     }
 
