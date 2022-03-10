@@ -33,7 +33,7 @@ class PBXOutgoingCampaign  {
   ];
 
   const SETTING_FIELDS = [
-    "result", "pause", "pause_time", "stop", "postpone_for", "postpone_to"
+    "result", "pause", "pause_time", "stop", "postpone_for", "postpone_to", "lead_status_result", "webhook"
   ];
 
   const SETTING_VALUES = [
