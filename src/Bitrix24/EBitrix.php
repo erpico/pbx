@@ -16,7 +16,7 @@ class EBitrix {
     protected $db;
     protected $settings;
 
-    public function __construct($request, $channel)
+    public function __construct($request, $channel = 0)
     {
         $settings = new PBXSettings();
         $this->settings = $settings;
@@ -100,19 +100,21 @@ class EBitrix {
                 'LINE_NUMBER' => $lineNumber,
                 'SHOW' => 0
             ]);
-            $this->logRequest(
-                $this->settings->getSettingByHandle('bitrix.api_url')['val'],
-                json_encode([
-                    'USER_PHONE_INNER' => $exten,
-                    'USER_ID' => $userId,
-                    'PHONE_NUMBER' => $callerid,
-                    'TYPE' => $type,
-                    'CALL_START_DATE' => $createTime,
-                    'CRM_CREATE' => $crmCreate,
-                    'LINE_NUMBER' => $lineNumber,
-                    'SHOW' => 0
-                ]),
-                json_encode($result));
+            if ($this->channel) {
+                $this->logRequest(
+                    $this->settings->getSettingByHandle('bitrix.api_url')['val'],
+                    json_encode([
+                        'USER_PHONE_INNER' => $exten,
+                        'USER_ID' => $userId,
+                        'PHONE_NUMBER' => $callerid,
+                        'TYPE' => $type,
+                        'CALL_START_DATE' => $createTime,
+                        'CRM_CREATE' => $crmCreate,
+                        'LINE_NUMBER' => $lineNumber,
+                        'SHOW' => 0
+                    ]),
+                    json_encode($result));
+            }
             $this->logSync($channel, 1, $result['result']['CALL_ID'], json_encode($result));
             return $result['result']['CALL_ID'];
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
@@ -167,16 +169,19 @@ class EBitrix {
                 'DURATION' => $duration, //длительность звонка в секундах
                 'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
             ]);
-            $this->logRequest($this->settings->getSettingByHandle('bitrix.api_url')['val'],
-                json_encode([
-                    'USER_PHONE_INNER' => $intNum,
-                    'USER_ID' => $userId,
-                    'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
-                    'STATUS_CODE' => $sipcode,
-                    'DURATION' => $duration, //длительность звонка в секундах
-                    'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
-                ]),
-                json_encode($result));
+            if ($this->channel) {
+                $this->logRequest(
+                    $this->settings->getSettingByHandle('bitrix.api_url')['val'],
+                    json_encode([
+                        'USER_PHONE_INNER' => $intNum,
+                        'USER_ID' => $userId,
+                        'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
+                        'STATUS_CODE' => $sipcode,
+                        'DURATION' => $duration, //длительность звонка в секундах
+                        'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
+                    ]),
+                    json_encode($result));
+            }
             $this->logSync($channel, 2, $call_id, json_encode($result));
             return $result;
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {

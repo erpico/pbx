@@ -34,7 +34,7 @@ class PBXOutgoingCampaign  {
   ];
 
   const SETTING_FIELDS = [
-    "result", "pause", "pause_time", "stop", "postpone_for", "postpone_to", "lead_status_result", "webhook"
+    "result", "pause", "pause_time", "stop", "postpone_for", "postpone_to", "lead_status_result", "webhook", "lead_status_user_rules"
   ];
 
   const SETTING_VALUES = [
@@ -331,8 +331,9 @@ class PBXOutgoingCampaign  {
   private function savePhone($id, $campaning_id, $phone, $name, $description, $state) {
     $contact = $this->getContactById($id);
     if ($contact && (!$phone || $phone == '')) {
-      $sql = " DELETE FROM outgouing_company_contacts WHERE id = '" . intval($id) . "'";
+      $sql = " DELETE FROM outgouing_company_contacts WHERE id = ".intval($id);
       $res = $this->db->query($sql);
+      $res->fetch();
     } else if (!$phone || $phone == '') {
       return ;
     } else {
