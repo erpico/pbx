@@ -1,6 +1,10 @@
 <?php
 
 
+use Bitrix24\Exceptions\Bitrix24EmptyResponseException;
+use Bitrix24\Exceptions\Bitrix24Exception;
+use Bitrix24\Exceptions\Bitrix24IoException;
+use Bitrix24\Exceptions\Bitrix24SecurityException;
 use Erpico\User;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;
@@ -77,7 +81,9 @@ class EBitrix {
      * We need only CALL_ID
      */
     public function runInputCall($exten, $callerid, $type=2, $crmCreate=1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
-        $userId = $this->getUserInnerIdByPhone($exten, $lineNumber, 'call/add');
+        $res = $this->getUserInnerIdByPhone($exten, $lineNumber, 'call/add');
+        $userId = $res['userId'];
+        $exten = $res['userPhone'];
 
         $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
         try {
@@ -111,14 +117,25 @@ class EBitrix {
      * Upload recorded file to Bitrix24.
      *
      * @param string $call_id
-     * @param string $recordingfile
-     * @param string $duration
+     * @param $recordedfile
      * @param string $intNum
      *
+     * @param string $duration
+     * @param $disposition
+     * @param $lineNumber
+     * @param string $channel
+     * @param null $crmCall
      * @return array|int
+     * @throws Bitrix24EmptyResponseException
+     * @throws Bitrix24Exception
+     * @throws Bitrix24IoException
+     * @throws Bitrix24SecurityException
      */
     public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber, $channel = "", $crmCall = null){
-        $userId = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record', $disposition);
+        $res = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record');
+        $userId = $res['userId'];
+        $intNum = $res['userPhone'];
+
         $statusCode = $this->getStatusCodeByReason($disposition);
         $sipcode = $statusCode;
         if ($sipcode == 304 || $sipcode == 486) {
@@ -233,38 +250,47 @@ class EBitrix {
             $result = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
             if (isset($result['result'][0]['ID'])) $userFromBtx = $result['result'][0]['ID'];
         }
-        $userFromLine = null;
-        if ($lineNumber != "") {
-            $settings = new PBXSettings();
-            $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
-            if ($result) {
-                $user = new User();
-                $result = $user->getNameById($result);
-                if ($result && ctype_digit($result)) $exten = $result;
-                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
-                $userFromLine = $userInfo['result'][0]['ID'];
-            } else {
-                $result = $settings->getDefaultSettingsByHandle('default_user')['value'];
-                if ($result) $exten = $result;
-                $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
-                $userFromLine = $userInfo['result'][0]['ID'];
-            }
+
+        $settings = new PBXSettings();
+        $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
+        $user = new User();
+        if ($result) {
+            $result = $user->getNameById($result);
+            if ($result && ctype_digit($result)) $extenLine = $result;
+            $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $extenLine, 'ACTIVE' => 'Y']]);
+            $userFromLine = $userInfo['result'][0]['ID'];
         }
+
+        $result = $settings->getDefaultSettingsByHandle('default_user')['value'];
+        $result = $user->getNameById($result);
+        if ($result) $extenDef = $result;
+        $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $extenDef, 'ACTIVE' => 'Y']]);
+        $defaultUser = $userInfo['result'][0]['ID'];
 
         if ($type == 'call/add') {
             if ($userFromLine) {
-                return $userFromLine;
+                return ['userPhone' => $extenLine,'userId' => $userFromLine];
+            } else if ($defaultUser) {
+                return ['userPhone' => $extenDef, 'userId' => $defaultUser];
             } else {
-                return $userFromBtx;
+                return ['userPhone' => $exten, 'userId' => $userFromBtx];
             }
         } elseif ($type == 'call/record') {
             if ($userFromBtx) {
                 if ($disposition == 'ABANDON') {
-                    return $userFromLine;
+                    if ($userFromLine) {
+                        return ['userPhone' => $extenLine, 'userId' => $userFromLine];
+                    } else {
+                        return ['userPhone' => $extenDef, 'userId' => $defaultUser];
+                    }
                 }
-                return $userFromBtx;
+                return ['userPhone' => $exten, 'userId' => $userFromBtx];
             } else {
-                return $userFromLine;
+                if ($userFromLine) {
+                    return ['userPhone' => $extenLine, 'userId' => $userFromLine];
+                } else {
+                    return ['userPhone' => $extenDef, 'userId' => $defaultUser];
+                }
             }
         }
     }
