@@ -14,10 +14,12 @@ class EBitrix {
 
     protected $obB24App;
     protected $db;
+    protected $settings;
 
-    public function __construct($request)
+    public function __construct($request, $channel)
     {
         $settings = new PBXSettings();
+        $this->settings = $settings;
         $appId = $settings->getSettingByHandle('bitrix.app_id')['val'];
         $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
         $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
@@ -55,6 +57,7 @@ class EBitrix {
         global $app;
         $container = $app->getContainer();
         $this->db = $container['db'];
+        $this->channel = $channel;
     }
 
     public function getobB24App() {
@@ -97,14 +100,27 @@ class EBitrix {
                 'LINE_NUMBER' => $lineNumber,
                 'SHOW' => 0
             ]);
-            $this->logSync($channel, 1, json_encode($result));
+            $this->logRequest(
+                $this->settings->getSettingByHandle('bitrix.api_url')['val'],
+                json_encode([
+                    'USER_PHONE_INNER' => $exten,
+                    'USER_ID' => $userId,
+                    'PHONE_NUMBER' => $callerid,
+                    'TYPE' => $type,
+                    'CALL_START_DATE' => $createTime,
+                    'CRM_CREATE' => $crmCreate,
+                    'LINE_NUMBER' => $lineNumber,
+                    'SHOW' => 0
+                ]),
+                json_encode($result));
+            $this->logSync($channel, 1, $result['result']['CALL_ID'], json_encode($result));
             return $result['result']['CALL_ID'];
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             $e = '"'.$e.'"';
             if ($channel == "" && $crmCall) {
                 $channel = $crmCall['uid'];
             }
-            $this->logSync($channel, 3, json_encode($e));
+            $this->logSync($channel, 3, null, json_encode($e));
             if (!$crmCall) {
                 return false;
             } else {
@@ -151,14 +167,24 @@ class EBitrix {
                 'DURATION' => $duration, //длительность звонка в секундах
                 'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
             ]);
-            $this->logSync($channel, 2, json_encode($result));
+            $this->logRequest($this->settings->getSettingByHandle('bitrix.api_url')['val'],
+                json_encode([
+                    'USER_PHONE_INNER' => $intNum,
+                    'USER_ID' => $userId,
+                    'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
+                    'STATUS_CODE' => $sipcode,
+                    'DURATION' => $duration, //длительность звонка в секундах
+                    'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
+                ]),
+                json_encode($result));
+            $this->logSync($channel, 2, $call_id, json_encode($result));
             return $result;
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             $e = '"'.$e.'"';
             if ($crmCall) {
                 $channel = $crmCall['uid'];
             }
-            $this->logSync($channel, 3, json_encode($e));
+            $this->logSync($channel, 3, $call_id, json_encode($e));
 
             if ($channel && !$crmCall) {
                 return false;
@@ -168,7 +194,7 @@ class EBitrix {
         }
     }
 
-    public function logSync($crmCallUid, $status, $result) {
+    public function logSync($crmCallUid, $status, $callId, $result) {
         $sql = "SELECT id FROM btx_call_sync WHERE u_id='$crmCallUid'";
         $res = $this->db->query($sql);
         $row = $res->fetch();
@@ -177,14 +203,15 @@ class EBitrix {
         $sql .= " btx_call_sync SET sync_time = now()".
             ", u_id = '".$crmCallUid.
             "', status = '".$status.
-            "', result = '".$result."'";
+            "', call_id = ".($callId ? "'$callId'" : "null").
+            ", result = '".$result."'";
         if ($row) $sql .= " WHERE id=".$row['id'];
 
         $this->db->query($sql);
     }
 
     public function getSynchronizedCalls($u_id) {
-        $sql = "SELECT id, status
+        $sql = "SELECT id, status, call_id, result
                 FROM btx_call_sync 
                 WHERE u_id = '$u_id'";
         $res = $this->db->query($sql);
@@ -192,7 +219,7 @@ class EBitrix {
         return $res->fetch();
     }
 
-    public function addCall($crmCall) {
+    public function addCall($crmCall, $callId = 0) {
         if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
         if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
         if (mb_strlen($crmCall['dst']) == 11) {
@@ -204,16 +231,19 @@ class EBitrix {
             $intnum = $crmCall['dst'];
             $extnum = $crmCall['src'];
         }
-        $crm_create = 1;
         if ($crmCall['userfield'] == "") {
             $settings = new PBXSettings();
             $crmCall['userfield'] = $settings->getDefaultSettingsByHandle('default_line')['value'];
         }
-        $callId = $this->runInputCall($intnum, $extnum, $type, $crm_create, $crmCall['userfield'], $crmCall['time'], $crmCall['uid'], $crmCall);
-        if (isset($callId['exception'])) {
-            return $callId;
-        } else {
+        if ($callId) {
             return $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
+        } else {
+            $callId = $this->runInputCall($intnum, $extnum, $type, 0, $crmCall['userfield'], $crmCall['time'], $crmCall['uid'], $crmCall);
+            if (isset($callId['exception'])) {
+                return $callId;
+            } else {
+                return $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
+            }
         }
     }
 
@@ -313,5 +343,15 @@ class EBitrix {
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();
       }
+    }
+
+    public function logRequest($url, $query, $response) {
+        $sql = "INSERT INTO bitrix24_requests SET datetime = Now(), channel = :channel, url = :url, query = :query, response = :response";
+        $stmt = $this->db->prepare($sql);
+        $stmt->bindParam('channel', $this->channel);
+        $stmt->bindParam('url', $url);
+        $stmt->bindParam('query', $query);
+        $stmt->bindParam('response', $response);
+        return $stmt->execute()?true:false;
     }
 }

@@ -244,14 +244,14 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
 });
 
 $app->get('/bitrix24/call/add', function (Request $request, Response $response, array $args) {
-    $helper = new EBitrix($request);
-
     $intnum = $request->getParam('intnum', ''); //номер сотрудника внт битрикс 1998
     $extnum = $request->getParam('extnum', ''); // номер пользователя кому звоним
     $type = $request->getParam('type', 2); // 1 - исходящий, 2 - входящий, 3 - входящий с перенаправлением, 4 - обратный
     $crm_create = $request->getParam('crm_create', 1); // создание сущности в срм
     $line_number = $request->getParam('line_number', ''); //Номер внешней линии, через который совершался звонок
     $channel = $request->getParam('channel', '');
+
+    $helper = new EBitrix($request, $channel);
 
     $result = $helper->runInputCall($intnum, $extnum, $type, $crm_create, $line_number, '', $channel);
 
@@ -261,8 +261,6 @@ $app->get('/bitrix24/call/add', function (Request $request, Response $response, 
 });
 
 $app->any('/bitrix24/call/record', function (Request $request, Response $response, array $args) {
-    $helper = new EBitrix($request);
-
     $call_id = $request->getParam('call_id', '');//id звонка из BTX
     $FullFname = $request->getParam('FullFname', '');//URL файла (желательно mp3) с записью звонка
     $CallIntNum = $request->getParam('CallIntNum', 0);//номер внутр сотрудника
@@ -271,14 +269,14 @@ $app->any('/bitrix24/call/record', function (Request $request, Response $respons
     $lineNumber = $request->getParam('line_number', '');
     $channel = $request->getParam('channel', '');
 
+    $helper = new EBitrix($request, $channel);
+
     $result = $helper->uploadRecordedFile($call_id, $FullFname, $CallIntNum, $CallDuration, $CallDisposition, $lineNumber, $channel);
 
     return $response->withJson($result);
 });
 
 $app->any('/bitrix24/call/sync', function (Request $request, Response $response, array $args) {
-    $helper = new EBitrix($request);
-
     $callId = $request->getParam('callId', '');
     $cdr = new PBXCdr();
 
@@ -300,9 +298,10 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
     if (count($crmCalls)) {
         foreach ($crmCalls as $crmCall) {
             if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
+            $helper = new EBitrix($request, $crmCall['uid']);
             if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
-                if ($callSync['status'] == 1 || $callSync['status'] == 3) {
-                    $result = $helper->addCall($crmCall);
+                if ($callSync['status'] == 1) {
+                    $result = $helper->addCall($crmCall, $callSync['call_id']);
                     isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
                 }
             } else {

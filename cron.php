@@ -89,8 +89,6 @@ if (isset($argv[1])) {
   $_COOKIE['token'] = $token;
 }
 
-$helper = new EBitrix(0);
-
 $cdr = new PBXCdr();
 
 $synchronizedCalls = [];
@@ -107,9 +105,10 @@ $crmCalls = $cdr->getReport($filter, 0, 1000000);
 if (count($crmCalls)) {
     foreach ($crmCalls as $crmCall) {
         if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
+        $helper = new EBitrix(0, $crmCall['uid']);
         if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
-            if ($callSync['status'] == 1 || $callSync['status'] == 3) {
-                $result = $helper->addCall($crmCall);
+            if ($callSync['status'] == 1) {
+                $result = $helper->addCall($crmCall, $callSync['call_id']);
                 isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
             }
         } else {
