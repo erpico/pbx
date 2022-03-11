@@ -25,7 +25,8 @@ class PBXOutgoingCampaign  {
     "dial_context" => 0,
     "lead_filters" => 0,
     "lead_status_enabled" => 0,
-    "lead_status" => 0
+    "lead_status" => 0,
+    "lead_status_user" => 0
   ];
 
   const WEEK_DAYS = [

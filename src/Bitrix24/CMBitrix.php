@@ -72,11 +72,23 @@ class CMBitrix {
 
   public function getLeadsByFilters($filters, $next) {
     $leads = [];
+    $newFilters = [];
     $filters = is_string($filters) ? json_decode($filters, true) : $filters;
+      foreach ($filters as $k => $v) {
+          if (str_contains($v, '||')) {
+              $values = explode('||', $v);
+              foreach ($values as $index => $value) {
+                  $newFilters[$k][$index] = $value;
+              }
+          } else {
+              $newFilters[$k] = $v;
+          }
+      }
+
 
     $result = $this->getBitrixApi(array(
         'ORDER' => ["DATE_CREATE" => "DESC"],
-        'FILTER' => $filters,
+        'FILTER' => $newFilters,
         'SELECT' => array('ID', 'CONTACT_ID', 'NAME', 'SECOND_NAME', 'LAST_NAME'),
         'start' => $next
     ), 'crm.lead.list');

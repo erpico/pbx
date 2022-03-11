@@ -325,7 +325,32 @@ class EBitrix {
         }
     }
 
-    public function getStatus() {
+    public function getUsers() {
+        $obB24User = new \Bitrix24\User\User($this->obB24App);
+        $users = [];
+        $i = 0;
+        while (1) {
+            $busers = $obB24User->get('NAME', 'ASC', ['ACTIVE' => 'Y'], $i);
+            if (!count($busers['result'])) break;
+            foreach ($busers['result'] as $u) {
+                $users[] = [
+                    "id"   => $u['ID'],
+                    "name" => trim($u['NAME']),
+                    "last_name" => trim($u['LAST_NAME']),
+                    "phone" => $u['UF_PHONE_INNER']
+                ];
+            }
+            if (!isset($busers['next'])) {
+                break;
+            }
+            $i = $busers['next'];
+        }
+        if ($users) {
+            return $users;
+        }
+    }
+
+    public function getStatuses() {
       $result = $this->obB24App->call('crm.status.list', [
         'FILTER' => ['ENTITY_ID' => 'STATUS'],
       ]);
@@ -334,11 +359,30 @@ class EBitrix {
       }
     }
 
-    public function updateLeadState($leadId, $state)
+    public function getLeadStatus($leadId) {
+        $result = $this->obB24App->call('crm.lead.get', ['ID' => $leadId]);
+
+        if ($result['result']) {
+            $lead = $result['result'];
+
+            $statuses = $this->getStatuses();
+            $foundedStatus = null;
+            foreach ($statuses as $status) {
+                if ($status['STATUS_ID'] == $lead['STATUS_ID']) {
+                    $foundedStatus = $status;
+                    break;
+                }
+            }
+
+            return ['lead_id' => $lead['ID'], 'status_id' => $foundedStatus['ID'], 'status' => $foundedStatus['NAME']];
+        }
+    }
+
+    public function updateLeadState($leadId, $state, $lead_status_user = 0)
     {
       try {
         $state = $this->obB24App->call('crm.status.get', ['ID' => $state]);
-        $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state['result']['STATUS_ID']]]);
+        $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state['result']['STATUS_ID'], 'ASSIGNED_BY_ID' => $lead_status_user]]);
         return $result['result'];
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();

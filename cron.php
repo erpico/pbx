@@ -44,7 +44,7 @@ function importLeads($filters, $next, $helper) {
     return $leadsFromBitrix;
 }
 //LEADS IMPORT
-$sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status FROM outgouing_company';
+$sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company';
 $res = $db->query($sql);
 
 $outgoingCompany = new PBXOutgoingCampaign();

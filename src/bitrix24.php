@@ -352,15 +352,38 @@ $app->get('/bitrix24/lead/import', function (Request $request, Response $respons
   }
 });
 
+$app->get('/bitrix24/users', function (Request $request, Response $response, array $args) {
+    $helper = new EBitrix($request);
+    $settings = new PBXSettings();
+    if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+
+    $res = $helper->getUsers();
+    if ($res) {
+        return $response->withJson(['res' => true, 'data' => $res]);
+    }
+});
+
 $app->get('/bitrix24/status', function (Request $request, Response $response, array $args) {
   $helper = new EBitrix($request);
   $settings = new PBXSettings();
   if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
 
-  $res = $helper->getStatus();
+  $res = $helper->getStatuses();
   if ($res) {
     return $response->withJson(['res' => true, 'data' => $res]);
   }
+});
+
+$app->get('/bitrix24/lead/{lead_id}/state', function (Request $request, Response $response, array $args) {
+    $helper = new EBitrix($request);
+    $settings = new PBXSettings();
+    if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+
+    $leadId = intval($args['lead_id']);
+
+    $res = $helper->getLeadStatus($leadId);
+
+    return $response->withJson($res);
 });
 
 $app->get('/bitrix24/lead/{lead_id}/state/{state}', function (Request $request, Response $response, array $args) {
@@ -369,9 +392,10 @@ $app->get('/bitrix24/lead/{lead_id}/state/{state}', function (Request $request, 
   if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
 
   $leadId = intval($args['lead_id']);
-  $state = $args['state'];
+  $state = intval($args['state']);
+  $lead_status_user = intval($request->getParam('lead_status_user', ''));
 
-  $res = $helper->updateLeadState($leadId, $state);
+  $res = $helper->updateLeadState($leadId, $state, $lead_status_user);
 
   return $response->withJson(['res' => $res]);
 });
