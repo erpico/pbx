@@ -71,13 +71,13 @@ while ($row = $res->fetch()) {
                     'settings' => 1
                 ]);
 
-                if ($row['lead_status_enabled'] == 1) {
+                /*if ($row['lead_status_enabled'] == 1) {
                     $eHelper = new EBitrix('');
                     $settings = new PBXSettings();
                     if ($settings->getDefaultSettingsByHandle('bitrix.enable')['value']) {
                         $eHelper->updateLeadState($btxLead['ID'], $row['lead_status']);
                     }
-                }
+                }*/
             }
         }
     }
