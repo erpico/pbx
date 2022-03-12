@@ -386,8 +386,8 @@ class EBitrix {
     public function updateLeadState($leadId, $state, $lead_status_user = 0)
     {
       try {
-        $state = $this->obB24App->call('crm.status.get', ['ID' => $state]);
-        $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state['result']['STATUS_ID'], 'ASSIGNED_BY_ID' => $lead_status_user]]);
+        //$state = $this->obB24App->call('crm.status.get', ['ID' => $state]);
+        $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state, 'ASSIGNED_BY_ID' => $lead_status_user]]);
         return $result['result'];
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();

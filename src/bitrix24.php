@@ -359,7 +359,9 @@ $app->get('/bitrix24/users', function (Request $request, Response $response, arr
 
     $res = $helper->getUsers();
     if ($res) {
-        return $response->withJson(['res' => true, 'data' => $res]);
+      return $response->withJson($res);
+    } else {
+      return $response->withJson([]);
     }
 });
 
@@ -370,7 +372,17 @@ $app->get('/bitrix24/status', function (Request $request, Response $response, ar
 
   $res = $helper->getStatuses();
   if ($res) {
-    return $response->withJson(['res' => true, 'data' => $res]);
+    $result = [];
+    foreach ($res as $e) {
+      if (!isset($e['STATUS_ID'])) continue;
+      $result[] = [
+        "id" => $e['STATUS_ID'],
+        "value" => $e['NAME']
+      ];
+    }
+    return $response->withJson($result);
+  } else {
+    return $response->withJson([]);
   }
 });
 
