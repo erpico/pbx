@@ -26,7 +26,7 @@ $helper = new CMBitrix('');
 function importLeads($filters, $next, $helper) {
     $leadsFromBitrix = [];
     $result = $helper->getLeadsByFilters($filters, $next);
-    if($result['result']) {
+    if(isset($result['result']) && $result['result']) {
         foreach ($result['result'] as $lead) {
             $leadsFromBitrix[] = $lead;
         }
@@ -43,6 +43,16 @@ function importLeads($filters, $next, $helper) {
 
     return $leadsFromBitrix;
 }
+
+if (!isset($argv[1])) {
+    print "Usage:\n cron.php [leads|calls]\n";
+    exit(1);
+}
+
+$action = $argv[1];
+
+if ($action == 'leads') {
+
 //LEADS IMPORT
 $sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company';
 $res = $db->query($sql);
@@ -82,12 +92,15 @@ while ($row = $res->fetch()) {
         }
     }
 }
+}
+
+if ($action == 'calls') {
 
 //CALL SYNC
-if (isset($argv[1])) {
+/*if (isset($argv[1])) {
   $token = $argv[1];
   $_COOKIE['token'] = $token;
-}
+}*/
 
 $cdr = new PBXCdr();
 
@@ -119,3 +132,4 @@ if (count($crmCalls)) {
 }
 
 var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
+}
