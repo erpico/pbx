@@ -102,7 +102,7 @@ class EBitrix {
             ]);
             if ($this->channel) {
                 $this->logRequest(
-                    $this->settings->getSettingByHandle('bitrix.api_url')['val'],
+                    $this->settings->getSettingByHandle('bitrix.api_url')['val']."telephony.externalcall.register",
                     json_encode([
                         'USER_PHONE_INNER' => $exten,
                         'USER_ID' => $userId,
@@ -171,7 +171,7 @@ class EBitrix {
             ]);
             if ($this->channel) {
                 $this->logRequest(
-                    $this->settings->getSettingByHandle('bitrix.api_url')['val'],
+                    $this->settings->getSettingByHandle('bitrix.api_url')['val']."telephony.externalcall.finish",
                     json_encode([
                         'USER_PHONE_INNER' => $intNum,
                         'USER_ID' => $userId,
@@ -386,8 +386,12 @@ class EBitrix {
     public function updateLeadState($leadId, $state, $lead_status_user = 0)
     {
       try {
-        //$state = $this->obB24App->call('crm.status.get', ['ID' => $state]);
         $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state]]);
+        $this->logRequest(
+            $this->settings->getSettingByHandle('bitrix.api_url')['val']."crm.lead.update",
+            json_encode(['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state]]),
+            json_encode($result)
+        );
         return $result['result'];
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();
