@@ -238,8 +238,6 @@ class PBXPhone
         $this->db->query($sql);
         if (isset($values['user_id']) && intval($values['user_id'])) {
           $new_user_id = intval($values["user_id"]);
-        } else {
-          $new_user_id = $this->db->lastInsertId();
         }
         if (!isset($id)) {
           $id = $this->db->lastInsertId();
@@ -254,7 +252,7 @@ class PBXPhone
           $this->server_host = $values['sipphone_server'];
         }
         $this->setCfgSettings($this->server_host, $values["login"], $values["password"], $values["phone"], $values["model"] == "erpico" ? 1 : 0);
-        $this->setUserConfig($new_user_id, $old_user_id);
+        if (isset($new_user_id)) $this->setUserConfig($new_user_id, $old_user_id);
         return ["result" => true, "message" => "Операция прошла успешно"];
       }
     }
