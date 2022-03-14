@@ -371,12 +371,14 @@ class PBXOutgoingCampaign  {
     foreach (self::FIELDS as $field => $isInt) {
       if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
         if (strlen($ssql)) $ssql .= ",";
-          if (($field == "lead_status" || $field == "call_tries_end") && $values[$field] > 1000000) {
-              $ssql .= "$field=null";
+        $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
+      }  else {
+          if (($field == "lead_status" || $field == "lead_status_user" || $field == "call_tries_end") && $values[$field] == "") {
+              if (strlen($ssql)) $ssql .= ",";
+              $ssql .= "`".$field."`=null";
               continue;
           }
-        $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
-      }  
+      }
     }
     if (!isset($values['id']) || $values['id'] == 0) {
       $ssql .= ", `tm_created` = NOW() ";
