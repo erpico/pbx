@@ -26,7 +26,8 @@ class PBXOutgoingCampaign  {
     "lead_filters" => 0,
     "lead_status_enabled" => 0,
     "lead_status" => 0,
-    "lead_status_user" => 0
+    "lead_status_user" => 0,
+    "call_tries_end" => 0
   ];
 
   const WEEK_DAYS = [
@@ -370,7 +371,7 @@ class PBXOutgoingCampaign  {
     foreach (self::FIELDS as $field => $isInt) {
       if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
         if (strlen($ssql)) $ssql .= ",";
-          if ($field == "lead_status" && $values[$field] > 1000000) {
+          if (($field == "lead_status" || $field == "call_tries_end") && $values[$field] > 1000000) {
               $ssql .= "$field=null";
               continue;
           }
