@@ -387,7 +387,7 @@ class EBitrix {
     {
       try {
         //$state = $this->obB24App->call('crm.status.get', ['ID' => $state]);
-        $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state, 'ASSIGNED_BY_ID' => $lead_status_user]]);
+        $result = $this->obB24App->call('crm.lead.update', ['ID' => $leadId, 'FIELDS' => ['STATUS_ID' => $state]]);
         return $result['result'];
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();

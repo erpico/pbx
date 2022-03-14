@@ -369,7 +369,11 @@ class PBXOutgoingCampaign  {
     }
     foreach (self::FIELDS as $field => $isInt) {
       if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
-        if (strlen($ssql)) $ssql .= ",";          
+        if (strlen($ssql)) $ssql .= ",";
+          if ($field == "lead_status" && $values[$field] > 1000000) {
+              $ssql .= "$field=null";
+              continue;
+          }
         $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
       }  
     }
