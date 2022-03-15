@@ -185,6 +185,14 @@ class EBitrix {
             $this->logSync($channel, 2, $call_id, json_encode($result));
             return $result;
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
+            if (strpos ($e->getMessage(), "Call is not found")) {
+                $cdr = new PBXCdr();
+                $crmCalls = $cdr->getReportsByUid($channel, 1);
+                foreach ($crmCalls as $crmCall) {
+                    $helper = new EBitrix(0, $crmCall['uid']);
+                    return $helper->addCall($crmCall);
+                }
+            }
             $e = '"'.$e.'"';
             if ($crmCall) {
                 $channel = $crmCall['uid'];
@@ -243,7 +251,7 @@ class EBitrix {
         if ($callId) {
             return $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
         } else {
-            $callId = $this->runInputCall($intnum, $extnum, $type, 0, $crmCall['userfield'], $crmCall['time'], $crmCall['uid'], $crmCall);
+            $callId = $this->runInputCall($intnum, $extnum, $type, 1, $crmCall['userfield'], $crmCall['time'], $crmCall['uid'], $crmCall);
             if (isset($callId['exception'])) {
                 return $callId;
             } else {
