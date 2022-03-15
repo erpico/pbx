@@ -736,7 +736,7 @@ class User
               if (intval($group)) $groups_int[] = intval($group);
             }
             if (is_array($groups_int) && COUNT($groups_int)) {
-              // $this->deleteUserGroups($groups_int,$id);
+              $this->deleteUserGroups($id);
               $this->saveUserGroups($groups_int,$id);
             }
           }
@@ -862,12 +862,10 @@ class User
     }
   }
 
-  // public function deleteUserGroups($group_ids, $user_id) {
-  //   if (is_array($group_ids)) {
-  //     $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_group_id IN (".implode(",",$group_ids).") AND acl_user_id = {$user_id}";
-  //     $this->db->query($sql);
-  //   }
-  // }
+   public function deleteUserGroups($user_id) {
+       $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_id = {$user_id}";
+       $this->db->query($sql);
+   }
 
   public function saveUserGroups($group_ids, $user_id) {
     if (is_array($group_ids)) {
