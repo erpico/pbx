@@ -15,6 +15,7 @@ class EBitrix {
     protected $obB24App;
     protected $db;
     protected $settings;
+    protected $channel;
 
     public function __construct($request, $channel = 0)
     {

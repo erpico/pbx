@@ -45,6 +45,15 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 
     setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $content['member_id'], 'access_token' => $content['access_token'], 'refresh_token' => $content['refresh_token']]))), 0, '/');
     if ($state == "master") {
+        $eHelper = new EBitrix( 0, 0);
+        $obB24App = $eHelper->getobB24App();
+        $obB24User = new \Bitrix24\User\User($obB24App);
+        $arCurrentB24User = $obB24User->current();
+        $eHelper->logRequest(
+            $settings->getSettingByHandle('bitrix.api_url')['val'],
+            json_encode('arCurrentB24User'),
+            json_encode($arCurrentB24User)
+        );
         $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $content['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $content['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $content['refresh_token']]]));
     }
   }
@@ -284,14 +293,21 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
     $exceptions = [];
 
     if ($callId) {
-        $crmCalls = $cdr->getReportsByUid($callId, 1);
+        $reports = $cdr->getReportsByUid($callId, 1);
+        foreach ($reports as $crmCall) {
+            if ($crmCall['queue'] !== '') {
+                $crmCalls[] = $crmCall;
+            }
+        }
+        if(empty($crmCalls)) {
+            $crmCalls[] = $reports[0];
+        }
     } else {
         $currentDatetime = new DateTime();
         $yesterdayDatetime = new DateTime();
         $yesterdayDatetime->modify('-1 day');
 
         $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
-//        $filter['time'] = '{"start":"2021-12-23 08:00:00","end":"2021-12-23 09:00:00"}';
         $crmCalls = $cdr->getReport($filter, 0, 1000000);
     }
 
