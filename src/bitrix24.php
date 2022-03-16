@@ -45,6 +45,7 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
 
     setcookie('bitrix24_token', base64_encode(gzencode(json_encode(['member_id' => $content['member_id'], 'access_token' => $content['access_token'], 'refresh_token' => $content['refresh_token']]))), 0, '/');
     if ($state == "master") {
+        $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $content['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $content['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $content['refresh_token']]]));
         $eHelper = new EBitrix( 0, 0);
         $obB24App = $eHelper->getobB24App();
         $obB24User = new \Bitrix24\User\User($obB24App);
@@ -54,7 +55,6 @@ $app->get('/bitrix24/app', function (Request $request, Response $response, array
             json_encode('arCurrentB24User'),
             json_encode($arCurrentB24User)
         );
-        $settings->setDefaultSettings(json_encode([['handle' => 'bitrix24.member_id', 'val' => $content['member_id']], ['handle' => 'bitrix24.access_token', 'val' => $content['access_token']], ['handle' => 'bitrix24.refresh_token', 'val' => $content['refresh_token']]]));
     }
   }
 
