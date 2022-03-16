@@ -112,7 +112,6 @@ $yesterdayDatetime = new DateTime();
 $yesterdayDatetime->modify('-1 day');
 
 $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
-//$filter['time'] = '{"start":"2021-12-23 09:40:00","end":"2021-12-23 09:50:00"}'; // test for small range
 $crmCalls = $cdr->getReport($filter, 0, 1000000);
 
 if (count($crmCalls)) {
@@ -121,7 +120,11 @@ if (count($crmCalls)) {
         $helper = new EBitrix(0, $crmCall['uid']);
         if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
             if ($callSync['status'] == 1) {
-                $result = $helper->addCall($crmCall, $callSync['call_id']);
+                $result = $helper->addCall($crmCall, $callSync['call_id'], 0);
+                isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+            }
+            if ($callSync['status'] == 2 && $crmCall['time'] !== $callSync['call_time']) {
+                $result = $helper->addCall($crmCall,0, 0);
                 isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
             }
         } else {

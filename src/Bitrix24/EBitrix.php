@@ -116,14 +116,14 @@ class EBitrix {
                     ]),
                     json_encode($result));
             }
-            $this->logSync($channel, 1, $result['result']['CALL_ID'], json_encode($result));
+            $this->logSync($channel, 1, $result['result']['CALL_ID'], $createTime, json_encode($result));
             return $result['result']['CALL_ID'];
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             $e = '"'.$e.'"';
             if ($channel == "" && $crmCall) {
                 $channel = $crmCall['uid'];
             }
-            $this->logSync($channel, 3, null, json_encode($e));
+            $this->logSync($channel, 3, null, $createTime, json_encode($e));
             if (!$crmCall) {
                 return false;
             } else {
@@ -161,6 +161,7 @@ class EBitrix {
             $duration = 0;
         }
 
+        $createTime = isset($crmCall['time']) ? date("Y-m-d H:i:s", strtotime($crmCall['time'])) : date("Y-m-d H:i:s");
         try {
             $result = $this->obB24App->call('telephony.externalcall.finish', [
                 'USER_PHONE_INNER' => $intNum,
@@ -183,7 +184,7 @@ class EBitrix {
                     ]),
                     json_encode($result));
             }
-            $this->logSync($channel, 2, $call_id, json_encode($result));
+            $this->logSync($channel, 2, $call_id, $createTime, json_encode($result));
             return $result;
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             if (strpos ($e->getMessage(), "Call is not found")) {
@@ -198,7 +199,7 @@ class EBitrix {
             if ($crmCall) {
                 $channel = $crmCall['uid'];
             }
-            $this->logSync($channel, 3, $call_id, json_encode($e));
+            $this->logSync($channel, 3, $call_id, $createTime, json_encode($e));
 
             if ($channel && !$crmCall) {
                 return false;
@@ -208,8 +209,8 @@ class EBitrix {
         }
     }
 
-    public function logSync($crmCallUid, $status, $callId, $result) {
-        $sql = "SELECT id FROM btx_call_sync WHERE u_id='$crmCallUid'";
+    public function logSync($crmCallUid, $status, $callId, $time, $result) {
+        $sql = "SELECT id FROM btx_call_sync WHERE u_id='$crmCallUid' AND call_time = '$time' AND status = 1 ORDER BY id DESC";
         $res = $this->db->query($sql);
         $row = $res->fetch();
 
@@ -218,22 +219,23 @@ class EBitrix {
             ", u_id = '".$crmCallUid.
             "', status = '".$status.
             "', call_id = ".($callId ? "'$callId'" : "null").
-            ", result = '".$result."'";
+            ", call_time = '".$time.
+            "', result = '".$result."'";
         if ($row) $sql .= " WHERE id=".$row['id'];
-
         $this->db->query($sql);
     }
 
     public function getSynchronizedCalls($u_id) {
-        $sql = "SELECT id, status, call_id, result
+        $sql = "SELECT id, status, call_id, call_time, result
                 FROM btx_call_sync 
-                WHERE u_id = '$u_id'";
+                WHERE u_id = '$u_id'
+                ORDER BY id DESC";
         $res = $this->db->query($sql);
 
         return $res->fetch();
     }
 
-    public function addCall($crmCall, $callId = 0) {
+    public function addCall($crmCall, $callId = 0, $crmCreate = 1) {
         if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
         if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
         if (mb_strlen($crmCall['dst']) == 11) {
@@ -252,7 +254,7 @@ class EBitrix {
         if ($callId) {
             return $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
         } else {
-            $callId = $this->runInputCall($intnum, $extnum, $type, 1, $crmCall['userfield'], $crmCall['time'], $crmCall['uid'], $crmCall);
+            $callId = $this->runInputCall($intnum, $extnum, $type, $crmCreate, $crmCall['userfield'], $crmCall['time'], $crmCall['uid'], $crmCall);
             if (isset($callId['exception'])) {
                 return $callId;
             } else {
