@@ -373,7 +373,7 @@ class PBXOutgoingCampaign  {
         if (strlen($ssql)) $ssql .= ",";
         $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
       }  else {
-          if (($field == "lead_status" || $field == "lead_status_user" || $field == "lead_status_tries_end") && $values[$field] == "") {
+          if (($field == "lead_status" || $field == "lead_status_user" || $field == "lead_status_tries_end") && isset($values[$field]) && $values[$field] == "") {
               if (strlen($ssql)) $ssql .= ",";
               $ssql .= "`".$field."`=null";
               continue;
