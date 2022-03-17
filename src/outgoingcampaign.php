@@ -22,6 +22,7 @@ class PBXOutgoingCampaign  {
     "min_call_time"=> 1,
     "concurrent_calls_limit" => 1,
     "max_day_calls_limit" => 0,
+    "calls_multiplier" => 0,
     "dial_context" => 0,
     "lead_filters" => 0,
     "lead_status_enabled" => 0,
@@ -130,12 +131,13 @@ class PBXOutgoingCampaign  {
       $result[] = $row;
     }
     if ($needTime) {
-      $sql = "SELECT min_call_time, concurrent_calls_limit, max_day_calls_limit FROM outgouing_company WHERE id={$id}";
+      $sql = "SELECT min_call_time, concurrent_calls_limit, max_day_calls_limit, calls_multiplier FROM outgouing_company WHERE id={$id}";
       $res = $this->db->query($sql);
       while ($row = $res->fetch()) {
         $result['min_call_time'] = $row['min_call_time'];
         $result['concurrent_calls_limit'] = $row['concurrent_calls_limit'];
         $result['max_day_calls_limit'] = $row['max_day_calls_limit'];
+        $result['calls_multiplier'] = $row['calls_multiplier'];
       }
     }
       return $result;
@@ -418,7 +420,7 @@ class PBXOutgoingCampaign  {
     return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
-  public function updateSettings($id, $settings, $concurrent_calls_limit = 1, $min_call_time = 1, $max_day_calls_limit = 0) {
+  public function updateSettings($id, $settings, $concurrent_calls_limit = 1, $min_call_time = 1, $max_day_calls_limit = 0, $calls_multiplier = 1) {
       // if (is_string($settings) && strlen($settings)) {
       $js = json_decode($settings);
       $this->deleteAllSettings($id);
@@ -438,10 +440,12 @@ class PBXOutgoingCampaign  {
       }
       if ($min_call_time == 0) $min_call_time = 1;
       if ($concurrent_calls_limit == 0) $concurrent_calls_limit = 1;
+      if ($calls_multiplier < 1) $calls_multiplier = 1;
       $sql = "UPDATE outgouing_company SET 
       `min_call_time`= $min_call_time,
       `concurrent_calls_limit`= $concurrent_calls_limit,
-      `max_day_calls_limit`= $max_day_calls_limit
+      `max_day_calls_limit`= $max_day_calls_limit,
+      `calls_multiplier`= $calls_multiplier
        WHERE id = $id";
       $this->db->query($sql);
 

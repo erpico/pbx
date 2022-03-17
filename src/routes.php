@@ -564,8 +564,9 @@ $app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, R
   $concurrent_calls_limit = $request->getParam("concurrent_calls_limit");
   $min_call_time = $request->getParam("min_call_time");
   $max_day_calls_limit = $request->getParam("max_day_calls_limit");
+  $calls_multiplier = $request->getParam("calls_multiplier");
 
-  return $response->withJson(["result" => $outgoingcampaign->updateSettings($id, $settings, $concurrent_calls_limit, $min_call_time, $max_day_calls_limit)]);
+  return $response->withJson(["result" => $outgoingcampaign->updateSettings($id, $settings, $concurrent_calls_limit, $min_call_time, $max_day_calls_limit, $calls_multiplier)]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
 // SMS messaging
