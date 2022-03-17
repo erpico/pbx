@@ -229,13 +229,16 @@ class EBitrix {
         $sql = "SELECT id, status, call_id, call_time, result
                 FROM btx_call_sync 
                 WHERE u_id = '$u_id'
-                ORDER BY id DESC";
+                ORDER BY sync_time DESC";
         $res = $this->db->query($sql);
 
         return $res->fetch();
     }
 
     public function addCall($crmCall, $callId = 0, $crmCreate = 1) {
+        $settings = new PBXSettings();
+        $sip_url = $settings->getDefaultSettingsByHandle('sip.url')['value'];
+        $sip_url = explode(':', $sip_url)[0];
         if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
         if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
         if (mb_strlen($crmCall['dst']) == 11) {
@@ -248,17 +251,16 @@ class EBitrix {
             $extnum = $crmCall['src'];
         }
         if ($crmCall['userfield'] == "") {
-            $settings = new PBXSettings();
             $crmCall['userfield'] = $settings->getDefaultSettingsByHandle('default_line')['value'];
         }
         if ($callId) {
-            return $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
+            return $this->uploadRecordedFile($callId, $sip_url.'/recording/'.$crmCall['uid'].'.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
         } else {
             $callId = $this->runInputCall($intnum, $extnum, $type, $crmCreate, $crmCall['userfield'], $crmCall['time'], $crmCall['uid'], $crmCall);
             if (isset($callId['exception'])) {
                 return $callId;
             } else {
-                return $this->uploadRecordedFile($callId, '/recording/' . $crmCall['uid'] . '.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
+                return $this->uploadRecordedFile($callId, $sip_url.'/recording/'.$crmCall['uid'].'.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
             }
         }
     }
