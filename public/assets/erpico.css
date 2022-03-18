@@ -882,6 +882,7 @@ line-height: 114%;
 .webix_window .webix_view{
     border-bottom: none;
     border-top: none;
+    border-right: none;
 }
 
 .webix_window .webix_win_body > .webix_layout_line{

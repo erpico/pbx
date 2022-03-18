@@ -186,7 +186,7 @@ class User
 
   public function getInfo() {
     if (!$this->id) return 0;
-    $sql = "SELECT id, name, fullname
+    $sql = "SELECT id, name, fullname, photo
             FROM acl_user
             WHERE id = {$this->id}";            
     $res = $this->db->query($sql);
@@ -196,6 +196,7 @@ class User
         'roles' => $this->getUserRoles() ? $this->getUserRoles()  : ['user'],
         'name' => $row['name'],
         'fullname' => $row['fullname'],    
+        'photo' => $row['photo'],
       ];
     } else {
       return [
@@ -492,7 +493,7 @@ class User
     ";
     } else {
       $sql = "SELECT 
-      U.id, U.name, U.fullname, U.description, C.val as phone, U.state
+      U.id, U.name, U.fullname, U.photo, U.description, C.val as phone, U.state
       FROM acl_user as U
       LEFT JOIN cfg_user_setting AS C ON (C.acl_user_id = U.id AND C.handle = 'cti.ext')
     ";
@@ -665,6 +666,10 @@ class User
         //}
       } else {
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
+      }
+
+      if (isset($params['photo']) && strlen(trim($params['photo']))) {
+          $sql .= "`photo` = '" . trim(addslashes($params['photo'])) . "',";
       }
 
       if (isset($params['state']) && intval($params['state'])) {

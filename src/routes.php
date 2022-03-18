@@ -7,6 +7,7 @@ use Erpico\PBXRules;
 use App\Middleware\OnlyAdmin;
 use App\Middleware\SecureRouteMiddleware;
 use App\Middleware\SetRoles;
+use App\helpers\ErpicoFileUploader;
 use PHPMailer\PHPMailer\PHPMailer;
 use GuzzleHttp\Client;
 use Supervisor\Supervisor;
@@ -1097,3 +1098,23 @@ $app->post('/export', function (Request $request, Response $response, array $arg
         );
     });
 //});
+
+$app->post('/upload', function ($request, $response, $args) {
+    $userId = $request->getParam('userId', 0);
+    if ($userId == 0) return $response->withJson([ "status" => "error", "message" => "Неверный идентификатор пользователя"]);
+    $config = require(__DIR__ . '/settings.php');
+
+    $uploadPath = $config['settings']['uploadPath'];
+
+    if (isset($_FILES['file'])) {
+        $_FILES['upload'] = $_FILES['file'];
+    }
+
+    if (is_null($_FILES['upload'])) {
+        return $response->withJson([ "status" => "error"]);
+    }
+
+    $result = ErpicoFileUploader::moveFile($_FILES['upload'], $userId, $uploadPath);
+
+    return $response->withJson($result);
+});
