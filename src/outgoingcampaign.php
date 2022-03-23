@@ -459,6 +459,11 @@ class PBXOutgoingCampaign  {
     return $result ? 1 : 0;
   }
 
+  public function truncate($id) {
+      $result = $this->db->query("DELETE FROM outgouing_company_contacts WHERE state NOT IN (3,4,6,7) AND `outgouing_company_id` = $id");
+      return $result ? 1 : 0;
+  }
+
   private function bindDefaultSettings($id) {
     $settings = $this->getSettings(1);
     foreach ($settings as $setting) {

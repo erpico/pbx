@@ -542,6 +542,15 @@ $app->post('/outgoingcampaign/{id}/remove', function (Request $request, Response
   ]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
+$app->post('/outgoingcampaign/{id}/truncate', function (Request $request, Response $response, array $args) use ($app) {
+    $outgoingcampaign = new PBXOutgoingCampaign();
+    $result = $outgoingcampaign->truncate(intval($args["id"]));
+    return $response->withJson([
+        "result" => $result,
+        "message" => $result ? "Очистка прошло успешно!" : 'Ошибка очистки',
+    ]);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
 $app->get('/outgoingcampaign/{id}/state/{state}', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
