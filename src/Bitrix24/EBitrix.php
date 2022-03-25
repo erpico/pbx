@@ -25,10 +25,9 @@ class EBitrix {
         $secret = $settings->getSettingByHandle('bitrix.secret')['val'];
         $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
 
-        if ($request) $bitrix24_token = json_decode(gzdecode(base64_decode($request->getCookieParam('bitrix24_token'))), true);
-        if(!isset($bitrix24_token['member_id'])) $bitrix24_token['member_id'] = $settings->getSettingByHandle('bitrix24.member_id')['val'];
-        if(!isset($bitrix24_token['access_token'])) $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
-        if(!isset($bitrix24_token['refresh_token'])) $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
+        $bitrix24_token['member_id'] = $settings->getSettingByHandle('bitrix24.member_id')['val'];
+        $bitrix24_token['access_token'] = $settings->getSettingByHandle('bitrix24.access_token')['val'];
+        $bitrix24_token['refresh_token'] = $settings->getSettingByHandle('bitrix24.refresh_token')['val'];
 
         // create a log channel
         $log = new Logger('bitrix24');
