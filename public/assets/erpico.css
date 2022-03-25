@@ -1069,3 +1069,7 @@ a:hover {
 .wxi-eye, .wxi-eye-slash {
     padding-right: 5px;
 }
+
+.export_btn .webix_el_box .webix_button{
+    padding-bottom: 10px;
+}
