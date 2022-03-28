@@ -1073,3 +1073,11 @@ a:hover {
 .export_btn .webix_el_box .webix_button{
     padding-bottom: 10px;
 }
+
+.sync_btn {
+    height:26px;
+    width:110px;
+    background: #22B7E1;
+    color: white;
+    border: none;
+}

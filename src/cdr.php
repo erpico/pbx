@@ -55,6 +55,18 @@ class PBXCdr {
     return $cdr;      
   }
 
+  public function getSyncByUid($id) {
+    $sql = "SELECT id, sync_time, u_id, status, call_id, call_time, result FROM phc.btx_call_sync WHERE u_id='".$id."'";
+    $res = $this->db->query($sql);
+
+    $syncCalls = [];
+    while ($row = $res->fetch()) {
+      $syncCalls[] = $row;
+    }
+
+    return $syncCalls;
+  }
+
   public function getReport($filter, $start = 0, $limit = 20, $onlyCount = 0, $serverFooter = 0, $_lcd = 0)
   {
     if ($_SERVER['REMOTE_ADDR']) {
