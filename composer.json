@@ -28,7 +28,8 @@
         "php-http/message": "^1.11",
         "supervisorphp/supervisor": "^4.0",
         "mesilov/bitrix24-php-sdk": "^1.2",
-        "symfony/http-client": "^5.4"
+        "symfony/http-client": "^5.4",
+        "ext-ftp": "*"
     },
     "require-dev": {
         "phpunit/phpunit": ">=4.8 < 6.0"
