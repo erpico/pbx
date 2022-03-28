@@ -397,7 +397,7 @@ class PBXOutgoingCampaign  {
       } else {
         $id = $this->db->lastInsertId();
       }
-      if (isset($values['phones'])) {
+      if (isset($values['phones']) && $values['phones'] !== "[]") {
         $phones = json_decode($values['phones']);
         foreach ($phones as $phone) {
           if ($phone->phone) $res = $this->getContactByPhone($phone->phone, $id);
@@ -407,6 +407,8 @@ class PBXOutgoingCampaign  {
             $errors[] = $resPhone;
           }
         }
+      } else {
+        $this->truncateQueues($id);
       }
       
       if (isset($values['days'])) {
@@ -459,7 +461,7 @@ class PBXOutgoingCampaign  {
     return $result ? 1 : 0;
   }
 
-  public function truncate($id) {
+  public function truncateQueues($id) {
       $result = $this->db->query("DELETE FROM outgouing_company_contacts WHERE state NOT IN (3,4,6,7) AND `outgouing_company_id` = $id");
       return $result ? 1 : 0;
   }
