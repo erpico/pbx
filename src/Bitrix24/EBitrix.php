@@ -98,7 +98,7 @@ class EBitrix {
                 'CALL_START_DATE' => $createTime,
                 'CRM_CREATE' => $crmCreate,
                 'LINE_NUMBER' => $lineNumber,
-                'SHOW' => 0
+                'SHOW' => (int)$this->settings->getSettingByHandle('bitrix.leadshow')['val'] ?? 0
             ]);
             if ($this->channel) {
                 $this->logRequest(
@@ -111,7 +111,7 @@ class EBitrix {
                         'CALL_START_DATE' => $createTime,
                         'CRM_CREATE' => $crmCreate,
                         'LINE_NUMBER' => $lineNumber,
-                        'SHOW' => 0
+                        'SHOW' => (int)$this->settings->getSettingByHandle('bitrix.leadshow')['val'] ?? 0
                     ]),
                     json_encode($result));
             }
