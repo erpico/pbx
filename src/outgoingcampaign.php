@@ -191,7 +191,7 @@ class PBXOutgoingCampaign  {
   public function getContacts($id) {
     $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
     state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} 
-    AND state NOT IN (3,4,6,7)";
+    AND state NOT IN (3,4,6,7) ORDER BY id";
     $res = $this->db->query($sql);
     $result = [];
     while ($row = $res->fetch()) {
@@ -207,11 +207,7 @@ class PBXOutgoingCampaign  {
     WHERE phone = {$phone} 
     AND outgouing_company_id = {$outgoing_company_id}";
         $res = $this->db->query($sql);
-        $result = [];
-        while ($row = $res->fetch()) {
-            $result[] = $row;
-        }
-        return $result;
+        return $res->fetch();
     }
 
   private function getSipStatusText($code) {
@@ -332,14 +328,7 @@ class PBXOutgoingCampaign  {
   }
 
   private function savePhone($id, $campaning_id, $phone, $name, $description, $state) {
-    $contact = $this->getContactById($id);
-    if ($contact && (!$phone || $phone == '')) {
-      $sql = " DELETE FROM outgouing_company_contacts WHERE id = ".intval($id);
-      $res = $this->db->query($sql);
-      $res->fetch();
-    } else if (!$phone || $phone == '') {
-      return ;
-    } else {
+      $contact = $this->getContactById($id);
       if (!$contact) {
         $sql = " INSERT INTO outgouing_company_contacts SET ";
       } else {
@@ -355,8 +344,7 @@ class PBXOutgoingCampaign  {
       ";
       if (isset($sql_end)) $sql .= $sql_end;
 
-      $res = $this->db->query($sql);
-    }
+      $this->db->query($sql);
   }
 
   public function addUpdate($values) {
@@ -400,6 +388,11 @@ class PBXOutgoingCampaign  {
       if (isset($values['phones']) && $values['phones'] !== "[]") {
         $phones = json_decode($values['phones']);
         foreach ($phones as $phone) {
+          if ($phone->id && (!$phone->phone || $phone == "")) {
+            $this->deleteContact($phone->id);
+            continue;
+          }
+          $res = false;
           if ($phone->phone) $res = $this->getContactByPhone($phone->phone, $id);
           if ($res && $res['id'] != $phone->id) continue;
           $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
@@ -509,5 +502,11 @@ class PBXOutgoingCampaign  {
     $sql = "DELETE FROM outgouing_company_weekdays WHERE outgouing_company_id = '{$id}'";
     $this->db->query($sql);
     return true;    
+  }
+
+  private function deleteContact(int $id)
+  {
+    $sql = "DELETE FROM outgouing_company_contacts WHERE id = '{$id}'";
+    $this->db->query($sql);
   }
 }
