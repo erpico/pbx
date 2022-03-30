@@ -326,7 +326,7 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
         foreach ($crmCalls as $crmCall) {
             if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
             $helper = new EBitrix($request, $crmCall['uid']);
-            if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
+            if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'], $crmCall['time'])) {
                 if ($callSync['status'] == 1) {
                     $result = $helper->addCall($crmCall, $callSync['call_id'], 0);
                     isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);

@@ -209,26 +209,26 @@ class EBitrix {
     }
 
     public function logSync($crmCallUid, $status, $callId, $time, $result) {
-        $sql = "SELECT id FROM btx_call_sync WHERE u_id='$crmCallUid' AND call_time = '$time' AND status = 1 ORDER BY id DESC";
+        $sql = "SELECT id FROM btx_call_sync WHERE u_id='$crmCallUid' AND status = 1 ORDER BY id DESC";
         $res = $this->db->query($sql);
         $row = $res->fetch();
 
         $sql = $row ? "UPDATE" : "INSERT INTO";
-        $sql .= " btx_call_sync SET sync_time = now()".
+        $sql .= " btx_call_sync SET sync_time = '".date("Y-m-d H:i:s")."'".
             ", u_id = '".$crmCallUid.
             "', status = '".$status.
-            "', call_id = ".($callId ? "'$callId'" : "null").
-            ", call_time = '".$time.
-            "', result = '".$result."'";
+            "', call_id = ".($callId ? "'$callId'" : "null");
+        if (!$row) $sql .= ", call_time = '".$time."'";
+        $sql .= ", result = '".$result."'";
         if ($row) $sql .= " WHERE id=".$row['id'];
         $this->db->query($sql);
     }
 
-    public function getSynchronizedCalls($u_id) {
+    public function getSynchronizedCalls($u_id, $time) {
         $sql = "SELECT id, status, call_id, call_time, result
                 FROM btx_call_sync 
-                WHERE u_id = '$u_id'
-                ORDER BY sync_time DESC";
+                WHERE u_id = '$u_id' AND call_time = '$time'
+                ORDER BY id DESC";
         $res = $this->db->query($sql);
 
         return $res->fetch();
