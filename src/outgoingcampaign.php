@@ -204,7 +204,7 @@ class PBXOutgoingCampaign  {
         $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
     state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) 
     FROM outgouing_company_contacts 
-    WHERE phone = {$phone} 
+    WHERE phone = '{$phone}' 
     AND outgouing_company_id = {$outgoing_company_id}";
         $res = $this->db->query($sql);
         return $res->fetch();
