@@ -449,6 +449,83 @@ class PBXOutgoingCampaign  {
     // return false;
   }
 
+  public function copy(int $id, ?int $queues = 0): int
+  {
+      $sql = "SELECT * FROM outgouing_company WHERE id = $id";
+      $res = $this->db->query($sql);
+      $row = $res->fetch();
+
+      $sql = "INSERT INTO outgouing_company SET ";
+      foreach ($row as $k => $v) {
+          if ($k === 'id' || $v == null) continue;
+          if ( in_array($k, ['updated', 'tm_created']) ) {
+              $sql .= "`$k` = NOW(), ";
+              continue;
+          }
+          $sql .= "`$k` = '$v', ";
+      }
+      $sql = rtrim($sql, ", ");
+      $res = $this->db->query($sql);
+      $newCampaignId = $this->db->lastInsertId();
+
+      if ($res) {
+          $sql = "SELECT * FROM outgoing_campaign_dial_result_setting WHERE campaign_id = $id";
+          $res = $this->db->query($sql);
+          while ($row = $res->fetch()) {
+              $sql = "INSERT INTO outgoing_campaign_dial_result_setting SET ";
+              foreach ($row as $k => $v) {
+                  if ($k === 'campaign_id') {
+                      $sql .= "`$k` = '$newCampaignId', ";
+                      continue;
+                  }
+                  if ($v == null) continue;
+                  $sql .= "`$k` = '$v', ";
+              }
+              $sql = rtrim($sql, ", ");
+              $this->db->query($sql);
+          }
+
+          $sql = "SELECT * FROM outgouing_company_weekdays WHERE outgouing_company_id = $id";
+          $res = $this->db->query($sql);
+          while ($row = $res->fetch()) {
+              $sql = "INSERT INTO outgouing_company_weekdays SET ";
+              foreach ($row as $k => $v) {
+                  if ($k === 'outgouing_company_id') {
+                      $sql .= "`$k` = '$newCampaignId', ";
+                      continue;
+                  }
+                  if ($v == null) continue;
+                  $sql .= "`$k` = '$v', ";
+              }
+              $sql = rtrim($sql, ", ");
+              $this->db->query($sql);
+          }
+
+          if ($queues) {
+              $sql = "SELECT * FROM outgouing_company_contacts 
+                      WHERE outgouing_company_id = $id 
+                      AND state NOT IN (3,4,6,7) 
+                      ORDER BY id";
+              $res = $this->db->query($sql);
+              while ($row = $res->fetch()) {
+                  $sql = "INSERT INTO outgouing_company_contacts SET ";
+                  foreach ($row as $k => $v) {
+                      if ($k === 'outgouing_company_id') {
+                          $sql .= "`$k` = '$newCampaignId', ";
+                          continue;
+                      }
+                      if ($v == null) continue;
+                      $sql .= "`$k` = '$v', ";
+                  }
+                  $sql = rtrim($sql, ", ");
+                  $this->db->query($sql);
+              }
+          }
+      }
+
+      return $newCampaignId;
+  }
+
   public function remove($id) {
     $result = $this->db->query("UPDATE outgouing_company SET deleted = 1 WHERE id = {$id}");
     return $result ? 1 : 0;

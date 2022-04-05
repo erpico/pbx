@@ -540,6 +540,19 @@ $app->post('/outgoingcampaign/{id}/save', function (Request $request, Response $
   return $response->withJson($outgoingcampaign->addUpdate($values));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
+$app->get('/outgoingcampaign/{id}/copy', function (Request $request, Response $response, array $args) use ($app) {
+    $outgoingcampaign = new PBXOutgoingCampaign();
+    $queues = $request->getParam('queues', 0);
+
+
+    $copyResult = $outgoingcampaign->copy(intval($args["id"]), $queues);
+    return $response->withJson([
+        "result" => 1,
+        "id" => $copyResult,
+        "message" => $copyResult ? "Копирование прошло успешно!" : 'Ошибка копирования',
+    ]);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
 $app->post('/outgoingcampaign/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $result = $outgoingcampaign->remove(intval($args["id"]));
