@@ -310,9 +310,6 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
                 $crmCalls[] = $crmCall;
             }
         }
-        if(empty($crmCalls)) {
-            $crmCalls[] = $reports[0];
-        }
     } else {
         $currentDatetime = new DateTime();
         $yesterdayDatetime = new DateTime();
@@ -326,12 +323,19 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
         foreach ($crmCalls as $crmCall) {
             if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
             $helper = new EBitrix($request, $crmCall['uid']);
-            if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'], $crmCall['time'])) {
+            $datetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+'.$crmCall['talk'].' sec')->format('Y-m-d H:i:s');
+            $datetimePlusSec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+1 sec')->format('Y-m-d H:i:s');
+            if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
                 if ($callSync['status'] == 1) {
                     $result = $helper->addCall($crmCall, $callSync['call_id'], 0);
                     isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
                 }
-                if ($callSync['status'] == 2 && $crmCall['time'] !== $callSync['call_time']) {
+                if (
+                        $callSync['status'] == 2 && //synchronized
+                        $crmCall['time'] !== $callSync['call_time'] && // synchronized by call/sync route
+                        $datetimePlusTalk !== $callSync['call_time'] && // synchronized by ats
+                        $datetimePlusSec !== $callSync['call_time'] // scripts delay
+                ) {
                     $result = $helper->addCall($crmCall,0, 0);
                     isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
                 }

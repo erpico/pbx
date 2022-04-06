@@ -224,10 +224,10 @@ class EBitrix {
         $this->db->query($sql);
     }
 
-    public function getSynchronizedCalls($u_id, $time) {
+    public function getSynchronizedCalls($u_id) {
         $sql = "SELECT id, status, call_id, call_time, result
                 FROM btx_call_sync 
-                WHERE u_id = '$u_id' AND call_time = '$time'
+                WHERE u_id = '$u_id'
                 ORDER BY id DESC";
         $res = $this->db->query($sql);
 
