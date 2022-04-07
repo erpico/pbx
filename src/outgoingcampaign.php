@@ -328,6 +328,7 @@ class PBXOutgoingCampaign  {
   }
 
   private function savePhone($id, $campaning_id, $phone, $name, $description, $state) {
+    try {
       $contact = $this->getContactById($id);
       if (!$contact) {
         $sql = " INSERT INTO outgouing_company_contacts SET ";
@@ -345,6 +346,10 @@ class PBXOutgoingCampaign  {
       if (isset($sql_end)) $sql .= $sql_end;
 
       $this->db->query($sql);
+    } catch (Exception $e) {
+      return $e;
+    }
+
   }
 
   public function addUpdate($values) {
@@ -392,9 +397,6 @@ class PBXOutgoingCampaign  {
             $this->deleteContact($phone->id);
             continue;
           }
-          $res = false;
-          if ($phone->phone) $res = $this->getContactByPhone($phone->phone, $id);
-          if ($res && $res['id'] != $phone->id) continue;
           $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
           if (isset($resPhone)) {
             $errors[] = $resPhone;

@@ -369,6 +369,9 @@ input::-ms-reveal, input::-ms-clear {
 .bad-row {
   background-color: rgb(255,168,168);
 }
+.duplicate-row {
+    background-color: rgb(251, 255, 123);
+}
 
 .greencircle, .greencircle_state{
     background-color: #33ff33;
