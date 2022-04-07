@@ -573,9 +573,8 @@ $app->get('/outgoingcampaign/{id}/state/{state}', function (Request $request, Re
 $app->get('/outgoingcampaign/{id}/settings', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
-  $extended = $request->getParam("extended", 0);
 
-  return $response->withJson($outgoingcampaign->getSettings($id, $extended));
+  return $response->withJson($outgoingcampaign->getSettings($id));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
 $app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, Response $response, array $args) use ($app) {

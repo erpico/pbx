@@ -19,16 +19,21 @@ class PBXOutgoingCampaign  {
     "call_tries"=> 1,
     "action"=> 1,
     "action_value" => 0,
-    "min_call_time"=> 1,
-    "concurrent_calls_limit" => 1,
-    "max_day_calls_limit" => 0,
-    "calls_multiplier" => 0,
     "dial_context" => 0,
     "lead_filters" => 0,
     "lead_status_enabled" => 0,
     "lead_status" => 0,
     "lead_status_user" => 0,
-    "lead_status_tries_end" => 0
+    "lead_status_tries_end" => 0,
+  ];
+
+  const EXTENDED_SETTING_FIELDS = [
+    "min_call_time",
+    "concurrent_calls_limit",
+    "max_day_calls_limit",
+    "calls_multiplier",
+    "waiting_connection_time",
+    "answering_machine_beat",
   ];
 
   const WEEK_DAYS = [
@@ -113,7 +118,7 @@ class PBXOutgoingCampaign  {
     return $days;
   }
 
-  public function getSettings($id, $extended = 0) {
+  public function getSettings($id) {
     $sql = "SELECT ".implode(",",self::SETTING_FIELDS)." FROM outgoing_campaign_dial_result_setting WHERE campaign_id = {$id}
       ORDER BY `campaign_id`, `result`";
     $res = $this->db->query($sql);
@@ -128,21 +133,19 @@ class PBXOutgoingCampaign  {
       }
       $row['value'] = self::SETTING_VALUES[$row['result']];
       $row['id'] = $row['result'];
-      $result[] = $row;
+      $result['dial_result'][] = $row;
     }
-    if ($extended) {
-      $sql = "SELECT min_call_time, concurrent_calls_limit, max_day_calls_limit, calls_multiplier, waiting_connection_time, answering_machine_beat FROM outgouing_company WHERE id={$id}";
-      $res = $this->db->query($sql);
-      while ($row = $res->fetch()) {
-        $result['min_call_time'] = $row['min_call_time'];
-        $result['concurrent_calls_limit'] = $row['concurrent_calls_limit'];
-        $result['max_day_calls_limit'] = $row['max_day_calls_limit'];
-        $result['calls_multiplier'] = $row['calls_multiplier'];
-        $result['waiting_connection_time'] = $row['waiting_connection_time'];
-        $result['answering_machine_beat'] = $row['answering_machine_beat'];
+
+    $sql = "SELECT ".implode(", ",self::EXTENDED_SETTING_FIELDS)." FROM outgouing_company WHERE id={$id}";
+    $res = $this->db->query($sql);
+    $result['extended'] = [];
+    while ($row = $res->fetch()) {
+      foreach ($row as $k => $v) {
+        $result['extended'][$k] = $v;
       }
     }
-      return $result;
+
+    return $result;
   }
 
   public function getContactById($id) {
