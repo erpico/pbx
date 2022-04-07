@@ -573,21 +573,19 @@ $app->get('/outgoingcampaign/{id}/state/{state}', function (Request $request, Re
 $app->get('/outgoingcampaign/{id}/settings', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
-  $needTime = $request->getParam("needTime", 0);
+  $extended = $request->getParam("extended", 0);
 
-  return $response->withJson($outgoingcampaign->getSettings($id, $needTime));
+  return $response->withJson($outgoingcampaign->getSettings($id, $extended));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
 $app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
-  $settings = $request->getParam("settings", 0);
-  $concurrent_calls_limit = $request->getParam("concurrent_calls_limit");
-  $min_call_time = $request->getParam("min_call_time");
-  $max_day_calls_limit = $request->getParam("max_day_calls_limit");
-  $calls_multiplier = $request->getParam("calls_multiplier");
+  $actions_after_call = $request->getParam("actions_after_call", 0);
+  $company_stop = $request->getParam("company_stop");
+  $other = $request->getParam("other");
 
-  return $response->withJson(["result" => $outgoingcampaign->updateSettings($id, $settings, $concurrent_calls_limit, $min_call_time, $max_day_calls_limit, $calls_multiplier)]);
+  return $response->withJson(["result" => $outgoingcampaign->updateSettings($id, $actions_after_call, $company_stop, $other)]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
 // SMS messaging

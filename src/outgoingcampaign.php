@@ -113,7 +113,7 @@ class PBXOutgoingCampaign  {
     return $days;
   }
 
-  public function getSettings($id, $needTime = 0) {
+  public function getSettings($id, $extended = 0) {
     $sql = "SELECT ".implode(",",self::SETTING_FIELDS)." FROM outgoing_campaign_dial_result_setting WHERE campaign_id = {$id}
       ORDER BY `campaign_id`, `result`";
     $res = $this->db->query($sql);
@@ -130,14 +130,16 @@ class PBXOutgoingCampaign  {
       $row['id'] = $row['result'];
       $result[] = $row;
     }
-    if ($needTime) {
-      $sql = "SELECT min_call_time, concurrent_calls_limit, max_day_calls_limit, calls_multiplier FROM outgouing_company WHERE id={$id}";
+    if ($extended) {
+      $sql = "SELECT min_call_time, concurrent_calls_limit, max_day_calls_limit, calls_multiplier, waiting_connection_time, answering_machine_beat FROM outgouing_company WHERE id={$id}";
       $res = $this->db->query($sql);
       while ($row = $res->fetch()) {
         $result['min_call_time'] = $row['min_call_time'];
         $result['concurrent_calls_limit'] = $row['concurrent_calls_limit'];
         $result['max_day_calls_limit'] = $row['max_day_calls_limit'];
         $result['calls_multiplier'] = $row['calls_multiplier'];
+        $result['waiting_connection_time'] = $row['waiting_connection_time'];
+        $result['answering_machine_beat'] = $row['answering_machine_beat'];
       }
     }
       return $result;
@@ -417,11 +419,12 @@ class PBXOutgoingCampaign  {
     return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
-  public function updateSettings($id, $settings, $concurrent_calls_limit = 1, $min_call_time = 1, $max_day_calls_limit = 0, $calls_multiplier = 1) {
-      // if (is_string($settings) && strlen($settings)) {
-      $js = json_decode($settings);
+  public function updateSettings($id, $actions_after_call, $company_stop, $other) {
+
+      $actions_after_call = json_decode($actions_after_call);
+
       $this->deleteAllSettings($id);
-      foreach ($js as $result) {
+      foreach ($actions_after_call as $result) {
         $ssql = "";
         foreach (self::SETTING_FIELDS as $field) {
           if (isset($result->$field)) {
@@ -435,16 +438,23 @@ class PBXOutgoingCampaign  {
           $this->db->query($sql);
         }
       }
-      if ($min_call_time == 0) $min_call_time = 1;
-      if ($concurrent_calls_limit == 0) $concurrent_calls_limit = 1;
-      if ($calls_multiplier < 1) $calls_multiplier = 1;
-      $sql = "UPDATE outgouing_company SET 
-      `min_call_time`= $min_call_time,
-      `concurrent_calls_limit`= $concurrent_calls_limit,
-      `max_day_calls_limit`= $max_day_calls_limit,
-      `calls_multiplier`= $calls_multiplier
-       WHERE id = $id";
-      $this->db->query($sql);
+
+      $other = json_decode($other);
+      if (!empty($other)) {
+        $sql = "UPDATE outgouing_company SET";
+
+        foreach ($other as $k => $v) {
+          if ($k == 'min_call_time' && $v == 0) $v = 1;
+          if ($k == 'concurrent_calls_limit' && $v == 0) $v = 1;
+          if ($k == 'calls_multiplier' && $v < 1) $v = 1;
+          $sql .= "`$k` = '$v', ";
+        }
+
+        $sql = rtrim($sql, ", ");
+        $sql .= " WHERE id = $id";
+
+        $this->db->query($sql);
+      }
 
       return true;
     // }
