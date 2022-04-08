@@ -581,10 +581,10 @@ $app->post('/outgoingcampaign/{id}/settings/save', function (Request $request, R
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);
   $actions_after_call = $request->getParam("actions_after_call", 0);
-  $company_stop = $request->getParam("company_stop");
+  $stop_company = $request->getParam("stop_company");
   $other = $request->getParam("other");
 
-  return $response->withJson(["result" => $outgoingcampaign->updateSettings($id, $actions_after_call, $company_stop, $other)]);
+  return $response->withJson(["result" => $outgoingcampaign->updateSettings($id, $actions_after_call, $stop_company, $other)]);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
 // SMS messaging

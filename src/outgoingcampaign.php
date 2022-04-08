@@ -36,6 +36,17 @@ class PBXOutgoingCampaign  {
     "answering_machine_beat",
   ];
 
+  const STOP_COMPANY_SETTING_FIELDS = [
+    "choice_of_numbers_enabled",
+    "choice_of_numbers",
+    "transfer_to_operator_enabled",
+    "transfer_to_operator",
+    "voice_message_enabled",
+    "voice_message",
+    "stop_after_enabled",
+    "stop_after"
+  ];
+
   const WEEK_DAYS = [
     "", "Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"//, "Рабочие дни", "Выходные", "Праздники"
   ];
@@ -138,10 +149,19 @@ class PBXOutgoingCampaign  {
 
     $sql = "SELECT ".implode(", ",self::EXTENDED_SETTING_FIELDS)." FROM outgouing_company WHERE id={$id}";
     $res = $this->db->query($sql);
-    $result['extended'] = [];
+
     while ($row = $res->fetch()) {
       foreach ($row as $k => $v) {
         $result['extended'][$k] = $v;
+      }
+    }
+
+    $sql = "SELECT ".implode(", ",self::STOP_COMPANY_SETTING_FIELDS)." FROM outgouing_company WHERE id={$id}";
+    $res = $this->db->query($sql);
+
+    while ($row = $res->fetch()) {
+      foreach ($row as $k => $v) {
+        $result['stop_company'][$k] = $v;
       }
     }
 
@@ -422,7 +442,7 @@ class PBXOutgoingCampaign  {
     return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
-  public function updateSettings($id, $actions_after_call, $company_stop, $other) {
+  public function updateSettings($id, $actions_after_call, $stop_company, $other) {
 
       $actions_after_call = json_decode($actions_after_call);
 
@@ -450,6 +470,20 @@ class PBXOutgoingCampaign  {
           if ($k == 'min_call_time' && $v == 0) $v = 1;
           if ($k == 'concurrent_calls_limit' && $v == 0) $v = 1;
           if ($k == 'calls_multiplier' && $v < 1) $v = 1;
+          $sql .= "`$k` = '$v', ";
+        }
+
+        $sql = rtrim($sql, ", ");
+        $sql .= " WHERE id = $id";
+
+        $this->db->query($sql);
+      }
+
+      $stop_company = json_decode($stop_company);
+      if (!empty($stop_company)) {
+        $sql = "UPDATE outgouing_company SET";
+
+        foreach ($stop_company as $k => $v) {
           $sql .= "`$k` = '$v', ";
         }
 
@@ -529,7 +563,7 @@ class PBXOutgoingCampaign  {
                           $sql .= "`$k` = '$newCampaignId', ";
                           continue;
                       }
-                      if ($v == null) continue;
+                      if ($v === null) continue;
                       $sql .= "`$k` = '$v', ";
                   }
                   $sql = rtrim($sql, ", ");
