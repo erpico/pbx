@@ -506,7 +506,7 @@ class PBXOutgoingCampaign  {
 
       $sql = "INSERT INTO outgouing_company SET ";
       foreach ($row as $k => $v) {
-          if ($k === 'id' || $v == null) continue;
+          if ($k === 'id' || $v === null) continue;
           if ( in_array($k, ['updated', 'tm_created']) ) {
               $sql .= "`$k` = NOW(), ";
               continue;
@@ -527,7 +527,7 @@ class PBXOutgoingCampaign  {
                       $sql .= "`$k` = '$newCampaignId', ";
                       continue;
                   }
-                  if ($v == null) continue;
+                  if ($v === null) continue;
                   $sql .= "`$k` = '$v', ";
               }
               $sql = rtrim($sql, ", ");
@@ -543,7 +543,7 @@ class PBXOutgoingCampaign  {
                       $sql .= "`$k` = '$newCampaignId', ";
                       continue;
                   }
-                  if ($v == null) continue;
+                  if ($v === null) continue;
                   $sql .= "`$k` = '$v', ";
               }
               $sql = rtrim($sql, ", ");
@@ -563,7 +563,7 @@ class PBXOutgoingCampaign  {
                           $sql .= "`$k` = '$newCampaignId', ";
                           continue;
                       }
-                      if ($v === null) continue;
+                      if ($v === null || $k === 'id') continue;
                       $sql .= "`$k` = '$v', ";
                   }
                   $sql = rtrim($sql, ", ");
