@@ -260,6 +260,22 @@ $app->post('/settings/default/save', function (Request $request, Response $respo
   return $response->withJson(["result" => FALSE]);
 });
 
+$app->get('/settings/dialingRules', function (Request $request, Response $response, array $args) use ($app) {
+  $settings = new PBXSettings();
+
+  return $response->withJson($settings->getDialingRules());
+});
+
+$app->post('/settings/dialingRules/save', function (Request $request, Response $response, array $args) use ($app) {
+  $params = $request->getParam("dialingRules", "");
+  $set = new PBXSettings();
+
+  if (isset($params)) {
+    return $response->withJson(["result" => $set->setDialingRulesSettings($params)]);
+  }
+  return $response->withJson(["result" => FALSE]);
+});
+
 $app->get('/groups/list', function (Request $request, Response $response, array $args) use ($app) {
   $user = new User();
 

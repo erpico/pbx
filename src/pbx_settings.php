@@ -181,6 +181,45 @@ class PBXSettings {
     return false;
   }
 
+  public function getDialingRules ($rule_name = false)
+  {
+    $sql = "SELECT dialing_rule, channel, caller_id, updated FROM dialing_rules_settings";
+    if ($rule_name) {
+      $sql .= " WHERE dialing_rule = '$rule_name'";
+      return $this->db->query($sql)->fetch();
+    } else {
+      $rules = [];
+      $res = $this->db->query($sql);
+      while ($row = $res->fetch()) {
+        $rules[] = $row;
+      }
+
+      return $rules;
+    }
+  }
+
+  public function  clearRules() {
+   $sql = "TRUNCATE TABLE dialing_rules_settings";
+   $this->db->query($sql);
+  }
+
+  public function setDialingRulesSettings ($rules) {
+    if (is_string($rules) && strlen($rules)) {
+      $rules = json_decode($rules, true);
+      $this->clearRules();
+      foreach($rules as $rule) {
+        $sql = "INSERT INTO dialing_rules_settings SET updated = NOW(), ";
+        foreach ($rule as $k => $v) {
+          $sql .= "`$k` = '$v', ";
+        }
+        $sql = rtrim($sql, ', ');
+        $this->db->query($sql);
+      }
+      return true;
+    }
+    return false;
+  }
+
   public function getSettingByHandle($handle) {
     $sql = "SELECT id, handle, val FROM cfg_setting WHERE handle ='".trim(addslashes($handle))."'";
     // die($sql);

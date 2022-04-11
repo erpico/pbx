@@ -70,6 +70,7 @@ class PBXChannel {
       if ($onlyCount) {
         return intval($row[0]);
       }
+      $row['value'] = $row['name'];
       $result[] = $row;
     }
 
