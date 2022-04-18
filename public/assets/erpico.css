@@ -1084,3 +1084,7 @@ a:hover {
     color: white;
     border: none;
 }
+
+.webix_setup_tab .webix_item_tab {
+    color: black !important;
+}
