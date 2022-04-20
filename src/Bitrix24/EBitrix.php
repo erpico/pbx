@@ -88,6 +88,7 @@ class EBitrix {
         $userId = $res['userId'];
         $exten = $res['userPhone'];
 
+        if ((int)$this->settings->getSettingByHandle('bitrix.leadcreate')['val'] == 0) $crmCreate = 0;
         $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
         try {
             $result = $this->obB24App->call('telephony.externalcall.register', [
