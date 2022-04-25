@@ -61,15 +61,6 @@ class CMBitrix {
     
 	}
 
-	public function getLeadLinkByPhone($phone){ 
-	$result = $this->getBitrixApi(array('ORDER' => ["DATE_CREATE" => "DESC"], 'FILTER' => array ('PHONE' => $phone, 'ACTIVE' => 'Y')), 'crm.lead.list');
-	    if ($result && isset($result['result'])){
-			  if (count($result['result']) > 0) return $result['result'][0]['ID'];
-	    } else {
-	        return false;
-	    }
-	}
-
   public function getLeadsByFilters($filters, $next) {
     $leads = [];
     $newFilters = [];

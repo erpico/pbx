@@ -88,6 +88,8 @@ class EBitrix {
         $userId = $res['userId'];
         $exten = $res['userPhone'];
 
+        $callerid = $this->findAlreadyExistedPhoneByPhoneAndEntity('contact', $callerid);
+
         if ((int)$this->settings->getSettingByHandle('bitrix.leadcreate')['val'] == 0) $crmCreate = 0;
         $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
         try {
@@ -409,6 +411,63 @@ class EBitrix {
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();
       }
+    }
+
+    public function getEntityIdByPhone($entity, $phone) {
+      $filter = 'PHONE';
+      $filterVal = $phone;
+      if ($entity === 'deal') {
+        $filterVal = $this->getEntityIdByPhone('contact', $phone);
+        if (!$filterVal) return false;
+        $filter = 'CONTACT_ID';
+      }
+
+      $result = $this->obB24App->call("crm.$entity.list", ['ORDER' => ["DATE_CREATE" => "DESC"], 'FILTER' => [$filter => $filterVal, 'ACTIVE' => 'Y']]);
+      if ($result && isset($result['result'])){
+        if (count($result['result']) > 0) return $result['result'][0]['ID'];
+      } else {
+        return false;
+      }
+    }
+
+    public function findAlreadyExistedPhoneByPhoneAndEntity($entity, $callerid) {
+      $entityId = $this->getEntityIdByPhone($entity, $callerid);
+      if (!$entityId) {
+        if (mb_strlen($callerid) == 10) {
+          $entityId = $this->getEntityIdByPhone($entity, '7'.$callerid);
+          if ($entityId) {
+            $callerid = '7'.$callerid;
+          } else {
+            $entityId = $this->getEntityIdByPhone($entity, '8' . $callerid);
+            if ($entityId) {
+              $callerid = '8'.$callerid;
+            }
+          }
+        } else {
+          if ($callerid[0] == '7') {
+            $newCallerid = substr($callerid, 1);
+            $entityId = $this->getEntityIdByPhone($entity, '8'.$newCallerid);
+            if ($entityId) {
+              $callerid = '8'.$newCallerid;
+            }
+          } else {
+            $newCallerid = substr($callerid, 1);
+            $entityId = $this->getEntityIdByPhone($entity, '7'.$newCallerid);
+            if ($entityId) {
+              $callerid = '7'.$newCallerid;
+            }
+          }
+          if (!$entityId) {
+            $newCallerid = substr($callerid, 1);
+            $entityId = $this->getEntityIdByPhone($entity, $newCallerid);
+            if ($entityId) {
+              $callerid = $newCallerid;
+            }
+          }
+        }
+      }
+
+      return $callerid;
     }
 
     public function logRequest($url, $query, $response) {

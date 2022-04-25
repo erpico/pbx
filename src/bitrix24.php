@@ -349,21 +349,25 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
     return $response->withJson(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 });
 
-$app->get('/bitrix24/lead/search', function (Request $request, Response $response, array $args) {
+$app->get('/bitrix24/{entity}/search', function (Request $request, Response $response, array $args) {
     $phone = $request->getParam('phone', '');
     $redirect = $request->getParam('redirect', 0);
     $channel = $request->getParam('channel', '');
-    $helper = new CMBitrix($channel);
+
+    $entity = $args['entity'];
+    if (in_array(['lead', 'deal', 'contact'], $entity)) return $response->withJson(['res' => false, 'message' => 'Wrong entity type.']);
+
+    $helper = new EBitrix($request, $channel);
     $settings = new PBXSettings();
     $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
 
-    $res = $helper->getLeadLinkByPhone($phone);
-    if ($res) {
+    $entityId = $helper->getEntityIdByPhone($entity, $phone);
+    if ($entityId) {
         if ($redirect) {
-            header("Location: https://$domain/crm/lead/details/$res/");
+            header("Location: https://$domain/crm/lead/details/$entityId/");
             die();
         } else {
-            return $response->withJson(['link' => "https://$domain/crm/lead/details/$res/"]);
+            return $response->withJson(['link' => "https://$domain/crm/$entity/details/$entityId/"]);
         }
     } else {
         return $response->withJson(['res'=> false]);
