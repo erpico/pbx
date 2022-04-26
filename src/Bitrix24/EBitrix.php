@@ -231,7 +231,7 @@ class EBitrix {
         $sql = "SELECT id, status, call_id, call_time, result
                 FROM btx_call_sync 
                 WHERE u_id = '$u_id'
-                ORDER BY id DESC";
+                ORDER BY call_time DESC, sync_time DESC";
         $res = $this->db->query($sql);
 
         return $res->fetch();
