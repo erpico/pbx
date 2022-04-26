@@ -311,7 +311,26 @@ class EBitrix {
             $userFromLine = $userInfo['result'][0]['ID'];
         }
 
-        $result = $settings->getDefaultSettingsByHandle('default_user')['value'];
+        if ($exten) {
+          $userId = $user->getIdByName($exten);
+          $groups = $user->getUserGroups($userId);
+          if (empty($groups['names'])) {
+            $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
+          } else {
+            foreach ($groups['names'] as $group) {
+              if ($group === 'msk') {
+                $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
+                break;
+              }
+              if ($group === 'spb') {
+                $result = $settings->getDefaultSettingsByHandle('default_user_spb')['value'];
+                break;
+              }
+            }
+          }
+        } else {
+          $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
+        }
         $result = $user->getNameById($result);
         if ($result) $extenDef = $result;
         $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $extenDef, 'ACTIVE' => 'Y']]);
