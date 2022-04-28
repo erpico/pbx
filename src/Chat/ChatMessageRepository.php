@@ -12,6 +12,8 @@ interface ChatMessageRepository
 
     public function getUnreadCount(int $recipientId, int $senderId): int;
 
+    public function getLastMessage(int $recipientId, int $senderId);
+
     public function resetUnreadCount(int $recipientId, int $senderId): void;
 
 }

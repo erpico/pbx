@@ -25,6 +25,8 @@ class PBXOutgoingCampaign  {
     "lead_status" => 0,
     "lead_status_user" => 0,
     "lead_status_tries_end" => 0,
+    "e164" => 0,
+    "duplicates" => 0,
   ];
 
   const EXTENDED_SETTING_FIELDS = [
@@ -129,6 +131,12 @@ class PBXOutgoingCampaign  {
     return $days;
   }
 
+  public function getMainSettings($companyId) {
+    $sql = "SELECT ".implode(",",array_keys(self::FIELDS))." FROM outgouing_company WHERE id = {$companyId}";
+    $res = $this->db->query($sql);
+    return $res->fetch();
+  }
+
   public function getSettings($id) {
     $sql = "SELECT ".implode(",",self::SETTING_FIELDS)." FROM outgoing_campaign_dial_result_setting WHERE campaign_id = {$id}
       ORDER BY `campaign_id`, `result`";
@@ -225,7 +233,7 @@ class PBXOutgoingCampaign  {
     return $result;
   }
 
-    public function getContactByPhone($phone, $outgoing_company_id) {
+    public function getContactByPhone ($phone, $outgoing_company_id) {
         $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
     state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) 
     FROM outgouing_company_contacts 
@@ -393,7 +401,12 @@ class PBXOutgoingCampaign  {
         if (strlen($ssql)) $ssql .= ",";
         $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
       }  else {
-          if (($field == "lead_status" || $field == "lead_status_user" || $field == "lead_status_tries_end") && isset($values[$field]) && $values[$field] == "") {
+          if (($field == "lead_status" ||
+              $field == "lead_status_user" ||
+              $field == "lead_status_tries_end" ||
+              $field == "e164" ||
+              $field == "duplicates"
+            ) && isset($values[$field]) && $values[$field] == "") {
               if (strlen($ssql)) $ssql .= ",";
               $ssql .= "`".$field."`=null";
               continue;

@@ -574,23 +574,64 @@ class User
 
       /** @var \App\Chat\ChatMessageRepository $chatMessageRepository */
       $chatMessageRepository = $container->get(\App\Chat\ChatMessageRepository::class);
+      $path = $container->get('settings')['uploadPath'];
+      $path = explode('/', $path);
+      $path = $path[count($path) - 1];
 
-      $sql = "SELECT U.id, U.fullname as name, '' as email FROM acl_user as U";
+
+      $sql = "
+select u.id, u.fullname as name, '' as email, u.photo from acl_user as u
+LEFT join chat_messages as m
+on (u.id = m.sender_id or u.id = m.recipient_id)
+where m.sender_id = $this->id or m.recipient_id = $this->id
+group by u.id
+order by max(m.created_at) desc;";
       $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
       $result = [];
       $rules = new PBXRules();
 
+      $ids = [];
       while ($row = $res->fetch()) {
-          $result[] = [
-              'id' => $row['id'],
-              'name' => $row['name'],
-              'email' => $row['email'],
-              'users' => [$row['id'], $this->id],
-              'unread_count' => $chatMessageRepository->getUnreadCount($row['id'], $this->id),
+          $ids[] = $row['id'];
+          $last_message = $chatMessageRepository->getLastMessage($this->id, $row['id']);
+
+          $return = [
+            'id' => $row['id'],
+            'name' => $row['name'],
+            'email' => $row['email'],
+            'users' => [$row['id'], $this->id],
+            'unread_count' => $chatMessageRepository->getUnreadCount($this->id, $row['id']),
+            'message' => $last_message['content'],
+            'date' => $last_message['created_at']
           ];
+
+          if (isset($row['photo'])) $return['avatar'] = $path.'/'.$row['photo'];
+
+          $result[] = $return;
       }
 
-      return $result;
+      $sql = "select id, fullname as name, '' as email, photo from acl_user where id ";
+      if ($ids) $sql .= "not in (".implode(',', $ids).")";
+      $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
+      while ($row = $res->fetch()) {
+        $last_message = $chatMessageRepository->getLastMessage($this->id, $row['id']);
+
+        $return = [
+          'id' => $row['id'],
+          'name' => $row['name'],
+          'email' => $row['email'],
+          'users' => [$row['id'], $this->id],
+          'unread_count' => $chatMessageRepository->getUnreadCount($this->id, $row['id']),
+          'message' => $last_message['content'],
+          'date' => $last_message['created_at']
+        ];
+
+        if (isset($row['photo'])) $return['avatar'] = $path.'/'.$row['photo'];
+
+        $result[] = $return;
+      }
+
+      return array_reverse($result);
   }
 
   public function getUserGroups($id)

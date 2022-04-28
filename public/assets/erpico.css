@@ -1088,3 +1088,21 @@ a:hover {
 .webix_setup_tab .webix_item_tab {
     color: black !important;
 }
+
+.webix_chat_toolbar_tmpl {
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    height: 94% !important;
+}
+
+.webix_comments .webix_list .webix_list_item {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    border: none;
+    cursor: default;
+}
+
+.webix_comments_menu {
+    display: none;
+}

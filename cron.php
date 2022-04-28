@@ -60,13 +60,16 @@ $res = $db->query($sql);
 $outgoingCompany = new PBXOutgoingCampaign();
 
 while ($row = $res->fetch()) {
+    $settings = $outgoingCompany->getMainSettings($row['id']);
     if (isset($row['lead_filters']) || $row['lead_filters'] != '') {
         $row['lead_filters'] = json_decode("{".$row['lead_filters']."}", true);
         $leadsFromBitrix = importLeads($row['lead_filters'], 0, $helper);
 
         foreach ($leadsFromBitrix as $btxLead) {
-            $exist = $outgoingCompany->getContactByPhone($btxLead['PHONE'], $row['id']);
+            $exist = 0;
+            if (!$settings['duplicates']) $exist = $outgoingCompany->getContactByPhone($btxLead['PHONE'], $row['id']);
             if (!$exist) {
+                if ($settings['e164']) $btxLead['PHONE'] = preg_replace("/[^+0-9]/", "",  $btxLead['PHONE']);
                 $outgoingCompany->addUpdate([
                     'id' => $row['id'],
                     'phones' => json_encode([
@@ -80,14 +83,6 @@ while ($row = $res->fetch()) {
                         ]),
                     'settings' => 1
                 ]);
-
-                /*if ($row['lead_status_enabled'] == 1) {
-                    $eHelper = new EBitrix('');
-                    $settings = new PBXSettings();
-                    if ($settings->getDefaultSettingsByHandle('bitrix.enable')['value']) {
-                        $eHelper->updateLeadState($btxLead['ID'], $row['lead_status']);
-                    }
-                }*/
             }
         }
     }
@@ -97,11 +92,6 @@ while ($row = $res->fetch()) {
 if ($action == 'calls') {
 
 //CALL SYNC
-/*if (isset($argv[1])) {
-  $token = $argv[1];
-  $_COOKIE['token'] = $token;
-}*/
-
 $cdr = new PBXCdr();
 
 $synchronizedCalls = [];

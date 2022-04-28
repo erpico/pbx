@@ -3744,10 +3744,9 @@ Usage without proper license is prohibited.
                         icon: "wxi-plus",
                         css: "webix_chat_add_button",
                         height: Math.max(webix.skin.$active.inputHeight, 38),
-                        label: _("Новый чат"),
+                        label: _("New chat"),
                         click: function () { return _this.app.callEvent("newChat", []); },
-                        hidden: limited,
-                        disabled: true
+                        hidden: limited
                     },
                 ],
             };
@@ -3861,7 +3860,7 @@ Usage without proper license is prohibited.
                 height: 52,
                 bottomOffset: 0,
                 options: [
-                    { value: _("Чаты"), id: "chats" },
+                    { value: _("Chats"), id: "chats" },
                     { value: _("Users"), id: "users" },
                 ],
                 on: {
@@ -3877,7 +3876,7 @@ Usage without proper license is prohibited.
                             view: "chat-search",
                             localId: "search",
                             height: Math.max(webix.skin.$active.inputHeight, 38),
-                            placeholder: _("Поиск"),
+                            placeholder: _("Search"),
                         },
                     ],
                 },
@@ -4076,7 +4075,7 @@ Usage without proper license is prohibited.
             if (data.name) {
                 result += helpers.listAvatar(data, "webix_chat_toolbar_avatar");
                 if (data.users) {
-                    var members = data.users.length + " " + _("участника");
+                    var members = data.users.length + " " + _("members");
                     result += "<div class='webix_chat_title'>";
                     if (data.direct_id)
                         result += "<span class=\"webix_chat_messages_chat_name\">" + data.name + "</span>";
@@ -5553,8 +5552,9 @@ Usage without proper license is prohibited.
         App.prototype.require = function (type, name) {
             if (type === "jet-views")
                 return views[name];
-            else if (type === "jet-locales")
+            else if (type === "jet-locales") {
                 return locales[name];
+            }
             return null;
         };
         App.prototype.getState = function () {

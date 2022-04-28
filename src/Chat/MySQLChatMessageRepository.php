@@ -70,11 +70,23 @@ LIMIT 1000';
 SELECT count(id) as count
 FROM chat_messages 
 WHERE recipient_id ='.$recipientId.' AND sender_id = '.$senderId.' AND is_read = 0';
-        $result = [];
         $res = $this->connection->query($sql);
 
         return $res->fetch()['count'];
     }
+
+  public function getLastMessage(int $recipientId, int $senderId)
+  {
+    $sql = '
+SELECT content, created_at
+FROM chat_messages 
+WHERE (recipient_id ='.$recipientId.' AND sender_id = '.$senderId.')
+OR (recipient_id ='.$senderId.' AND sender_id = '.$recipientId.') 
+ORDER BY `created_at` DESC LIMIT 1';
+    $res = $this->connection->query($sql);
+
+    return $res->fetch();
+  }
 
     public function resetUnreadCount(int $recipientId, int $senderId): void
     {
