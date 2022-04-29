@@ -69,7 +69,10 @@ class PBXCdr {
 
   public function getReport($filter, $start = 0, $limit = 20, $onlyCount = 0, $serverFooter = 0, $_lcd = 0)
   {
-    if ($_SERVER['REMOTE_ADDR']) {
+    $extens = "";
+    $queues = "";
+
+    if (isset($_SERVER['REMOTE_ADDR'])) {
       $ext = $this->user->allow_extens();
       $extens = $this->utils->sql_allow_extens($ext);
 
@@ -83,13 +86,15 @@ class PBXCdr {
     $cwsql = "";
 
     $timeisset = 0;
-    $userPhone = addslashes($this->user->getPhone($this->user->getId()));
-    $userName = addslashes($this->user->getInfo()['name']);
-    $isCanSeeOthers = in_array('phc.reports',$this->user->getUserRoles()) || in_array('erpico.admin',$this->user->getUserRoles());
-    if ($_SERVER['REMOTE_ADDR']) {
-      if (!$isCanSeeOthers) {
-        $cwsql .= "	AND (cdr.src = '" . $userPhone . "' OR cdr.dst = '" . $userPhone . "') "; //Ignore CDR
-        $qwsql .= "	AND ( a.agentname = '" . $userName . "' OR a.src = '" . $userPhone . "' OR a.agentdev  = '" . $userPhone . "')";
+    if ($this->user->getId()) {
+      $userPhone = addslashes($this->user->getPhone($this->user->getId()));
+      $userName = addslashes($this->user->getInfo()['name']);
+      $isCanSeeOthers = in_array('phc.reports', $this->user->getUserRoles()) || in_array('erpico.admin', $this->user->getUserRoles());
+      if (isset($_SERVER['REMOTE_ADDR'])) {
+        if (!$isCanSeeOthers) {
+          $cwsql .= "	AND (cdr.src = '" . $userPhone . "' OR cdr.dst = '" . $userPhone . "') "; //Ignore CDR
+          $qwsql .= "	AND ( a.agentname = '" . $userName . "' OR a.src = '" . $userPhone . "' OR a.agentdev  = '" . $userPhone . "')";
+        }
       }
     }
 

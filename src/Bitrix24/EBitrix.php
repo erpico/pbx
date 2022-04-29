@@ -91,6 +91,8 @@ class EBitrix {
         $callerid = $this->findAlreadyExistedPhoneByPhoneAndEntity('contact', $callerid);
 
         if ((int)$this->settings->getSettingByHandle('bitrix.leadcreate')['val'] == 0) $crmCreate = 0;
+        $show = 0;
+        if ($this->settings->getSettingByHandle('bitrix.leadshow')['val']) $show = 1;
         $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
         try {
             $result = $this->obB24App->call('telephony.externalcall.register', [
@@ -101,7 +103,7 @@ class EBitrix {
                 'CALL_START_DATE' => $createTime,
                 'CRM_CREATE' => $crmCreate,
                 'LINE_NUMBER' => $lineNumber,
-                'SHOW' => (int)$this->settings->getSettingByHandle('bitrix.leadshow')['val'] ?? 0
+                'SHOW' => $show
             ]);
             if ($this->channel) {
                 $this->logRequest(
@@ -114,7 +116,7 @@ class EBitrix {
                         'CALL_START_DATE' => $createTime,
                         'CRM_CREATE' => $crmCreate,
                         'LINE_NUMBER' => $lineNumber,
-                        'SHOW' => (int)$this->settings->getSettingByHandle('bitrix.leadshow')['val'] ?? 0
+                        'SHOW' => $show
                     ]),
                     json_encode($result));
             }
@@ -313,7 +315,8 @@ class EBitrix {
 
         if ($exten) {
           $userId = $user->getIdByName($exten);
-          $groups = $user->getUserGroups($userId);
+          if ($userId) $groups = $user->getUserGroups($userId);
+
           if (empty($groups['names'])) {
             $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
           } else {
@@ -337,7 +340,7 @@ class EBitrix {
         $defaultUser = $userInfo['result'][0]['ID'];
 
         if ($type == 'call/add') {
-            if ($userFromLine) {
+            if (isset($userFromLine)) {
                 return ['userPhone' => $extenLine,'userId' => $userFromLine];
             } else if ($defaultUser) {
                 return ['userPhone' => $extenDef, 'userId' => $defaultUser];
@@ -347,7 +350,7 @@ class EBitrix {
         } elseif ($type == 'call/record') {
             if ($userFromBtx) {
                 if ($disposition == 'ABANDON') {
-                    if ($userFromLine) {
+                    if (isset($userFromLine)) {
                         return ['userPhone' => $extenLine, 'userId' => $userFromLine];
                     } else {
                         return ['userPhone' => $extenDef, 'userId' => $defaultUser];

@@ -30,7 +30,7 @@ class PBXSettings {
     $row = $res->fetch();
     
     $res = isset($row['val']);
-    return ['result' => $res, 'value' => $row['val']];
+    return ['result' => $res, 'value' => $row['val'] ?? ''];
   }
 
   public function getDefaultSettings() {

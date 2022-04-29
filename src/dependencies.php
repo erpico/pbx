@@ -65,6 +65,7 @@ $container['dbConfig'] = function ($c) {
     $fcfg = fopen($filename, "r");
     $config = [];
     while ($s = fgets($fcfg)) {
+      if ($s == "\n") continue;
       list($key, $value) = explode("=", $s, 2);
       $key = trim($key);
       $value = trim($value, " \"\t\n\r\0\x0B");
@@ -106,6 +107,7 @@ $container['ami'] = function ($c)  use ($container, $app) {
     $fcfg = fopen($filename, "r");
     $config = [];
     while ($s = fgets($fcfg)) {
+      if ($s == "\n") continue;
       list($key,$value) = explode("=", $s, 2);
       $key = trim($key);
       $value = trim($value, " \"\t\n\r\0\x0B");
