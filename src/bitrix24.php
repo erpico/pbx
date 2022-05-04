@@ -325,20 +325,27 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
             $helper = new EBitrix($request, $crmCall['uid']);
             $datetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+'.$crmCall['talk'].' sec')->format('Y-m-d H:i:s');
             $datetimePlusSec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+1 sec')->format('Y-m-d H:i:s');
-            if ($callSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
+            if ($callsSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
+              $needSync = 1;
+              foreach($callsSync as $callSync) {
                 if ($callSync['status'] == 1) {
-                    $result = $helper->addCall($crmCall, $callSync['call_id'], 0);
-                    isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+                  $result = $helper->addCall($crmCall, $callSync['call_id'], 0);
+                  isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+                  break;
                 }
                 if (
-                        $callSync['status'] == 2 && //synchronized
-                        $crmCall['time'] !== $callSync['call_time'] && // synchronized by call/sync route
-                        $datetimePlusTalk !== $callSync['call_time'] && // synchronized by ats
-                        $datetimePlusSec !== $callSync['call_time'] // scripts delay
+                    $callSync['status'] == 2 && //synchronized
+                    ($callSync['call_time'] === $crmCall['time'] || // synchronized by call/sync route
+                    $callSync['call_time'] === $datetimePlusTalk || // synchronized by ats
+                    $callSync['call_time'] === $datetimePlusSec) // scripts delay
                 ) {
-                    $result = $helper->addCall($crmCall,0, 0);
-                    isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+                  $needSync = 0;
                 }
+              }
+              if ($needSync) {
+                  $result = $helper->addCall($crmCall, 0, 0);
+                  isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+              }
             } else {
                 $result = $helper->addCall($crmCall);
                 isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);

@@ -232,11 +232,14 @@ class EBitrix {
     public function getSynchronizedCalls($u_id) {
         $sql = "SELECT id, status, call_id, call_time, result
                 FROM btx_call_sync 
-                WHERE u_id = '$u_id'
-                ORDER BY call_time DESC, sync_time DESC";
+                WHERE u_id = '$u_id'";
         $res = $this->db->query($sql);
+        $calls = [];
+        while ($row = $res->fetch()) {
+          $calls[] = $row;
+        }
 
-        return $res->fetch();
+        return $calls;
     }
 
     public function addCall($crmCall, $callId = 0, $crmCreate = 1) {
