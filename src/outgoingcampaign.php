@@ -46,7 +46,9 @@ class PBXOutgoingCampaign  {
     "voice_message_enabled",
     "voice_message",
     "stop_after_enabled",
-    "stop_after"
+    "stop_after",
+    "actions_count_enabled",
+    "actions_count"
   ];
 
   const WEEK_DAYS = [
