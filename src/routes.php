@@ -951,6 +951,13 @@ $app->post('/blacklist/{id}/remove', function (Request $request, Response $respo
 
 $app->get('/vm/email', function (Request $request, Response $response, array $args) {
 
+  $settings = new PBXSettings();
+  $smtp_address = $settings->getSettingByHandle('smtp.server')['val'];
+  $port = $settings->getSettingByHandle('smtp.port')['val'];
+  $user_name = $settings->getSettingByHandle('smtp.user')['val'];
+  $password = $settings->getSettingByHandle('smtp.password')['val'];
+  $email_sender = $settings->getSettingByHandle('smtp.email')['val'];
+
   $_email = $request->getParam("to", "rp@erpico.ru"); //"rp@erpico.ru";
   $_subj  = "ErpicoPBX: пропущенный звонок";
   $_text  = "Звонок с номера " . $request->getParam("tel") . " в " . date("d.m.Y H:i:s");
@@ -958,11 +965,11 @@ $app->get('/vm/email', function (Request $request, Response $response, array $ar
   $mail = new PHPMailer;
 
   $mail->Mailer = "smtp";
-  $mail->Host = 'mail.erpico.ru';  // Specify main and backup SMTP servers
+  $mail->Host = $smtp_address ?: 'mail.erpico.ru';  // Specify main and backup SMTP servers
   //$mail->Port = 25;
   $mail->SMTPAuth = true;                               // Enable SMTP authentication
-  $mail->Username = 'noreply';                 // SMTP username
-  $mail->Password = 'oL(H&LVrh7lnyef';
+  $mail->Username = $user_name ?: 'noreply'; // SMTP username
+  $mail->Password = $password ?: 'oL(H&LVrh7lnyef';
   $mail->SMTPOptions = array(
     'ssl' => array(
       'verify_peer' => false,
@@ -973,7 +980,7 @@ $app->get('/vm/email', function (Request $request, Response $response, array $ar
 
   $msg = "";
 
-  $mail->setFrom('noreply@erpicopbx.ru', 'Erpico PBX');
+  $mail->setFrom($email_sender ?: 'noreply@erpicopbx.ru', $user_name ?: 'Erpico PBX');
   $mail->addAddress($_email);
 
   $mail->Subject = $_subj;
