@@ -51,11 +51,16 @@ if (!isset($argv[1])) {
 
 $action = $argv[1];
 
-if ($action == 'leads') {
-
-$lockfile = __DIR__."/logs/cron_leads.lock";
-if (file_exists($lockfile)) exit(0);
+$lockfile = __DIR__."/logs/cron_{$action}.lock";
+if (file_exists($lockfile)) {
+  $data = filemtime($lockfile);
+  $last_touch = date('Y-m-d H:i:s', $data);
+  $now = date('Y-m-d H:i:s');
+  if (strtotime($now) - strtotime($last_touch) <= 3600) exit(0);
+}
 touch($lockfile);
+
+if ($action == 'leads') {
 
 //LEADS IMPORT
 $sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company';
@@ -96,10 +101,6 @@ unlink($lockfile);
 }
 
 if ($action == 'calls') {
-
-$lockfile = __DIR__."/logs/cron_calls.lock";
-if (file_exists($lockfile)) exit(0);
-touch($lockfile);
 
 //CALL SYNC
 $cdr = new PBXCdr();
@@ -150,5 +151,6 @@ if (count($crmCalls)) {
 
 var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 
-unlink($lockfile);
 }
+
+unlink($lockfile);
