@@ -53,6 +53,10 @@ $action = $argv[1];
 
 if ($action == 'leads') {
 
+$lockfile = __DIR__."/logs/cron_leads.lock";
+if (file_exists($lockfile)) exit(0);
+touch($lockfile);
+
 //LEADS IMPORT
 $sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company';
 $res = $db->query($sql);
@@ -87,9 +91,15 @@ while ($row = $res->fetch()) {
         }
     }
 }
+
+unlink($lockfile);
 }
 
 if ($action == 'calls') {
+
+$lockfile = __DIR__."/logs/cron_calls.lock";
+if (file_exists($lockfile)) exit(0);
+touch($lockfile);
 
 //CALL SYNC
 $cdr = new PBXCdr();
@@ -139,4 +149,6 @@ if (count($crmCalls)) {
 }
 
 var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
+
+unlink($lockfile);
 }
