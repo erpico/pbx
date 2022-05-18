@@ -32,14 +32,14 @@ function importLeads($filters, $next, $helper) {
         }
     }
 
-    if (isset($result['next'])) {
+    /*if (isset($result['next'])) {
         $result = importLeads($filters, $result['next'], $helper);
         if ($result) {
             foreach ($result as $lead) {
                 $leadsFromBitrix[] = $lead;
             }
         }
-    }
+    }*/
 
     return $leadsFromBitrix;
 }
@@ -63,7 +63,7 @@ touch($lockfile);
 if ($action == 'leads') {
 
 //LEADS IMPORT
-$sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company';
+$sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company WHERE state = 2';
 $res = $db->query($sql);
 
 $outgoingCompany = new PBXOutgoingCampaign();
