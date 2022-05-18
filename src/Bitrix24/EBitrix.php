@@ -245,7 +245,6 @@ class EBitrix {
     public function addCall($crmCall, $callId = 0, $crmCreate = 1) {
         $settings = new PBXSettings();
         $sip_url = $settings->getDefaultSettingsByHandle('web.url')['value'];
-        $sip_url = explode(':', $sip_url)[0];
         if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
         if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
         if (mb_strlen($crmCall['dst']) == 11) {
