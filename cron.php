@@ -23,7 +23,8 @@ $db = $container['db'];
 
 $helper = new CMBitrix('');
 
-function importLeads($filters, $next, $helper) {
+function importLeads($filters, $next, $helper): array
+{
     $leadsFromBitrix = [];
     $result = $helper->getLeadsByFilters($filters, $next);
     if(isset($result['result']) && $result['result']) {
@@ -66,20 +67,21 @@ if ($action == 'leads') {
 $sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company WHERE state = 2';
 $res = $db->query($sql);
 
-$outgoingCompany = new PBXOutgoingCampaign();
+$outgoingCampaign = new PBXOutgoingCampaign();
 
 while ($row = $res->fetch()) {
-    $settings = $outgoingCompany->getMainSettings($row['id']);
+    $settings = $outgoingCampaign->getMainSettings($row['id']);
+    $helper->setCampaignId($row['id']);
     if (isset($row['lead_filters']) || $row['lead_filters'] != '') {
         $row['lead_filters'] = json_decode("{".$row['lead_filters']."}", true);
         $leadsFromBitrix = importLeads($row['lead_filters'], 0, $helper);
 
         foreach ($leadsFromBitrix as $btxLead) {
             $exist = 0;
-            if (!$settings['duplicates']) $exist = $outgoingCompany->getContactByPhone($btxLead['PHONE'], $row['id']);
+            if (!$settings['duplicates']) $exist = $outgoingCampaign->getContactByPhone($btxLead['PHONE'], $row['id']);
             if (!$exist) {
                 if ($settings['e164']) $btxLead['PHONE'] = preg_replace("/[^+0-9]/", "",  $btxLead['PHONE']);
-                $outgoingCompany->addUpdate([
+                $outgoingCampaign->addUpdate([
                     'id' => $row['id'],
                     'phones' => json_encode([
                             [

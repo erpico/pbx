@@ -178,6 +178,32 @@ class PBXOutgoingCampaign  {
     return $result;
   }
 
+  public function getJournal($id, $filters) {
+      $sql = "SELECT id, channel, datetime, url, query, response, campaign_id 
+              FROM bitrix24_requests 
+              WHERE url LIKE '%crm.lead.list%' AND campaign_id = $id";
+
+      if ($filters['start'] !== '' && $filters['end'] !== '') {
+          $sql .= " AND datetime BETWEEN '".$filters['start']."' AND '".$filters['end']."'";
+      }
+
+      $sql .= " ORDER BY id DESC;";
+
+      $res = $this->db->query($sql);
+
+      $records = [];
+      while ($row = $res->fetch()) {
+          $response = json_decode($row['response'], true);
+          $row['response'] = count($response['result']);
+          if (isset($row[''])) {
+
+          }
+          $records[] = $row;
+      }
+
+      return $records;
+  }
+
   public function getContactById($id) {
     $sql = "SELECT id, updated, outgouing_company_id, `order`, phone, name, description, state, tries, last_call, dial_result, scheduled_time FROM outgouing_company_contacts WHERE id = '".intval($id)."'";
     $res = $this->db->query($sql);
@@ -457,7 +483,7 @@ class PBXOutgoingCampaign  {
     return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
-  public function updateSettings($id, $actions_after_call, $stop_company, $other) {
+  public function updateSettings($id, $actions_after_call, $stop_campaign, $other) {
 
       $actions_after_call = json_decode($actions_after_call);
 
@@ -494,11 +520,11 @@ class PBXOutgoingCampaign  {
         $this->db->query($sql);
       }
 
-      $stop_company = json_decode($stop_company);
-      if (!empty($stop_company)) {
+      $stop_campaign = json_decode($stop_campaign);
+      if (!empty($stop_campaign)) {
         $sql = "UPDATE outgouing_company SET";
 
-        foreach ($stop_company as $k => $v) {
+        foreach ($stop_campaign as $k => $v) {
           $sql .= "`$k` = '$v', ";
         }
 

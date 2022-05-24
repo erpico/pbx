@@ -10,10 +10,15 @@ class CMBitrix {
 
 	protected $db;
     protected $ami;
-
 	protected $channel = "";
+    protected $server_host;
+    protected $logger;
+    protected $user;
+    protected $utils;
+    protected $settings;
+    protected $campaign_id = 0;
 
-	public function __construct($channel)
+    public function __construct($channel)
     {
 		global $app;
 		$container = $app->getContainer();
@@ -25,6 +30,10 @@ class CMBitrix {
 		$this->utils = new Erpico\Utils();
 		$this->channel = $channel;
 		$this->settings = new PBXSettings();
+    }
+
+    public function setCampaignId($campaignId) {
+        $this->campaign_id = $campaignId;
     }
 
 	/**
@@ -77,12 +86,12 @@ class CMBitrix {
       }
 
 
-    $result = $this->getBitrixApi(array(
+    $result = $this->getBitrixApi([
         'ORDER' => ["DATE_CREATE" => "DESC"],
         'FILTER' => $newFilters,
         'SELECT' => array('ID', 'CONTACT_ID', 'NAME', 'SECOND_NAME', 'LAST_NAME'),
         'start' => $next
-    ), 'crm.lead.list');
+    ], 'crm.lead.list');
     if (isset($result['res']) && $result['res'] == false) return $result;
     if (!count($result['result'])) return false;
     foreach ($result['result'] as $lead) {
@@ -498,12 +507,19 @@ class CMBitrix {
   	}
 
 	public function logRequest($url, $query, $response) {
-		$sql = "INSERT INTO bitrix24_requests SET datetime = Now(), channel = :channel, url = :url, query = :query, response = :response";
+		$sql = "INSERT INTO bitrix24_requests 
+                SET datetime = Now(), 
+                    channel = :channel, 
+                    url = :url, 
+                    query = :query, 
+                    response = :response,
+                    campaign_id = :campaign_id";
 		$stmt = $this->db->prepare($sql);
 		$stmt->bindParam('channel', $this->channel);
 		$stmt->bindParam('url', $url);
 		$stmt->bindParam('query', $query);
 		$stmt->bindParam('response', $response);
+		$stmt->bindParam('campaign_id', $this->campaign_id);
 		return $stmt->execute()?true:false;
 	}
 }
