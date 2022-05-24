@@ -78,7 +78,10 @@ while ($row = $res->fetch()) {
 
         foreach ($leadsFromBitrix as $btxLead) {
             $exist = 0;
-            if (!$settings['duplicates']) $exist = $outgoingCampaign->getContactByPhone($btxLead['PHONE'], $row['id']);
+            if (!$settings['duplicates']) {
+                $exist = $outgoingCampaign->getContactByPhone($btxLead['PHONE'], $row['id']);
+                if (in_array($exist['state'], [3,4,6,7])) $exist = 0;
+            }
             if (!$exist) {
                 if ($settings['e164']) $btxLead['PHONE'] = preg_replace("/[^+0-9]/", "",  $btxLead['PHONE']);
                 $outgoingCampaign->addUpdate([
