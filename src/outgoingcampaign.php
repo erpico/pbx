@@ -525,6 +525,10 @@ class PBXOutgoingCampaign  {
         $sql = "UPDATE outgouing_company SET";
 
         foreach ($stop_campaign as $k => $v) {
+          if ($k === 'choice_of_numbers' && $v === '') {
+              $sql .= "`$k` = NULL, ";
+              continue;
+          }
           $sql .= "`$k` = '$v', ";
         }
 
