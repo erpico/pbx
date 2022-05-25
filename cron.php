@@ -64,7 +64,7 @@ touch($lockfile);
 if ($action == 'leads') {
 
 //LEADS IMPORT
-$sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company WHERE state = 2';
+$sql = 'SELECT id, lead_filters, lead_status_enabled, lead_status, lead_status_user FROM outgouing_company WHERE state = 2 AND deleted != 1';
 $res = $db->query($sql);
 
 $outgoingCampaign = new PBXOutgoingCampaign();
