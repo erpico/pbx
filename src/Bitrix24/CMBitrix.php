@@ -70,7 +70,7 @@ class CMBitrix {
     
 	}
 
-  public function getLeadsByFilters($filters, $next) {
+  public function getLeadsByFilters($filters, $next, $cron = 0) {
     $leads = [];
     $newFilters = [];
     $filters = is_string($filters) ? json_decode($filters, true) : $filters;
@@ -85,6 +85,10 @@ class CMBitrix {
           }
       }
 
+      if ($cron) {
+          $date = date('Y-m-d H:i:s', strtotime('-10 minutes'));
+          $newFilters['>DATE_MODIFY'] = "$date";
+      }
 
     $result = $this->getBitrixApi([
         'ORDER' => ["DATE_CREATE" => "DESC"],

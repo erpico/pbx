@@ -26,7 +26,7 @@ $helper = new CMBitrix('');
 function importLeads($filters, $next, $helper): array
 {
     $leadsFromBitrix = [];
-    $result = $helper->getLeadsByFilters($filters, $next);
+    $result = $helper->getLeadsByFilters($filters, $next, 1);
     if(isset($result['result']) && $result['result']) {
         foreach ($result['result'] as $lead) {
             $leadsFromBitrix[] = $lead;
@@ -80,7 +80,9 @@ while ($row = $res->fetch()) {
             $exist = 0;
             if (!$settings['duplicates']) {
                 $exist = $outgoingCampaign->getContactByPhone($btxLead['PHONE'], $row['id']);
-                if (in_array($exist['state'], [3,4,6,7])) $exist = 0;
+                if (isset($exist['state'])) {
+                    if (in_array($exist['state'], [3, 4, 6, 7])) $exist = 0;
+                }
             }
             if (!$exist) {
                 if ($settings['e164']) $btxLead['PHONE'] = preg_replace("/[^+0-9]/", "",  $btxLead['PHONE']);
@@ -102,7 +104,6 @@ while ($row = $res->fetch()) {
     }
 }
 
-unlink($lockfile);
 }
 
 if ($action == 'calls') {
