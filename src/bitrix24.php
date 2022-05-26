@@ -325,6 +325,7 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
             $helper = new EBitrix($request, $crmCall['uid']);
             $datetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+'.$crmCall['talk'].' sec')->format('Y-m-d H:i:s');
             $datetimePlusSec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+1 sec')->format('Y-m-d H:i:s');
+            $datetimePlus2Sec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+2 sec')->format('Y-m-d H:i:s');
             if ($callsSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
               $needSync = 1;
               foreach($callsSync as $callSync) {
@@ -337,7 +338,8 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
                     $callSync['status'] == 2 && //synchronized
                     ($callSync['call_time'] === $crmCall['time'] || // synchronized by call/sync route
                     $callSync['call_time'] === $datetimePlusTalk || // synchronized by ats
-                    $callSync['call_time'] === $datetimePlusSec) // scripts delay
+                    $callSync['call_time'] === $datetimePlusSec ||
+                    $callSync['call_time'] === $datetimePlus2Sec) // scripts delay
                 ) {
                   $needSync = 0;
                 }
