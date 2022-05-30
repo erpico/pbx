@@ -86,7 +86,7 @@ class CMBitrix {
       }
 
       if ($cron) {
-          $date = new DateTime(date('Y-m-d H:i:s', strtotime('-10 minutes')));
+          $date = new DateTime(date('Y-m-d H:i:s', strtotime('-60 minutes')));
           $date->setTimezone(new DateTimeZone('Europe/Moscow'));
           $date = $date->format('Y-m-d H:i:s');
 
