@@ -179,8 +179,13 @@ $app->get('/users/list', function (Request $request, Response $response, array $
   $filter = $request->getParam('filter', "");
   $start = $request->getParam('start', 0);
   $count = $request->getParam('count', 20);
+  $short = $request->getParam('short', 0);
 
   $user = new User();
+
+  if ($short) {
+      return $response->withJson($user->fetchList($filter, $start, 1000, 0, 1));
+  }
 
   return $response->withJson([
     "data" => $user->fetchList($filter, $start, $count, 0),
@@ -1167,3 +1172,26 @@ $app->post('/upload', function ($request, $response, $args) {
 
     return $response->withJson($result);
 });
+
+// API_KEYS
+$app->get('/api_key', function ($request, $response, $args) {
+    $key = new PBXApi_keys(0);
+
+    return $response->withJson($key->getAllKeys());
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post('/api_key/save', function ($request, $response, $args) {
+    $key = new PBXApi_keys(0);
+    $data = json_decode($request->getParam('data', ""));
+
+    return $response->withJson($key->saveKey($data));
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->delete('/api_key/{key_id}/delete', function ($request, $response, $args) {
+    $key_id = intval($args["key_id"]);
+    $key = new PBXApi_keys($key_id);
+
+    return $response->withJson(["result" => $key->deleteKey($key_id)]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+//API_KEYS END

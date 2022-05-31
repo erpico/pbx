@@ -75,6 +75,8 @@ class User
         $this->updateToken();
         $this->token = $token_data['token'];
       }
+    } else {
+        $this->id = $_id;
     }
   }
 
@@ -256,7 +258,8 @@ class User
     SELECT val
     FROM cfg_user_setting
     WHERE handle = 'cti.extens.allow.mask'
-    AND acl_user_id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") ";
+    AND acl_user_id = ";
+    $demand_user_extens .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") " : "$this->id";
     $result_user_extens = $this->db->query($demand_user_extens);
     while ($myrow_user_extens = $result_user_extens->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_extens['val'] != "") {
@@ -276,8 +279,9 @@ class User
     FROM cfg_group_setting AS A
     LEFT JOIN acl_user_group_has_users AS B ON (A.acl_user_group_id = B.acl_user_group_id)
     LEFT JOIN acl_user AS C ON (B.acl_user_id = C.id)
-    WHERE C.id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") 
-    AND A.handle = 'cti.extens.allow.mask' ";
+    WHERE C.id = ";
+    $demand_user_group_extens .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.")" : "$this->id ";
+    $demand_user_group_extens .= "AND A.handle = 'cti.extens.allow.mask' ";
     $result_user_group_extens = $this->db->query($demand_user_group_extens);
     while ($myrow_user_group_extens = $result_user_group_extens->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_group_extens['val'] != "") {
@@ -324,7 +328,8 @@ class User
     SELECT val
     FROM cfg_user_setting
     WHERE handle = 'cti.queues.allowed'
-    AND acl_user_id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") ";
+    AND acl_user_id = ";
+    $demand_user_queues .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") " : "$this->id";
     $result_user_queues = $this->db->query($demand_user_queues);
     while ($myrow_user_queues = $result_user_queues->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_queues['val'] != "") {
@@ -342,8 +347,9 @@ class User
     FROM cfg_group_setting AS A
     LEFT JOIN acl_user_group_has_users AS B ON (A.acl_user_group_id = B.acl_user_group_id)
     LEFT JOIN acl_user AS C ON (B.acl_user_id = C.id)
-    WHERE C.id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") 
-    AND A.handle = 'cti.queues.allowed' ";
+    WHERE C.id = ";
+    $demand_user_group_queues .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.")" : "$this->id ";
+    $demand_user_group_queues .= "AND A.handle = 'cti.queues.allowed' ";
     $result_user_group_queues = $this->db->query($demand_user_group_queues);
     while ($myrow_user_group_queues = $result_user_group_queues->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_group_queues['val'] != "") {

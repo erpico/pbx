@@ -6,6 +6,7 @@ use App\Services\RequestTypeService;
 use PAMI\Client\Impl\ClientImpl;
 
 $container = $app->getContainer();
+$app_request = $container->get('request');
 
 // Replace to localhost on $_SERVER
 if (in_array(getenv('env'), ['dev','test'])) {
@@ -125,8 +126,15 @@ $container['ami'] = function ($c)  use ($container, $app) {
   return $ami;
 };
 
-$container['auth'] = function ($c) use ($app){
-    return new \Erpico\User($app->getContainer()['db']);
+$container['auth'] = function ($c) use ($app, $app_request){
+    $key = $app_request->getHeaderLine('X-PBXAPIKEY');
+    if (!strlen($key)) {
+        $key = $app_request->getParam('X-PBXAPIKEY');
+    }
+
+    $api_user = PBXApi_keys::getUserByKey($key);
+
+    return new \Erpico\User($app->getContainer()['db'], $api_user);
 };
 $container['roleProvider'] = function ($container) {
   $myService = new RoleProvider($container);
@@ -188,3 +196,4 @@ require_once( __DIR__ . "/old_contact_cdr.php");
 require_once( __DIR__ . "/Providers/RoleProvider.php");
 require_once( __DIR__ . "/aliases.php");
 require_once( __DIR__ . "/blacklist.php");
+require_once( __DIR__ . "/api_key.php");
