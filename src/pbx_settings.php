@@ -63,6 +63,18 @@ class PBXSettings {
     return $result;
   }
 
+    public function deleteGroupSettingByHandle($handle, $group_id) {
+        try {
+            $sql = "DELETE FROM cfg_group_setting WHERE handle = '".trim(addslashes($handle))."' AND acl_user_group_id = '".intval($group_id)."'";
+            $res = $this->db->query($sql);
+            $result = ['result' => true, 'message' => ''];
+        } catch (\Throwable $th) {
+            $result = ['result' => false, 'message' => $th->getMessage()];
+        }
+
+        return $result;
+    }
+
   public function deleteAllQueues() {
       try {
           $sql = "SET SQL_SAFE_UPDATES = 0; DELETE FROM cfg_setting WHERE handle REGEXP '^[0-9]+$'; SET SQL_SAFE_UPDATES = 1;";

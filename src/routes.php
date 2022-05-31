@@ -248,6 +248,17 @@ $app->get('/settings/user/{user_id}/default/{handle}', function (Request $reques
   return $response->withJson($settings->deleteUserSettingByHandle(trim($args['handle']), (int)$args['user_id']));
 });
 
+$app->get('/settings/group/{group_id}/default/{handle}', function (Request $request, Response $response, array $args) use ($app) {
+    $settings = new PBXSettings();
+    if (!(int)$args['group_id']) {
+        return $response
+            ->withJson(['result' => false, 'message' => 'Группа не обнаружена'])
+            ->withStatus(400);
+    }
+
+    return $response->withJson($settings->deleteGroupSettingByHandle(trim($args['handle']), (int)$args['group_id']));
+});
+
 $app->get('/settings/default', function (Request $request, Response $response, array $args) use ($app) {
   $settings = new PBXSettings();
 
