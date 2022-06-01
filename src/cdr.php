@@ -4,11 +4,19 @@ class PBXCdr {
   protected $db;
   /** @var \Erpico\User $user */
   private $user;
-  
-  public function __construct() {
+
+  private string $direction;
+  private int $answered;
+  private int $missed;
+
+  public function __construct(string $direction, int $answered, int $missed) {
     global $app;    
     $container = $app->getContainer();
     $this->db = $container['db'];
+
+    $this->direction = $direction;
+    $this->answered = $answered;
+    $this->missed = $missed;
 
     $this->user = $container['auth'];//new Erpico\User($this->db);
     $this->utils = new Erpico\Utils();
@@ -98,6 +106,8 @@ class PBXCdr {
       }
     }
 
+    if ($this->missed) $filter['reason'] = 'ABANDON';
+
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
@@ -176,7 +186,23 @@ class PBXCdr {
           $qwsql .= "AND a.holdtime <= '".intval($hold['to'])."' ";
           $cwsql .= "AND duration - billsec <= '".intval($hold['to'])."' ";
         }
-      }      
+      }
+      if ($this->direction === 'in') {
+          $qwsql .= " AND LENGTH(a.src) > 4 ";
+          $cwsql .= " AND LENGTH(src) > 4 ";
+      }
+      if ($this->direction === 'out') {
+          $qwsql .= " AND LENGTH(a.src) <= 4 ";
+          $cwsql .= " AND LENGTH(src) <= 4 ";
+      }
+        if ($this->answered === 1) {
+            $qwsql .= " \nAND a.reason NOT REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+            $cwsql .= " \nAND disposition NOT REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+        }
+        if ($this->answered === 0) {
+            $qwsql .= " \nAND a.reason REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+            $cwsql .= " \nAND disposition REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+        }
     }
 
     if (intval($onlyCount)) {

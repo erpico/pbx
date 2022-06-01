@@ -26,20 +26,19 @@ $app->post('/auth/login', function (Request $request, Response $response, array 
 });
 
 $app->get('/cdr/list', function (Request $request, Response $response, array $args) use ($app) {
-  $key = $request->getParam('key', 0);
-  $status = $request->getParam('status', 0);
-  $call = $request->getParam('call', 0);
-  $missed = $request->getParam('missed', 0);
-  $password = $request->getParam('password', 0);
-  $filter = $request->getParam('filter', 0);
-  $start = $request->getParam('start', 0);
-  $count = $request->getParam('count', 20);
-  $lcd = $request->getParam('lcd', 0);
-  $lli = $request->getParam('lli', 0);
+    $direction = $request->getParam('direction',  ''); //all(none) incoming(in) outgoing(out)
+    $answered = $request->getParam('answered', -1); //all(-1) answered(1) not answered(0)
+    $missed = $request->getParam('missed', 0); //1 0
 
-  $cdr = new PBXCdr($key, $status, $call, $missed);
-  // return $response->withJson($cdr->getReport($filter, $start, $count, 0));
-  return $response->withJson([
+    $filter = $request->getParam('filter', 0);
+    $start = $request->getParam('start', 0);
+    $count = $request->getParam('count', 20);
+    $lcd = $request->getParam('lcd', 0);
+    $lli = $request->getParam('lli', 0);
+
+    $cdr = new PBXCdr($direction, $answered, $missed);
+
+    return $response->withJson([
     "data" => $cdr->getReport($filter, $start, $count, 0, 0, $lcd),
     "total_count" => $cdr->getReport($filter, $start, $count, 1),
     "pos" => $lli,
