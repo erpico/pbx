@@ -1205,3 +1205,18 @@ $app->delete('/api_key/{key_id}/delete', function ($request, $response, $args) {
 })->add('\App\Middleware\OnlyAuthUser');
 
 //API_KEYS END
+
+$app->get("/timezones", function (Request $request, Response $response, $args) {
+    $filter = $request->getParam("filter", 0);
+    $timezones = \DateTimeZone::listIdentifiers();
+    $filteredTimezones = [];
+    if (isset($filter['value']) && $filter['value'] != "") {
+        array_walk($timezones, static function($timezone) use ($filter, &$filteredTimezones) {
+            if (strpos(strtolower($timezone), strtolower($filter['value'])) !== false) {
+                $filteredTimezones[] = ["id" => $timezone, "value" => $timezone];
+            }
+        });
+        return $response->withJson($filteredTimezones);
+    }
+    return $response->withJson($timezones);
+});
