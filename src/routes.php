@@ -1220,3 +1220,17 @@ $app->get("/timezones", function (Request $request, Response $response, $args) {
     }
     return $response->withJson($timezones);
 });
+
+$app->get("/specific_phones", function (Request $request, Response $response, $args) {
+    $settings = new PBXSettings();
+
+    return $response->withJson($settings->getSpecificPhones());
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post("/specific_phones/save", function (Request $request, Response $response, $args) {
+    $settings = new PBXSettings();
+    $data = $request->getParam('data', '');
+    if (is_string($data)) $data = json_decode($data, 1);
+
+    return $response->withJson($settings->setSpecificPhones($data));
+})->add('\App\Middleware\OnlyAuthUser');

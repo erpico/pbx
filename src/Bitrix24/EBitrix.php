@@ -67,8 +67,8 @@ class EBitrix {
     /**
      * Run Bitrix24 REST API method telephony.externalcall.register.json
      *
-     * @param int $exten (${EXTEN} from the Asterisk server, i.e. internal number)
-     * @param int $callerid (${CALLERID(num)} from the Asterisk server, i.e. number which called us)
+     * @param int $intNum (${EXTEN} from the Asterisk server, i.e. internal number)
+     * @param int $extNum (${CALLERID(num)} from the Asterisk server, i.e. number which called us)
      *
      * @return array|false
      * Array
@@ -83,12 +83,31 @@ class EBitrix {
      *	)
      * We need only CALL_ID
      */
-    public function runInputCall($exten, $callerid, $type=2, $crmCreate=1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
-        $res = $this->getUserInnerIdByPhone($exten, $lineNumber, 'call/add');
+    public function runInputCall(int $intNum, int $extNum, $type = 2, $crmCreate = 1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
+        $spe = $this->settings->getSettingByHandle('bitrix.specific_phones_enabled');
+        if ($spe && isset($spe['val']) && $spe['val'] === '1' && $type === '2') {
+            $numbers = $this->settings->getSpecificPhones();
+            $continue = 0;
+            foreach($numbers as $number) {
+                if ((int)$number['number'] === $intNum) $continue = 1;
+            }
+            if (!$continue) {
+                return false;
+            }
+        }
+        $res = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/add');
         $userId = $res['userId'];
-        $exten = $res['userPhone'];
+        $intNum = $res['userPhone'];
 
-        $callerid = $this->findAlreadyExistedPhoneByPhoneAndEntity('contact', $callerid);
+        $eo = $this->settings->getSettingByHandle('bitrix.existing_outgoing');
+        $existed = $this->findAlreadyExistedPhoneByPhoneAndEntity('contact', $extNum);
+        if ($existed['res'] === false) $existed = $this->findAlreadyExistedPhoneByPhoneAndEntity('lead', $extNum);
+        if ($existed['res'] === false) $existed = $this->findAlreadyExistedPhoneByPhoneAndEntity('deal', $extNum);
+
+        if ($existed['res'] === true) $extNum = $existed['number'];
+        if ($eo && isset($eo['val']) && $eo['val'] === '1' && $type === '1' && $existed['res'] === false) {
+            return false;
+        }
 
         if ((int)$this->settings->getSettingByHandle('bitrix.leadcreate')['val'] == 0) $crmCreate = 0;
         $show = 0;
@@ -96,9 +115,9 @@ class EBitrix {
         $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
         try {
             $result = $this->obB24App->call('telephony.externalcall.register', [
-                'USER_PHONE_INNER' => $exten,
+                'USER_PHONE_INNER' => $intNum,
                 'USER_ID' => $userId,
-                'PHONE_NUMBER' => $callerid,
+                'PHONE_NUMBER' => $extNum,
                 'TYPE' => $type,
                 'CALL_START_DATE' => $createTime,
                 'CRM_CREATE' => $crmCreate,
@@ -109,9 +128,9 @@ class EBitrix {
                 $this->logRequest(
                     $this->settings->getSettingByHandle('bitrix.api_url')['val']."telephony.externalcall.register",
                     json_encode([
-                        'USER_PHONE_INNER' => $exten,
+                        'USER_PHONE_INNER' => $intNum,
                         'USER_ID' => $userId,
-                        'PHONE_NUMBER' => $callerid,
+                        'PHONE_NUMBER' => $extNum,
                         'TYPE' => $type,
                         'CALL_START_DATE' => $createTime,
                         'CRM_CREATE' => $crmCreate,
@@ -298,10 +317,10 @@ class EBitrix {
         return $sipcode;
     }
 
-    public function getUserInnerIdByPhone($exten, $lineNumber = "", $type, $disposition = null) {
+    public function getUserInnerIdByPhone($intNum, $lineNumber = "", $type, $disposition = null) {
         $userFromBtx = null;
-        if ($exten) {
-            $result = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $exten, 'ACTIVE' => 'Y']]);
+        if ($intNum) {
+            $result = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
             if (isset($result['result'][0]['ID'])) $userFromBtx = $result['result'][0]['ID'];
         }
 
@@ -310,13 +329,13 @@ class EBitrix {
         $user = new User();
         if ($result) {
             $result = $user->getNameById($result);
-            if ($result && ctype_digit($result)) $extenLine = $result;
-            $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $extenLine, 'ACTIVE' => 'Y']]);
+            if ($result && ctype_digit($result)) $intNumLine = $result;
+            $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNumLine, 'ACTIVE' => 'Y']]);
             $userFromLine = $userInfo['result'][0]['ID'];
         }
 
-        if ($exten) {
-          $userId = $user->getIdByName($exten);
+        if ($intNum) {
+          $userId = $user->getIdByName($intNum);
           if ($userId) $groups = $user->getUserGroups($userId);
 
           if (empty($groups['names'])) {
@@ -337,33 +356,33 @@ class EBitrix {
           $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
         }
         $result = $user->getNameById($result);
-        if ($result) $extenDef = $result;
-        $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $extenDef, 'ACTIVE' => 'Y']]);
+        if ($result) $intNumDef = $result;
+        $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNumDef, 'ACTIVE' => 'Y']]);
         $defaultUser = $userInfo['result'][0]['ID'];
 
         if ($type == 'call/add') {
             if (isset($userFromLine)) {
-                return ['userPhone' => $extenLine,'userId' => $userFromLine];
+                return ['userPhone' => $intNumLine,'userId' => $userFromLine];
             } else if ($defaultUser) {
-                return ['userPhone' => $extenDef, 'userId' => $defaultUser];
+                return ['userPhone' => $intNumDef, 'userId' => $defaultUser];
             } else {
-                return ['userPhone' => $exten, 'userId' => $userFromBtx];
+                return ['userPhone' => $intNum, 'userId' => $userFromBtx];
             }
         } elseif ($type == 'call/record') {
             if ($userFromBtx) {
                 if ($disposition == 'ABANDON') {
                     if (isset($userFromLine)) {
-                        return ['userPhone' => $extenLine, 'userId' => $userFromLine];
+                        return ['userPhone' => $intNumLine, 'userId' => $userFromLine];
                     } else {
-                        return ['userPhone' => $extenDef, 'userId' => $defaultUser];
+                        return ['userPhone' => $intNumDef, 'userId' => $defaultUser];
                     }
                 }
-                return ['userPhone' => $exten, 'userId' => $userFromBtx];
+                return ['userPhone' => $intNum, 'userId' => $userFromBtx];
             } else {
                 if ($userFromLine) {
-                    return ['userPhone' => $extenLine, 'userId' => $userFromLine];
+                    return ['userPhone' => $intNumLine, 'userId' => $userFromLine];
                 } else {
-                    return ['userPhone' => $extenDef, 'userId' => $defaultUser];
+                    return ['userPhone' => $intNumDef, 'userId' => $defaultUser];
                 }
             }
         }
@@ -454,44 +473,51 @@ class EBitrix {
       }
     }
 
-    public function findAlreadyExistedPhoneByPhoneAndEntity($entity, $callerid) {
-      $entityId = $this->getEntityIdByPhone($entity, $callerid);
+    public function findAlreadyExistedPhoneByPhoneAndEntity($entity, $extNum) {
+      $res = false;
+      $entityId = $this->getEntityIdByPhone($entity, $extNum);
+      if ($entityId) $res = true;
       if (!$entityId) {
-        if (mb_strlen($callerid) == 10) {
-          $entityId = $this->getEntityIdByPhone($entity, '7'.$callerid);
+        if (mb_strlen($extNum) == 10) {
+          $entityId = $this->getEntityIdByPhone($entity, '7'.$extNum);
           if ($entityId) {
-            $callerid = '7'.$callerid;
+            $res = true;
+            $extNum = '7'.$extNum;
           } else {
-            $entityId = $this->getEntityIdByPhone($entity, '8' . $callerid);
+            $entityId = $this->getEntityIdByPhone($entity, '8' . $extNum);
             if ($entityId) {
-              $callerid = '8'.$callerid;
+              $res = true;
+              $extNum = '8'.$extNum;
             }
           }
         } else {
-          if ($callerid[0] == '7') {
-            $newCallerid = substr($callerid, 1);
-            $entityId = $this->getEntityIdByPhone($entity, '8'.$newCallerid);
+          if (strval($extNum)[0] == '7') {
+            $newExtNum = substr($extNum, 1);
+            $entityId = $this->getEntityIdByPhone($entity, '8'.$newExtNum);
             if ($entityId) {
-              $callerid = '8'.$newCallerid;
+              $res = true;
+              $extNum = '8'.$newExtNum;
             }
           } else {
-            $newCallerid = substr($callerid, 1);
-            $entityId = $this->getEntityIdByPhone($entity, '7'.$newCallerid);
+            $newExtNum = substr($extNum, 1);
+            $entityId = $this->getEntityIdByPhone($entity, '7'.$newExtNum);
             if ($entityId) {
-              $callerid = '7'.$newCallerid;
+              $res = true;
+              $extNum = '7'.$newExtNum;
             }
           }
           if (!$entityId) {
-            $newCallerid = substr($callerid, 1);
-            $entityId = $this->getEntityIdByPhone($entity, $newCallerid);
+            $newExtNum = substr($extNum, 1);
+            $entityId = $this->getEntityIdByPhone($entity, $newExtNum);
             if ($entityId) {
-              $callerid = $newCallerid;
+              $res = true;
+              $extNum = $newExtNum;
             }
           }
         }
       }
 
-      return $callerid;
+      return ['number' => $extNum, 'res' => $res];
     }
 
     public function logRequest($url, $query, $response) {

@@ -294,4 +294,30 @@ class PBXSettings {
     }
     return false;
   }
+
+  public function getSpecificPhones() {
+      $sql = 'SELECT id, number FROM specific_phones';
+      $res = $this->db->query($sql);
+
+      $result = [];
+      while ($row = $res->fetch()) {
+          $result[] = $row;
+      }
+
+      return $result;
+  }
+
+  public function setSpecificPhones($data) {
+      $sql = 'TRUNCATE TABLE specific_phones';
+      $this->db->query($sql);
+
+      $sql = 'INSERT INTO specific_phones (`number`) VALUES ';
+      foreach ($data as $number) {
+               $sql .= "(" . $number['number'] . "), ";
+      }
+      $sql = rtrim($sql, ', ');
+      $this->db->query($sql);
+
+      return ['result' => true];
+  }
 }
