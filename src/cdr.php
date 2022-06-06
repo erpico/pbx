@@ -9,7 +9,7 @@ class PBXCdr {
   private int $answered;
   private int $missed;
 
-  public function __construct(string $direction, int $answered, int $missed) {
+  public function __construct(string $direction = '', int $answered = -1, int $missed = 0) {
     global $app;    
     $container = $app->getContainer();
     $this->db = $container['db'];
