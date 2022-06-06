@@ -30,12 +30,13 @@ class PBXOutgoingCampaign  {
   ];
 
   const EXTENDED_SETTING_FIELDS = [
-    "min_call_time",
-    "concurrent_calls_limit",
-    "max_day_calls_limit",
-    "calls_multiplier",
-    "waiting_connection_time",
-    "answering_machine_beat",
+    "min_call_time" => 0,
+    "concurrent_calls_limit" => 0,
+    "max_day_calls_limit" => 0,
+    "calls_multiplier" => 0,
+    "waiting_connection_time" => 0,
+    "answering_machine_beat" => 0,
+    "outgoing_filtering" => 0
   ];
 
   const STOP_COMPANY_SETTING_FIELDS = [
@@ -134,7 +135,7 @@ class PBXOutgoingCampaign  {
   }
 
   public function getMainSettings($companyId) {
-    $sql = "SELECT ".implode(",",array_keys(self::FIELDS))." FROM outgouing_company WHERE id = {$companyId}";
+    $sql = "SELECT ".implode(",",array_keys(self::FIELDS)).", ".implode(",",array_keys(self::EXTENDED_SETTING_FIELDS))." FROM outgouing_company WHERE id = {$companyId}";
     $res = $this->db->query($sql);
     return $res->fetch();
   }
@@ -157,7 +158,7 @@ class PBXOutgoingCampaign  {
       $result['dial_result'][] = $row;
     }
 
-    $sql = "SELECT ".implode(", ",self::EXTENDED_SETTING_FIELDS)." FROM outgouing_company WHERE id={$id}";
+    $sql = "SELECT ".implode(", ", array_keys(self::EXTENDED_SETTING_FIELDS))." FROM outgouing_company WHERE id={$id}";
     $res = $this->db->query($sql);
 
     while ($row = $res->fetch()) {
@@ -212,17 +213,6 @@ class PBXOutgoingCampaign  {
     return $row;
   }
 
-  public function getContactsResults($id) {
-    $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
-    state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} AND `state` IN (3,4,6,7)";
-    $res = $this->db->query($sql);
-    $result = [];
-    while ($row = $res->fetch()) {
-      $result[] = $row;
-    }
-    return $result;
-  }
-
   public function getContactCalls($id) {
     $sql = "SELECT id, asteriskid, userId, type, state, time, 
     tm_created, tm_rbt, tm_bridged, tm_done, caller, called, 
@@ -248,6 +238,15 @@ class PBXOutgoingCampaign  {
     }
     return ["result" => false, "message" => "Ошибка получения данных"];
   }
+
+//  1 - в очереди (оч)
+//  2 - вызывается (оч)
+//  3 - занят (рез)
+//  4 - ошибка (рез)
+//  5 - разговор (оч)
+//  6 - завершен (рез)
+//  7 - остановлен (рез)
+//  8 - запланирован (оч)
   
   public function getContacts($id) {
     $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
@@ -259,6 +258,17 @@ class PBXOutgoingCampaign  {
       $result[] = $row;
     }
     return $result;
+  }
+
+  public function getContactsResults($id) {
+      $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
+  state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} AND `state` IN (3,4,6,7)";
+      $res = $this->db->query($sql);
+      $result = [];
+      while ($row = $res->fetch()) {
+          $result[] = $row;
+      }
+      return $result;
   }
 
     public function getContactByPhone ($phone, $outgoing_company_id) {
@@ -413,6 +423,15 @@ class PBXOutgoingCampaign  {
 
   }
 
+  public function findInBitrix($phone, $filteredFromBitrix): bool
+  {
+      foreach ($filteredFromBitrix as $lead) {
+          if ($lead->phone == $phone) return true;
+      }
+
+      return false;
+  }
+
   public function addUpdate($values) {
     $errors = [];    
     if (isset($values['id']) && intval($values['id'])) {
@@ -458,6 +477,33 @@ class PBXOutgoingCampaign  {
       }
       if (isset($values['phones']) && $values['phones'] !== "[]") {
         $phones = json_decode($values['phones']);
+
+        $of = $this->getMainSettings($values['id'])['outgoing_filtering'];
+
+        if ($of === '1') {
+            $queue = $this->getContacts($values['id']);
+            $results = $this->getContactsResults($values['id']);
+            $contacts = array_merge($queue, $results);
+
+            $filteredFromBitrix = array_filter($phones, function ($phone) {
+                return $phone->fromBitrix;
+            });
+
+            foreach ($contacts as $contact) {
+                $res = $this->findInBitrix($contact['phone'], $filteredFromBitrix);
+                if (!$res) {
+                    if (in_array($contact['state'], ['3', '4', '6', '7'])) {
+                        $this->updateContactState($contact['id'], $values['id'], 6);
+                    } else {
+                        $this->deleteContact($contact['id']);
+                        foreach ($phones as $k => $v) {
+                            if ($v->phone == $contact['phone']) unset($phones[$k]);
+                        }
+                    }
+                }
+            }
+        }
+
         foreach ($phones as $phone) {
           if ($phone->id && (!$phone->phone || $phone == "")) {
             $this->deleteContact($phone->id);
@@ -675,9 +721,15 @@ class PBXOutgoingCampaign  {
     return true;    
   }
 
-  private function deleteContact(int $id)
+  public function deleteContact(int $id)
   {
     $sql = "DELETE FROM outgouing_company_contacts WHERE id = '{$id}'";
     $this->db->query($sql);
+  }
+
+  public function updateContactState(int $contactId, int $ocId, int $state): void
+  {
+      $sql = "UPDATE outgouing_company_contacts set `state` = '$state' WHERE id = '$contactId' AND outgouing_company_id = '$ocId'";
+      $this->db->query($sql);
   }
 }

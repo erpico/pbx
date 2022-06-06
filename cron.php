@@ -76,6 +76,7 @@ while ($row = $res->fetch()) {
         $row['lead_filters'] = json_decode("{".$row['lead_filters']."}", true);
         $leadsFromBitrix = importLeads($row['lead_filters'], 0, $helper);
 
+        $leads = [];
         foreach ($leadsFromBitrix as $btxLead) {
             $exist = 0;
             if (!$settings['duplicates']) {
@@ -86,21 +87,22 @@ while ($row = $res->fetch()) {
             }
             if (!$exist) {
                 if ($settings['e164']) $btxLead['PHONE'] = preg_replace("/[^+0-9]/", "",  $btxLead['PHONE']);
-                $outgoingCampaign->addUpdate([
-                    'id' => $row['id'],
-                    'phones' => json_encode([
-                            [
-                                'id' => 0,
-                                'phone' => $btxLead['PHONE'],
-                                'name' => $btxLead['FIO'],
-                                'description' => $btxLead['ID'],
-                                'state' => 0
-                            ]
-                        ]),
-                    'settings' => 1
-                ]);
+                $leads[] = [
+                    'id' => 0,
+                    'phone' => $btxLead['PHONE'],
+                    'name' => $btxLead['FIO'],
+                    'description' => $btxLead['ID'],
+                    'state' => 0,
+                    'fromBitrix' => 1
+                  ];
             }
         }
+
+        $outgoingCampaign->addUpdate([
+          'id' => $row['id'],
+          'phones' => json_encode($leads),
+          'settings' => 1
+        ]);
     }
 }
 
