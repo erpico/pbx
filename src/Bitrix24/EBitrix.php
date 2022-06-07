@@ -114,29 +114,21 @@ class EBitrix {
         if ($this->settings->getSettingByHandle('bitrix.leadshow')['val']) $show = 1;
         $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
         try {
-            $result = $this->obB24App->call('telephony.externalcall.register', [
-                'USER_PHONE_INNER' => $intNum,
-                'USER_ID' => $userId,
-                'PHONE_NUMBER' => $extNum,
-                'TYPE' => $type,
-                'CALL_START_DATE' => $createTime,
-                'CRM_CREATE' => $crmCreate,
-                'LINE_NUMBER' => $lineNumber,
-                'SHOW' => $show
-            ]);
+            $query = [
+              'USER_PHONE_INNER' => $intNum,
+              'USER_ID' => $userId,
+              'PHONE_NUMBER' => $extNum,
+              'TYPE' => $type,
+              'CALL_START_DATE' => $createTime,
+              'CRM_CREATE' => $crmCreate,
+              'LINE_NUMBER' => $lineNumber,
+              'SHOW' => $show
+            ];
+            $result = $this->obB24App->call('telephony.externalcall.register', $query);
             if ($this->channel) {
                 $this->logRequest(
                     $this->settings->getSettingByHandle('bitrix.api_url')['val']."telephony.externalcall.register",
-                    json_encode([
-                        'USER_PHONE_INNER' => $intNum,
-                        'USER_ID' => $userId,
-                        'PHONE_NUMBER' => $extNum,
-                        'TYPE' => $type,
-                        'CALL_START_DATE' => $createTime,
-                        'CRM_CREATE' => $crmCreate,
-                        'LINE_NUMBER' => $lineNumber,
-                        'SHOW' => $show
-                    ]),
+                    json_encode($query),
                     json_encode($result));
             }
             $this->logSync($channel, 1, $result['result']['CALL_ID'], $createTime, json_encode($result));
@@ -182,29 +174,24 @@ class EBitrix {
         $sipcode = $statusCode;
         if ($sipcode == 304 || $sipcode == 486) {
             $duration = 0;
+            $recordedfile = '';
         }
 
         $createTime = isset($crmCall['time']) ? date("Y-m-d H:i:s", strtotime($crmCall['time'])) : date("Y-m-d H:i:s");
         try {
-            $result = $this->obB24App->call('telephony.externalcall.finish', [
-                'USER_PHONE_INNER' => $intNum,
-                'USER_ID' => $userId,
-                'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
-                'STATUS_CODE' => $sipcode,
-                'DURATION' => $duration, //длительность звонка в секундах
-                'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
-            ]);
+            $query = [
+              'USER_PHONE_INNER' => $intNum,
+              'USER_ID' => $userId,
+              'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
+              'STATUS_CODE' => $sipcode,
+              'DURATION' => $duration, //длительность звонка в секундах
+              'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
+            ];
+            $result = $this->obB24App->call('telephony.externalcall.finish', $query);
             if ($this->channel) {
                 $this->logRequest(
                     $this->settings->getSettingByHandle('bitrix.api_url')['val']."telephony.externalcall.finish",
-                    json_encode([
-                        'USER_PHONE_INNER' => $intNum,
-                        'USER_ID' => $userId,
-                        'CALL_ID' => $call_id, //идентификатор звонка из результатов вызова метода telephony.externalCall.register
-                        'STATUS_CODE' => $sipcode,
-                        'DURATION' => $duration, //длительность звонка в секундах
-                        'RECORD_URL' => $recordedfile //url на запись звонка для сохранения в Битрикс24
-                    ]),
+                    json_encode($query),
                     json_encode($result));
             }
             $this->logSync($channel, 2, $call_id, $createTime, json_encode($result));
