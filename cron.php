@@ -79,9 +79,9 @@ while ($row = $res->fetch()) {
         $leads = [];
         foreach ($leadsFromBitrix as $btxLead) {
             $exist = 0;
-            if (!$settings['duplicates']) {
+            if (!$settings['duplicates'] || $settings['duplicates_all']) {
                 $exist = $outgoingCampaign->getContactByPhone($btxLead['PHONE'], $row['id']);
-                if (isset($exist['state'])) {
+                if (isset($exist['state']) && !$settings['duplicates_all']) {
                     if (in_array($exist['state'], [3, 4, 6, 7])) $exist = 0;
                 }
             }

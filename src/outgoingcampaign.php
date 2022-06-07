@@ -27,6 +27,7 @@ class PBXOutgoingCampaign  {
     "lead_status_tries_end" => 0,
     "e164" => 0,
     "duplicates" => 0,
+    "duplicates_all" => 0,
   ];
 
   const EXTENDED_SETTING_FIELDS = [
@@ -452,11 +453,11 @@ class PBXOutgoingCampaign  {
               $field == "lead_status_user" ||
               $field == "lead_status_tries_end" ||
               $field == "e164" ||
-              $field == "duplicates"
+              $field == "duplicates" ||
+              $field == "duplicates_all"
             ) && isset($values[$field]) && $values[$field] == "") {
               if (strlen($ssql)) $ssql .= ",";
               $ssql .= "`".$field."`=null";
-              continue;
           }
       }
     }
