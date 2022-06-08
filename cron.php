@@ -79,6 +79,7 @@ while ($row = $res->fetch()) {
         $leads = [];
         foreach ($leadsFromBitrix as $btxLead) {
             $exist = 0;
+            if ($settings['e164']) $btxLead['PHONE'] = preg_replace("/[^+0-9]/", "",  $btxLead['PHONE']);
             if (!$settings['duplicates'] || $settings['duplicates_all']) {
                 $exist = $outgoingCampaign->getContactByPhone($btxLead['PHONE'], $row['id']);
                 if (isset($exist['state']) && !$settings['duplicates_all']) {
@@ -86,7 +87,6 @@ while ($row = $res->fetch()) {
                 }
             }
             if (!$exist) {
-                if ($settings['e164']) $btxLead['PHONE'] = preg_replace("/[^+0-9]/", "",  $btxLead['PHONE']);
                 $leads[] = [
                     'id' => 0,
                     'phone' => $btxLead['PHONE'],
@@ -102,7 +102,7 @@ while ($row = $res->fetch()) {
           'id' => $row['id'],
           'phones' => json_encode($leads),
           'settings' => 1
-        ]);
+        ], 1);
     }
 }
 

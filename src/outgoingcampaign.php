@@ -433,8 +433,8 @@ class PBXOutgoingCampaign  {
       return false;
   }
 
-  public function addUpdate($values) {
-    $errors = [];    
+  public function addUpdate($values, $cron = 0) {
+    $errors = [];
     if (isset($values['id']) && intval($values['id'])) {
       $sql = "UPDATE outgouing_company SET ";
     } else {
@@ -516,7 +516,7 @@ class PBXOutgoingCampaign  {
           }
         }
       } else {
-        $this->truncateQueues($id);
+        if (!$cron) $this->truncateQueues($id);
       }
       
       if (isset($values['days'])) {
