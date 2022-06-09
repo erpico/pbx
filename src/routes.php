@@ -26,6 +26,9 @@ $app->post('/auth/login', function (Request $request, Response $response, array 
 });
 
 $app->map(['GET', 'OPTIONS'], '/cdr/list', function (Request $request, Response $response, array $args) use ($app) {
+    if ($request->getMethod() === 'OPTIONS') {
+      return $response->withJson([]);
+    }
     $direction = $request->getParam('direction',  ''); //all(none) incoming(in) outgoing(out)
     $answered = $request->getParam('answered', -1); //all(-1) answered(1) not answered(0)
     $missed = $request->getParam('missed', 0); //1 0
