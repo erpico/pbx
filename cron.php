@@ -133,8 +133,7 @@ if (count($crmCalls)) {
         if ($callsSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
           $needSync = 1;
           foreach($callsSync as $callSync) {
-            $synchronizedDatetimeMinus10Sec = DateTime::createFromFormat('Y-m-d H:i:s', $callSync['call_time'])->modify('-10 sec')->format('Y-m-d H:i:s');
-            $synchronizedDatetimePlus10Sec = DateTime::createFromFormat('Y-m-d H:i:s', $callSync['call_time'])->modify('+10 sec')->format('Y-m-d H:i:s');
+            $synchronizedDatetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $callSync['call_time'])->modify('+'.$callSync['talk'].' sec')->format('Y-m-d H:i:s');
 
             if ($callSync['status'] == 1) {
               $result = $helper->addCall($crmCall, $callSync['call_id'], 0);
@@ -145,7 +144,7 @@ if (count($crmCalls)) {
               $callSync['status'] == 2 && //synchronized
               ($callSync['call_time'] === $crmCall['time'] || // synchronized by call/sync route
                 $callSync['call_time'] === $datetimePlusTalk || // synchronized by ats
-                ($synchronizedDatetimeMinus10Sec <=  $datetimePlusTalk && $datetimePlusTalk <= $synchronizedDatetimePlus10Sec) ||
+                (strtotime($datetimePlusTalk) - strtotime($synchronizedDatetimePlusTalk) <= 10) ||
                 $callSync['call_time'] === $datetimePlusSec ||
                 $callSync['call_time'] === $datetimePlus2Sec) // scripts delay
             ) {
@@ -157,7 +156,15 @@ if (count($crmCalls)) {
             isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
           }
         } else {
-            $result = $helper->addCall($crmCall);
+            if ($crmCall['reason'] === 'EXITWITHTIMEOUT' || $crmCall['reason'] === 'RINGNOANSWER') {
+              $datetimeMinus10Min = DateTime::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'))->modify('-10 minute')->format('Y-m-d H:i:s');
+              $callTime = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->format('Y-m-d H:i:s');
+              if ($callTime < $datetimeMinus10Min) {
+                $result = $helper->addCall($crmCall);
+              }
+            } else {
+              $result = $helper->addCall($crmCall);
+            }
             isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
         }
     }

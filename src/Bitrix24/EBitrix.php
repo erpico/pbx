@@ -236,7 +236,7 @@ class EBitrix {
     }
 
     public function getSynchronizedCalls($u_id) {
-        $sql = "SELECT id, status, call_id, call_time, result
+        $sql = "SELECT id, status, call_id, call_time, JSON_EXTRACT(result, '$.result.CALL_DURATION') as talk
                 FROM btx_call_sync 
                 WHERE u_id = '$u_id'";
         $res = $this->db->query($sql);
