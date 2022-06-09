@@ -33,7 +33,7 @@ require __DIR__ . '/../src/amocrm.php';
 require __DIR__ . '/../src/bitrix24.php';
 
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET, POST');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 
 // Allow multiple requests 
 // https://stackoverflow.com/questions/1430883/simultaneous-requests-to-php-script
