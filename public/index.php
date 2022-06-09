@@ -34,6 +34,7 @@ require __DIR__ . '/../src/bitrix24.php';
 
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
+header('Access-Control-Allow-Headers: *');
 
 // Allow multiple requests 
 // https://stackoverflow.com/questions/1430883/simultaneous-requests-to-php-script
