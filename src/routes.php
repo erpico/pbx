@@ -630,6 +630,15 @@ $app->get('/outgoingcampaign/{id}/journal', function (Request $request, Response
     return $response->withJson($outgoingcampaign->getJournal($id, $filters));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
+$app->get('/outgoingcampaign/{id}/journal/{j_id}', function (Request $request, Response $response, array $args) use ($app) {
+  $outgoingcampaign = new PBXOutgoingCampaign();
+  $j_id = intval($args['j_id']);
+  $filters['start'] = $request->getParam("start", '');
+  $filters['end'] = $request->getParam("end", '');
+
+  return $response->withJson($outgoingcampaign->getJournalLeads($j_id, $filters));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
 // SMS messaging
 
 $app->get('/acd/sms', function (Request $request, Response $response, array $args) use ($app) {

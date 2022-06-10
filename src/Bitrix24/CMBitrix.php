@@ -70,6 +70,14 @@ class CMBitrix {
     
 	}
 
+  public function getLeadById(int $id) {
+    return $this->getBitrixApi(['ID' => $id], 'crm.lead.get');
+  }
+
+  public function getContactById(int $id) {
+    return $this->getBitrixApi(['ID' => $id], 'crm.contact.get');
+  }
+
   public function getLeadsByFilters($filters, $next, $cron = 0) {
     $leads = [];
     $newFilters = [];
@@ -102,7 +110,7 @@ class CMBitrix {
     if (isset($result['res']) && $result['res'] == false) return $result;
     if (!count($result['result'])) return false;
     foreach ($result['result'] as $lead) {
-        $leadInfo = $this->getBitrixApi(['ID' => $lead['ID']], 'crm.lead.get');
+        $leadInfo = $this->getLeadById($lead['ID']);
         $phone = $leadInfo['result']['PHONE'][0]['VALUE'];
 
         $fio = '';

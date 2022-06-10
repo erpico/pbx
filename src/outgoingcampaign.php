@@ -197,13 +197,28 @@ class PBXOutgoingCampaign  {
       while ($row = $res->fetch()) {
           $response = json_decode($row['response'], true);
           $row['response'] = count($response['result']);
-          if (isset($row[''])) {
-
-          }
           $records[] = $row;
       }
 
       return $records;
+  }
+
+  public function getJournalLeads($j_id) {
+    $sql = "SELECT response FROM bitrix24_requests WHERE id = '$j_id' ORDER BY id DESC;";
+    $res = $this->db->query($sql);
+
+    $helper = new CMBitrix('');
+    $leads = [];
+    if ($row = $res->fetch()) {
+      $response = json_decode($row['response'], true);
+      foreach ($response['result'] as $lead) {
+        $result = $helper->getLeadById($lead['ID']);
+        $lead['PHONE'] = $result['result']['PHONE'][0]['VALUE'];
+        $leads[] = $lead;
+      }
+    }
+
+    return $leads;
   }
 
   public function getContactById($id) {
