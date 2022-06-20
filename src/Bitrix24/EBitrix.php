@@ -64,25 +64,6 @@ class EBitrix {
         return $this->obB24App;
     }
 
-    /**
-     * Run Bitrix24 REST API method telephony.externalcall.register.json
-     *
-     * @param int $intNum (${EXTEN} from the Asterisk server, i.e. internal number)
-     * @param int $extNum (${CALLERID(num)} from the Asterisk server, i.e. number which called us)
-     *
-     * @return array|false
-     * Array
-     *	(
-     *	    [result] => Array
-     *	        (
-     *	            [CALL_ID] => externalCall.cf1649fa0f4479870b76a0686f4a7058.1513888745
-     *	            [CRM_CREATED_LEAD] =>
-     *	            [CRM_ENTITY_TYPE] => LEAD
-     *	            [CRM_ENTITY_ID] => 24
-     *	        )
-     *	)
-     * We need only CALL_ID
-     */
     public function runInputCall(int $intNum, int $extNum, $type = 2, $crmCreate = 1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
         $spe = $this->settings->getSettingByHandle('bitrix.specific_phones_enabled');
         if ($spe && isset($spe['val']) && $spe['val'] === '1' && $type === '2') {
@@ -100,12 +81,22 @@ class EBitrix {
         $intNum = $res['userPhone'];
 
         $eo = $this->settings->getSettingByHandle('bitrix.existing_outgoing');
-        $existed = $this->findAlreadyExistedPhoneByPhoneAndEntity('contact', $extNum);
-        if ($existed['res'] === false) $existed = $this->findAlreadyExistedPhoneByPhoneAndEntity('lead', $extNum);
-        if ($existed['res'] === false) $existed = $this->findAlreadyExistedPhoneByPhoneAndEntity('deal', $extNum);
+        $ids = $this->getDuplicateLeadAndContactIdByPhone($extNum);
 
-        if ($existed['res'] === true) $extNum = $existed['number'];
-        if ($eo && isset($eo['val']) && $eo['val'] === '1' && $type === '1' && $existed['res'] === false) {
+        if ($ids) {
+          if (isset($ids['leads'])) {
+            foreach ($ids['leads'] as $id) {
+              $this->updateEntityPhone($id, $extNum, 'lead');
+            }
+          }
+          if (isset($ids['contacts'])) {
+            foreach ($ids['contacts'] as $id) {
+              $this->updateEntityPhone($id, $extNum, 'contact');
+            }
+          }
+        }
+
+        if ($eo && isset($eo['val']) && $eo['val'] === '1' && $type === '1' && count($ids) === 0) {
             return false;
         }
 
@@ -147,24 +138,6 @@ class EBitrix {
         }
     }
 
-    /**
-     * Upload recorded file to Bitrix24.
-     *
-     * @param string $call_id
-     * @param $recordedfile
-     * @param string $intNum
-     *
-     * @param string $duration
-     * @param $disposition
-     * @param $lineNumber
-     * @param string $channel
-     * @param null $crmCall
-     * @return array|int
-     * @throws Bitrix24EmptyResponseException
-     * @throws Bitrix24Exception
-     * @throws Bitrix24IoException
-     * @throws Bitrix24SecurityException
-     */
     public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber, $channel = "", $crmCall = null){
         $res = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record');
         $userId = $res['userId'];
@@ -441,6 +414,58 @@ class EBitrix {
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();
       }
+    }
+
+    public function updateEntityPhone($id, $phone, $entity)
+    {
+      try {
+        $result = $this->obB24App->call("crm.$entity.get", ['ID' => $id]);
+        if ($result['result']['PHONE'][0]['VALUE'] !== "$phone") {
+          $result = $this->obB24App->call("crm.$entity.update", ['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]);
+          $this->logRequest(
+            $this->settings->getSettingByHandle('bitrix.api_url')['val'] . "crm.$entity.update",
+            json_encode(['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]),
+            json_encode($result)
+          );
+        }
+        return true;
+      } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
+        return $e->getMessage();
+      }
+    }
+
+    public function getDuplicateLeadAndContactIdByPhone($phone) {
+      $phones = [];
+      $phones[] = $phone;
+      if (mb_strlen($phone) == 10) {
+        $phones[] = "7$phone";
+        $phones[] = "8$phone";
+      } else {
+        if (strval($phone)[0] == '7') {
+          $phone = substr($phone, 1);
+          $phones[] = "$phone";
+          $phones["8$phone"] = "8$phone";
+        } else {
+          $phone = substr($phone, 1);
+          $phones[] = "$phone";
+          $phones[] = "7$phone";
+        }
+      }
+
+      $leads = $this->obB24App->call("crm.duplicate.findbycomm", ['TYPE' => 'PHONE', 'VALUES' => $phones, 'ENTITY_TYPE' => 'LEAD']);
+      $contacts = $this->obB24App->call("crm.duplicate.findbycomm", ['TYPE' => 'PHONE', 'VALUES' => $phones, 'ENTITY_TYPE' => 'CONTACT']);
+
+
+      $result = [];
+      if (isset($leads['result']['LEAD'])) {
+        $result['leads'] = $leads['result']['LEAD'];
+      }
+
+      if (isset($contacts['result']['CONTACT'])) {
+        $result['contacts'] = $contacts['result']['CONTACT'];
+      }
+
+      return $result;
     }
 
     public function getEntityIdByPhone($entity, $phone) {
