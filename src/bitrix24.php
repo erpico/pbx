@@ -323,46 +323,7 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
         foreach ($crmCalls as $crmCall) {
             if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
             $helper = new EBitrix($request, $crmCall['uid']);
-            $datetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+'.$crmCall['talk'].' sec')->format('Y-m-d H:i:s');
-            $datetimePlusSec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+1 sec')->format('Y-m-d H:i:s');
-            $datetimePlus2Sec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+2 sec')->format('Y-m-d H:i:s');
-            if ($callsSync = $helper->getSynchronizedCalls($crmCall['uid'])) {
-              $needSync = 1;
-              foreach($callsSync as $callSync) {
-                $synchronizedDatetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $callSync['call_time'])->modify('+'.$callSync['talk'].' sec')->format('Y-m-d H:i:s');
-
-                if ($callSync['status'] == 1) {
-                  $result = $helper->addCall($crmCall, $callSync['call_id'], 0);
-                  isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
-                  break;
-                }
-                if (
-                    $callSync['status'] == 2 && //synchronized
-                    ($callSync['call_time'] === $crmCall['time'] || // synchronized by call/sync route
-                    $callSync['call_time'] === $datetimePlusTalk || // synchronized by ats
-                    (strtotime($datetimePlusTalk) - strtotime($synchronizedDatetimePlusTalk) <= 10) ||
-                    $callSync['call_time'] === $datetimePlusSec ||
-                    $callSync['call_time'] === $datetimePlus2Sec) // scripts delay
-                ) {
-                  $needSync = 0;
-                }
-              }
-              if ($needSync) {
-                  $result = $helper->addCall($crmCall, 0, 0);
-                  isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
-              }
-            } else {
-                if ($crmCall['reason'] === 'EXITWITHTIMEOUT' || $crmCall['reason'] === 'RINGNOANSWER') {
-                  $datetimeMinus10Min = DateTime::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'))->modify('-10 minute')->format('Y-m-d H:i:s');
-                  $callTime = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->format('Y-m-d H:i:s');
-                  if ($callTime < $datetimeMinus10Min) {
-                    $result = $helper->addCall($crmCall);
-                  }
-                } else {
-                  $result = $helper->addCall($crmCall);
-                }
-                isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
-            }
+            $helper->synchronizeCall($crmCall, $synchronizedCalls, $exceptions);
         }
     }
 
