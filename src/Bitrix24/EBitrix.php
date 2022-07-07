@@ -83,18 +83,27 @@ class EBitrix {
         $eo = $this->settings->getSettingByHandle('bitrix.existing_outgoing');
         $ids = $this->getDuplicateLeadAndContactIdByPhone($extNum);
 
-        if ($ids) {
-          if (isset($ids['leads'])) {
-            foreach ($ids['leads'] as $id) {
-              $this->updateEntityPhone($id, $extNum, 'lead');
-            }
-          }
-          if (isset($ids['contacts'])) {
-            foreach ($ids['contacts'] as $id) {
+        if ($ids && $ids['contacts']) {
+          foreach ($ids['contacts'] as $id) {
+            $dealId = $this->getDealIdByContactId($id);
+            if ($dealId) {
               $this->updateEntityPhone($id, $extNum, 'contact');
             }
           }
         }
+
+//        if ($ids) {
+//          if (isset($ids['leads'])) {
+//            foreach ($ids['leads'] as $id) {
+//              $this->updateEntityPhone($id, $extNum, 'lead');
+//            }
+//          }
+//          if (isset($ids['contacts'])) {
+//            foreach ($ids['contacts'] as $id) {
+//              $this->updateEntityPhone($id, $extNum, 'contact');
+//            }
+//          }
+//        }
 
         if ($eo && isset($eo['val']) && $eo['val'] === '1' && $type === '1' && count($ids) === 0) {
             return false;
@@ -462,14 +471,12 @@ class EBitrix {
     {
       try {
         $result = $this->obB24App->call("crm.$entity.get", ['ID' => $id]);
-        if ($result['result']['PHONE'][0]['VALUE'] !== "$phone") {
-          $result = $this->obB24App->call("crm.$entity.update", ['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]);
-          $this->logRequest(
-            $this->settings->getSettingByHandle('bitrix.api_url')['val'] . "crm.$entity.update",
-            json_encode(['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]),
-            json_encode($result)
-          );
-        }
+        $result = $this->obB24App->call("crm.$entity.update", ['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]);
+        $this->logRequest(
+          $this->settings->getSettingByHandle('bitrix.api_url')['val'] . "crm.$entity.update",
+          json_encode(['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]),
+          json_encode($result)
+        );
         return true;
       } catch (Bitrix24\Exceptions\Bitrix24ApiException $e) {
         return $e->getMessage();
@@ -508,6 +515,15 @@ class EBitrix {
       }
 
       return $result;
+    }
+
+    private function getDealIdByContactId(int $id) {
+      $result = $this->obB24App->call("crm.deal.list", ['ORDER' => ["DATE_CREATE" => "DESC"], 'FILTER' => ['CONTACT_ID' => $id, 'ACTIVE' => 'Y']]);
+      if ($result && isset($result['result'])){
+        if (count($result['result']) > 0) return $result['result'][0]['ID'];
+      } else {
+        return false;
+      }
     }
 
     public function getEntityIdByPhone($entity, $phone) {
