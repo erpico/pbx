@@ -108,6 +108,15 @@ class PBXCdr {
 
     if ($this->missed) $filter['reason'] = 'ABANDON';
 
+    if (!isset($filter['time'])) {
+      $currentDatetime = new DateTime();
+      $yesterdayDatetime = new DateTime();
+      $yesterdayDatetime->modify('-1 day');
+
+      if ($filter == 0) $filter = [];
+      $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
+    }
+
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
@@ -207,13 +216,26 @@ class PBXCdr {
 
     if (intval($onlyCount)) {
       if ($timeisset != 2) return 100000; // Return infinite for scrolling
-      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(*) AS n FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  $queues $qwsql) as u 
-              UNION 
-              SELECT COUNT(uniqueid) AS n FROM cdr 
-              LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
-              LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)     
-              WHERE 1=1 $extens $cwsql) as c";                              
-              
+      $sql = "SELECT count(*) FROM (
+              SELECT 
+                  a.calldate, 
+                  a.src, 
+                  a.agentdev AS dst, 
+                  a.queue, 
+                  a.reason, 
+                  a.holdtime, 
+                  a.talktime, 
+                  a.uniqid, 
+                  a.agentname,
+                  a.userfield
+        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql
+        UNION
+        SELECT calldate, src, dst, cdr.name, disposition, duration - billsec, billsec, uniqueid AS uniqid, acl_user.name, userfield        
+        FROM cdr 
+        LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+        LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
+        WHERE 1=1 $extens $cwsql) AS c ORDER BY calldate DESC ";
+
       $res = $this->db->query($sql);      
       $row = $res->fetch(PDO::FETCH_NUM);      
       return $row[0]; 
@@ -246,22 +268,23 @@ class PBXCdr {
               LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
               WHERE 1=1 $extens $cwsql
           ) as c      
-      ";            
+      ";
+
       $result_cdr = $this->db->query($sql);      
       $cdr = $result_cdr->fetch(\PDO::FETCH_ASSOC);      
       return $cdr;      
     }
     
-    $lcd = 0;
-    if (strlen($_lcd)) $lcd = strtotime($_lcd);    
-    if (!$lcd) $lcd = time();
-    else $lcd -= 1;
+//    $lcd = 0;
+//    if (strlen($_lcd)) $lcd = strtotime($_lcd);
+//    if (!$lcd) $lcd = time();
+//    else $lcd -= 1;
+//
+//    $mintime = strtotime("2000-01-01 00:00:00");
 
-    $mintime = strtotime("2000-01-01 00:00:00");
-    
-    do {
+//    do {
 
-      $fcd = $lcd - 3600*24;
+//      $fcd = $lcd - 3600*24;
 
       $sql = "SELECT * FROM (
               SELECT 
@@ -275,27 +298,28 @@ class PBXCdr {
                   a.uniqid, 
                   a.agentname,
                   a.userfield
-        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql 
-        ".($limit != 1000000 ? "AND a.calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND a.calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
-        UNION
+        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql" .
+//        ".($limit != 1000000 ? "AND a.calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND a.calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
+        "UNION
         SELECT calldate, src, dst, cdr.name, disposition, duration - billsec, billsec, uniqueid AS uniqid, acl_user.name, userfield        
         FROM cdr 
         LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
         LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
-        WHERE 1=1 $extens $cwsql 
-        ".($limit != 1000000 ? "AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
-        ) AS c ORDER BY calldate DESC ";
+        WHERE 1=1 $extens $cwsql" .
+//        ".($limit != 1000000 ? "AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
+        ") AS c ORDER BY calldate DESC ";
 
-      /*if (isset($start) && isset($limit)){
+      if (isset($start) && isset($limit)){
         $sql .= " LIMIT ".intval($start).", ".intval($limit);
-      }*/
+      }
+
       //$sql .= " LIMIT 100"; // No more for now
       $cdr = [];
       $res = $this->db->query($sql);
       //die(var_dump($res));
-      $lcd -= 3600*24;
-
-    } while ($lcd > $mintime && $res->rowCount() == 0);
+//      $lcd -= 3600*24;
+//
+//    } while ($lcd > $mintime && $res->rowCount() == 0);
 
     while ($row = $res->fetch()) {
         $src = $row['src'];
