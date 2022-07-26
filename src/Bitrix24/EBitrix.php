@@ -433,6 +433,15 @@ class EBitrix {
       }
     }
 
+    public function getSources() {
+      $result = $this->obB24App->call('crm.status.list', [
+        'FILTER' => ['ENTITY_ID' => 'SOURCE'],
+      ]);
+      if ($result['result']) {
+        return $result['result'];
+      }
+    }
+
     public function getLeadStatus($leadId) {
         $result = $this->obB24App->call('crm.lead.get', ['ID' => $leadId]);
 

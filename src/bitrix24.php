@@ -406,6 +406,27 @@ $app->get('/bitrix24/status', function (Request $request, Response $response, ar
   }
 });
 
+$app->get('/bitrix24/source', function (Request $request, Response $response, array $args) {
+  $helper = new EBitrix($request);
+  $settings = new PBXSettings();
+  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+
+  $res = $helper->getSources();
+  if ($res) {
+    $result = [];
+    foreach ($res as $e) {
+      if (!isset($e['STATUS_ID'])) continue;
+      $result[] = [
+        "id" => $e['STATUS_ID'],
+        "value" => $e['NAME']
+      ];
+    }
+    return $response->withJson($result);
+  } else {
+    return $response->withJson([]);
+  }
+});
+
 $app->get('/bitrix24/lead/{lead_id}/state', function (Request $request, Response $response, array $args) {
     $helper = new EBitrix($request);
     $settings = new PBXSettings();
