@@ -653,6 +653,13 @@ $app->get('/outgoingcampaign/statistics', function (Request $request, Response $
   return $response->withJson($statistics);
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
+$app->get('/outgoings/phone', function (Request $request, Response $response, array $args) use ($app) {
+  $outgoingcampaign = new PBXOutgoingCampaign();
+  $phone = $request->getParam('phone', "");
+
+  return $response->withJson($outgoingcampaign->getOutgoingIdsByPhone($phone));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
 $app->get('/outgoingcampaign/statistics/{id}', function (Request $request, Response $response, array $args) use ($app) {
   $outgoingcampaign = new PBXOutgoingCampaign();
   $id = intval($args['id']);

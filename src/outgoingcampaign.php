@@ -355,6 +355,19 @@ ORDER BY id";
         return $res->fetch();
     }
 
+  public function getOutgoingIdsByPhone(string $phone): array
+  {
+    $sql = "SELECT outgouing_company_id FROM outgouing_company_contacts WHERE `phone` like '%$phone%'";
+    $res = $this->db->query($sql);
+
+    $ids = [];
+    while ($row = $res->fetch()) {
+      $ids[] = $row['outgouing_company_id'];
+    }
+
+    return array_unique($ids);
+  }
+
   private function getSipStatusText($code) {
     $status_list[100] = "100 - Запрос обрабатывается"; // Trying
 
