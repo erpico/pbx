@@ -639,6 +639,48 @@ $app->get('/outgoingcampaign/{id}/journal/{j_id}', function (Request $request, R
   return $response->withJson($outgoingcampaign->getJournalLeads($j_id, $filters));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
 
+$app->get('/outgoingcampaign/statistics', function (Request $request, Response $response, array $args) use ($app) {
+  $outgoingcampaign = new PBXOutgoingCampaign();
+  $filter = $request->getParam('filter', "");
+
+  $campaigns = $outgoingcampaign->fetchList($filter);
+
+  $statistics = [];
+  foreach ($campaigns as $campaign) {
+    $statistics[] = $outgoingcampaign->getStatistics($campaign['id'], $campaign['name']);
+  }
+
+  return $response->withJson($statistics);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
+$app->get('/outgoingcampaign/statistics/{id}', function (Request $request, Response $response, array $args) use ($app) {
+  $outgoingcampaign = new PBXOutgoingCampaign();
+  $id = intval($args['id']);
+  $filter = $request->getParam('filter', "");
+  $filter['id'] = $id;
+
+  $campaign = $outgoingcampaign->fetchList($filter)[0];
+
+  return $response->withJson($outgoingcampaign->getStatistics($id, $campaign['name']));
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
+$app->post('/outgoingcampaign/{id}/archive', function (Request $request, Response $response, array $args) use ($app) {
+  $outgoingcampaign = new PBXOutgoingCampaign();
+  $id = intval($args['id']);
+
+  $res = $outgoingcampaign->toggleArchive($id);
+
+  if (isset($res['action'])) {
+    $action = $res['action'];
+    $res = $res['res'];
+  } else {
+    $message = $res;
+    $res = false;
+  }
+
+  return $response->withJson(['res' => $res, 'message' => $message ?? null, 'action' => $action ?? null]);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.oc', 'erpico.admin']));
+
 // SMS messaging
 
 $app->get('/acd/sms', function (Request $request, Response $response, array $args) use ($app) {

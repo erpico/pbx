@@ -2,6 +2,8 @@
 
 class PBXOutgoingCampaign  {
   protected $db;
+
+  //if value is 1, it's means that field is int type
   const FIELDS = [
     "user_id" => 0,
     "tm_created" => 0,
@@ -28,6 +30,7 @@ class PBXOutgoingCampaign  {
     "e164" => 0,
     "duplicates" => 0,
     "duplicates_all" => 0,
+    "archive" => 1,
   ];
 
   const EXTENDED_SETTING_FIELDS = [
@@ -104,10 +107,15 @@ class PBXOutgoingCampaign  {
         }        
       }
     }
-    $sql .= " WHERE deleted = 0 OR deleted is null";
+    $sql .= " WHERE (deleted = 0 OR deleted is null)";
     if (strlen($wsql)) {
       $sql.= " AND ".$wsql;
     }
+
+    if (isset($filter['archive']) && $filter['archive'] == 1) {
+      $sql .= ' AND `archive` = 1 ';
+    } else $sql .= ' AND `archive` = 0 ';
+
     $sql .= " order by id";
 
     $res = $this->db->query($sql, $onlyCount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
@@ -221,6 +229,52 @@ class PBXOutgoingCampaign  {
     return $leads;
   }
 
+  public function getStatistics($id, $name = "")
+  {
+    $contacts = $this->getContactsResults($id);
+
+    $res = [
+      'id' => $id,
+      'name' => $name,
+      'busy' => 0,
+      'failed' => 0,
+      'complete' => 0,
+      'stopped' => 0,
+      'first_call' => '2999-12-31 23:59:59',
+      'last_call' => '2000-01-01 00:00:00',
+      'general_duration' => 0
+    ];
+
+    if ($contacts) {
+      foreach ($contacts as &$contact) {
+        $contact['calls'] = $this->getContactCalls($contact['id']);
+
+        foreach ($contact['calls'] as $call) {
+          if ($call['tm_created'] < $res['first_call']) $res['first_call'] = $call['tm_created'];
+          if ($call['tm_created'] > $res['last_call']) $res['last_call'] = $call['tm_created'];
+          $res['general_duration'] += $call['duration'];
+        }
+
+        switch ($contact['state']) {
+          case 3:
+            $res['busy']++;
+            break;
+          case 4:
+            $res['failed']++;
+            break;
+          case 6:
+            $res['complete']++;
+            break;
+          case 7:
+            $res['stopped']++;
+            break;
+        }
+      }
+    }
+
+    return $res;
+  }
+
   public function getContactById($id) {
     $sql = "SELECT id, updated, outgouing_company_id, `order`, phone, name, description, state, tries, last_call, dial_result, scheduled_time FROM outgouing_company_contacts WHERE id = '".intval($id)."'";
     $res = $this->db->query($sql);
@@ -257,13 +311,14 @@ class PBXOutgoingCampaign  {
 
 //  1 - в очереди (оч)
 //  2 - вызывается (оч)
+//  5 - разговор (оч)
+//  8 - запланирован (оч)
+//  --------------------
 //  3 - занят (рез)
 //  4 - ошибка (рез)
-//  5 - разговор (оч)
 //  6 - завершен (рез)
 //  7 - остановлен (рез)
-//  8 - запланирован (оч)
-  
+
   public function getContacts($id) {
     $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
     state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} 
@@ -278,7 +333,10 @@ class PBXOutgoingCampaign  {
 
   public function getContactsResults($id) {
       $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
-  state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} AND `state` IN (3,4,6,7)";
+  state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) 
+FROM outgouing_company_contacts 
+WHERE outgouing_company_id = {$id} AND `state` IN (3,4,6,7)
+ORDER BY id";
       $res = $this->db->query($sql);
       $result = [];
       while ($row = $res->fetch()) {
@@ -747,5 +805,22 @@ class PBXOutgoingCampaign  {
   {
       $sql = "UPDATE outgouing_company_contacts set `state` = '$state' WHERE id = '$contactId' AND outgouing_company_id = '$ocId'";
       $this->db->query($sql);
+  }
+
+  public function toggleArchive(int $id) {
+    try {
+      $sql = "SELECT archive FROM outgouing_company WHERE id =" . $id;
+      $res = $this->db->query($sql);
+      $row = $res->fetch();
+
+      $sql = "UPDATE outgouing_company SET `archive` = ";
+      $sql .= $row['archive'] ? "0" : "1, `state` = 4 ";
+      $sql .= " WHERE id = " . $id;
+      $this->db->query($sql);
+
+      return ['res' => true, 'action' => $row['archive'] ? 'unarchived' : 'archived'];
+    } catch (Exception | Error $e) {
+      return $e->getMessage();
+    }
   }
 }
