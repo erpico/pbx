@@ -289,9 +289,14 @@ $app->post('/settings/dialingRules/save', function (Request $request, Response $
   $set = new PBXSettings();
 
   if (isset($params)) {
-    return $response->withJson(["result" => $set->setDialingRulesSettings($params)]);
+    $res = $set->setDialingRulesSettings($params);
+    if (is_bool($res)) {
+        return $response->withJson(["result" => $res]);
+    } elseif (is_string($res)) {
+      return $response->withJson(["result" => false, "message" => $res]);
+    }
   }
-  return $response->withJson(["result" => FALSE]);
+  return $response->withJson(["result" => false]);
 });
 
 $app->get('/groups/list', function (Request $request, Response $response, array $args) use ($app) {

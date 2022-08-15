@@ -217,17 +217,21 @@ class PBXSettings {
 
   public function setDialingRulesSettings ($rules) {
     if (is_string($rules) && strlen($rules)) {
-      $rules = json_decode($rules, true);
-      $this->clearRules();
-      foreach($rules as $rule) {
-        $sql = "INSERT INTO dialing_rules_settings SET updated = NOW(), ";
-        foreach ($rule as $k => $v) {
-          $sql .= "`$k` = '$v', ";
+      try {
+        $rules = json_decode($rules, true);
+        $this->clearRules();
+        foreach($rules as $rule) {
+          $sql = "INSERT INTO dialing_rules_settings SET updated = NOW(), ";
+          foreach ($rule as $k => $v) {
+            $sql .= "`$k` = '$v', ";
+          }
+          $sql = rtrim($sql, ', ');
+          $this->db->query($sql);
         }
-        $sql = rtrim($sql, ', ');
-        $this->db->query($sql);
+        return true;
+      } catch (Exception | Error $e) {
+        return $e->getMessage();
       }
-      return true;
     }
     return false;
   }
