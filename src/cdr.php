@@ -207,14 +207,27 @@ class PBXCdr {
 
     if (intval($onlyCount)) {
       if ($timeisset != 2) return 100000; // Return infinite for scrolling
-      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(*) AS n FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  $queues $qwsql) as u 
-              UNION 
-              SELECT COUNT(uniqueid) AS n FROM cdr 
-              LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
-              LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)     
-              WHERE 1=1 $extens $cwsql) as c";                              
-              
-      $res = $this->db->query($sql);      
+      $sql = "SELECT count(*) FROM (
+              SELECT 
+                  a.calldate, 
+                  a.src, 
+                  a.agentdev AS dst, 
+                  a.queue, 
+                  a.reason, 
+                  a.holdtime, 
+                  a.talktime, 
+                  a.uniqid, 
+                  a.agentname,
+                  a.userfield
+        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql 
+        UNION
+        SELECT calldate, src, dst, cdr.name, disposition, duration - billsec, billsec, uniqueid AS uniqid, acl_user.name, userfield        
+        FROM cdr 
+        LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+        LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
+        WHERE 1=1 $extens $cwsql 
+        ) AS c ORDER BY calldate DESC ";
+      $res = $this->db->query($sql);
       $row = $res->fetch(PDO::FETCH_NUM);      
       return $row[0]; 
     }

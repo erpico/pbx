@@ -132,7 +132,6 @@ if (count($crmCalls)) {
 }
 
 var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
-
 }
 
 unlink($lockfile);
