@@ -791,6 +791,14 @@ $app->any('/config/extensions', function (Request $request, Response $response, 
   return $response->withJson($helper->getOptions(PBXConfigHelper::RULES_FILE));
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
 
+$app->any('/config/channel_drivers', function (Request $request, Response $response, array $args) use ($app) {
+  $conf = $app->getContainer()->get('dbConfig');
+  $channel_drivers = $conf['channel_drivers'];
+  $channel_drivers = explode(',', $channel_drivers);
+
+  return $response->withJson($channel_drivers);
+})->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.admin', 'erpico.admin']));
+
 $app->get('/extended_calls/list', function (Request $request, Response $response, array $args) use ($app) {
   $oldCdr = new PBXOldCdr();
   $filter = $request->getParam("filter", []);
