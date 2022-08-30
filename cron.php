@@ -121,8 +121,9 @@ $yesterdayDatetime->modify('-1 day');
 //$filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
 //$crmCalls = $cdr->getReport($filter, 0, 1000000);
 
-function sync ($crmCalls) {
+function sync ($crmCalls, &$synchronizedCalls, &$exceptions) {
   if (count($crmCalls)) {
+    var_dump('Calls count: ' . count($crmCalls));
     foreach ($crmCalls as $crmCall) {
       if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
       $helper = new EBitrix(0, $crmCall['uid']);
@@ -133,13 +134,13 @@ function sync ($crmCalls) {
 
 if ($action == 'calls_incoming') {
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'dst');
-  sync($crmCalls);
+  sync($crmCalls, $synchronizedCalls, $exceptions);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 
 if ($action == 'calls_outgoing') {
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'src');
-  sync($crmCalls);
+  sync($crmCalls, $synchronizedCalls, $exceptions);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 

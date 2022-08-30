@@ -477,7 +477,8 @@ class PBXCdr {
       WHERE 1=1  AND calldate >= '$start' AND calldate <= '$end'  
       ) AS c 
       LEFT JOIN btx_call_sync ON (uniqid = btx_call_sync.u_id) 
-      WHERE status is null " . ($dir ? "AND CHAR_LENGTH($dir) = 11" : "") . "
+      WHERE status IS NULL " . ($dir ? "AND CHAR_LENGTH($dir) = 11" : "") . "
+      AND reason NOT IN ('EXITWITHTIMEOUT', 'RINGNOANSWER', 'RINGDECLINE')
       ORDER BY calldate DESC";
     $res = $this->db->query($sql);
     while ($row = $res->fetch()) {

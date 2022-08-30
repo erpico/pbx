@@ -210,7 +210,6 @@ class EBitrix {
       $datetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+'.$crmCall['talk'].' sec')->format('Y-m-d H:i:s');
       $datetimePlusSec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+1 sec')->format('Y-m-d H:i:s');
       $datetimePlus2Sec = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->modify('+2 sec')->format('Y-m-d H:i:s');
-      if (!in_array($crmCall['reason'], ['EXITWITHTIMEOUT', 'RINGNOANSWER', 'RINGDECLINE'])) {
         if ($callsSync = $this->getSynchronizedCalls($crmCall['uid'])) {
           $needSync = 1;
           foreach ($callsSync as $callSync) {
@@ -263,7 +262,6 @@ class EBitrix {
 //        }
           isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
         }
-      }
     }
 
     public function logSync($crmCallUid, $status, $callId, $time, $result) {
