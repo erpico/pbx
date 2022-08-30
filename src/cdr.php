@@ -453,7 +453,7 @@ class PBXCdr {
     }
   }
 
-  public function getUnSynchronizedCdrs($start, $end, $dir = null) {
+  public function getUnSynchronizedCdrs($start, $end, $dir = null, $parity = null) {
     $cdrs = [];
 
     $sql = "SELECT calldate as time, src, dst, queue, reason, holdtime as hold, talktime as talk, uniqid, agentname, userfield, status FROM (
@@ -477,8 +477,10 @@ class PBXCdr {
       WHERE 1=1  AND calldate >= '$start' AND calldate <= '$end'  
       ) AS c 
       LEFT JOIN btx_call_sync ON (uniqid = btx_call_sync.u_id) 
-      WHERE status IS NULL " . ($dir ? "AND CHAR_LENGTH($dir) = 11" : "") . "
+      WHERE status IS NULL 
+      " . ($dir ? "AND CHAR_LENGTH($dir) = 11" : "") . "
       AND reason NOT IN ('EXITWITHTIMEOUT', 'RINGNOANSWER', 'RINGDECLINE')
+      " . ($parity ? (($parity === "even") ? "AND uniqid %2 < 1" : "AND uniqid %2 >= 1" ) : "") . " 
       ORDER BY calldate DESC";
     $res = $this->db->query($sql);
     while ($row = $res->fetch()) {
