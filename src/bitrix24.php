@@ -254,6 +254,7 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
       $uinfo['phone'] = $u['phone'];
       $uinfo['description'] = "email=".$u['email'].";mobile=".$u['mobile'].";title=".$u['title'];
       $u['result'] = $user->addUpdate($uinfo, $disable_rules = 1);
+      if (isset($u['result']['id'])) $user->addBitrixId($u['result']['id'], $u['id']);
       $p = $phone->fetchList(['phone' => $u['phone'], "active" => 1], 0, 3, 0, 0);
       if($p && $u['result']['id']) {
         $res = $phone->setPhoneUser(["id" => $p[0]['id'], "login" => $u['phone'], "password" => $p[0]['password'],"phone" => $u['phone'], "model" => "erpico", "user_id" => $u['result']['id']]);
@@ -315,8 +316,10 @@ $app->any('/bitrix24/call/sync', function (Request $request, Response $response,
         $yesterdayDatetime = new DateTime();
         $yesterdayDatetime->modify('-1 day');
 
-        $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
-        $crmCalls = $cdr->getReport($filter, 0, 1000000);
+//        $filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
+//        $crmCalls = $cdr->getReport($filter, 0, 1000000);
+
+        $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'));
     }
 
     if (count($crmCalls)) {

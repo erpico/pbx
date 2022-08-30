@@ -132,14 +132,14 @@ function sync ($crmCalls, &$synchronizedCalls, &$exceptions) {
   }
 }
 
-if ($action == 'calls_incoming') {
-  $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'dst');
+if ($action == 'calls_outgoing') { //исход
+  $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'dst'); //dst === 11
   sync($crmCalls, $synchronizedCalls, $exceptions);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 
-if ($action == 'calls_outgoing') {
-  $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'src');
+if ($action == 'calls_incoming') { //вход
+  $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'src'); //src === 11
   sync($crmCalls, $synchronizedCalls, $exceptions);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }

@@ -1258,4 +1258,33 @@ order by max(m.created_at) desc;";
 
     return $result;
   }
+
+  public function addBitrixId($userId, $bitrixId) {
+    $sql = "SELECT * FROM acl_user_bitrix_id WHERE user_id = $userId ";
+    $res = $this->db->query($sql);
+    $row = $res->fetch();
+
+    $sql = isset($row['user_id']) ? "UPDATE" : "INSERT INTO";
+    $sql .= " acl_user_bitrix_id ";
+    $sql .= "SET bitrix_user_id = $bitrixId";
+    $sql .= isset($row['user_id']) ? " WHERE user_id = $userId" : ", user_id = $userId";
+
+    $this->db->query($sql);
+  }
+
+  public function getBitrixIdByUserId($id) {
+    $sql = "SELECT bitrix_user_id FROM acl_user_bitrix_id WHERE user_id = '$id'";
+    $res = $this->db->query($sql);
+    return $res->fetch()['bitrix_user_id'] ?? 0;
+  }
+
+  public function getBitrixIdByPhone($phone) {
+    $sql = "
+SELECT bitrix_user_id 
+FROM acl_user_bitrix_id
+LEFT JOIN acl_user ON (acl_user_bitrix_id.user_id = acl_user.id)
+WHERE acl_user.name = '$phone'";
+    $res = $this->db->query($sql);
+    return $res->fetch()['bitrix_user_id'] ?? 0;
+  }
 }

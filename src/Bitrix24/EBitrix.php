@@ -351,19 +351,25 @@ class EBitrix {
 
     public function getUserInnerIdByPhone($intNum, $lineNumber = "", $type, $disposition = null) {
         $userFromBtx = null;
+        $user = new User($this->db);
         if ($intNum) {
-            $result = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
-            if (isset($result['result'][0]['ID'])) $userFromBtx = $result['result'][0]['ID'];
+            $userFromBtx = $user->getBitrixIdByPhone($intNum);
+            if (!$userFromBtx) {
+              $result = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNum, 'ACTIVE' => 'Y']]);
+              if (isset($result['result'][0]['ID'])) $userFromBtx = $result['result'][0]['ID'];
+            }
         }
 
         $settings = new PBXSettings();
         $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
-        $user = new User();
         if ($result) {
+            $userFromLine = $user->getBitrixIdByUserId($result);
             $result = $user->getNameById($result);
             if ($result && ctype_digit($result)) $intNumLine = $result;
-            $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNumLine, 'ACTIVE' => 'Y']]);
-            $userFromLine = $userInfo['result'][0]['ID'];
+            if (!$userFromLine) {
+              $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNumLine, 'ACTIVE' => 'Y']]);
+              $userFromLine = $userInfo['result'][0]['ID'];
+            }
         }
 
         if ($intNum) {
@@ -387,28 +393,36 @@ class EBitrix {
         } else {
           $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
         }
+        $defaultUser = $user->getBitrixIdByUserId($result);
         $result = $user->getNameById($result);
         if ($result) $intNumDef = $result;
-        $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNumDef, 'ACTIVE' => 'Y']]);
-        $defaultUser = $userInfo['result'][0]['ID'];
+        if (!$defaultUser) {
+          $userInfo = $this->obB24App->call('user.get', ['FILTER' => ['UF_PHONE_INNER' => $intNumDef, 'ACTIVE' => 'Y']]);
+          $defaultUser = $userInfo['result'][0]['ID'];
+        }
 
-        if ($type == 'call/add') {
+        if ($type == 'call/add') { // if call register method
             if (isset($userFromLine)) {
+              // if $userFromLine -> return - this if on first place for "TREND" client,
+              // who wants to create leads by default users in line
                 return ['userPhone' => $intNumLine,'userId' => $userFromLine];
             } else if ($defaultUser) {
+              // create leads by default, if line undefined
                 return ['userPhone' => $intNumDef, 'userId' => $defaultUser];
             } else {
                 return ['userPhone' => $intNum, 'userId' => $userFromBtx];
             }
-        } elseif ($type == 'call/record') {
+        } elseif ($type == 'call/record') { // if call finish method
             if ($userFromBtx) {
                 if ($disposition == 'ABANDON') {
+                    // if we have user, but this reason we need to link this lead to userFromLine or defaultUser (not manager)
                     if (isset($userFromLine)) {
                         return ['userPhone' => $intNumLine, 'userId' => $userFromLine];
                     } else {
                         return ['userPhone' => $intNumDef, 'userId' => $defaultUser];
                     }
                 }
+                // if another reason -> link lead to manager
                 return ['userPhone' => $intNum, 'userId' => $userFromBtx];
             } else {
                 if (isset($userFromLine)) {
