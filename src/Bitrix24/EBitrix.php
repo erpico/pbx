@@ -65,6 +65,7 @@ class EBitrix {
     }
 
     public function runInputCall(int $intNum, int $extNum, $type = 2, $crmCreate = 1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
+        $regStart = time();
         $spe = $this->settings->getSettingByHandle('bitrix.specific_phones_enabled');
         if ($spe && isset($spe['val']) && $spe['val'] === '1' && $type === '2') {
             $numbers = $this->settings->getSpecificPhones();
@@ -83,7 +84,7 @@ class EBitrix {
         $eo = $this->settings->getSettingByHandle('bitrix.existing_outgoing');
         $ids = $this->getDuplicateLeadAndContactIdByPhone($extNum);
 
-        if ($ids && $ids['contacts']) {
+        if ($ids && isset($ids['contacts'])) {
           foreach ($ids['contacts'] as $id) {
             $dealId = $this->getDealIdByContactId($id);
             if ($dealId) {
@@ -132,6 +133,8 @@ class EBitrix {
                     json_encode($result));
             }
             $this->logSync($channel, 1, $result['result']['CALL_ID'], $createTime, json_encode($result));
+            $regEnd = time();
+            var_dump("register '" . $crmCall['uid'] . "': " . ($regEnd - $regStart) . "s");
             return $result['result']['CALL_ID'];
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             $e = '"'.$e.'"';
@@ -148,6 +151,7 @@ class EBitrix {
     }
 
     public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber, $channel = "", $crmCall = null){
+        $finStart = time();
         $res = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record');
         $userId = $res['userId'];
         $intNum = $res['userPhone'];
@@ -176,6 +180,8 @@ class EBitrix {
                     json_encode($result));
             }
             $this->logSync($channel, 2, $call_id, $createTime, json_encode($result));
+            $finEnd = time();
+            var_dump("finish '" . $crmCall['uid'] . "': " . ($finEnd - $finStart) . "s");
             return $result;
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             if (strpos ($e->getMessage(), "Call is not found")) {
@@ -210,27 +216,42 @@ class EBitrix {
           foreach ($callsSync as $callSync) {
             $synchronizedDatetimePlusTalk = DateTime::createFromFormat('Y-m-d H:i:s', $callSync['call_time'])->modify('+' . $callSync['talk'] . ' sec')->format('Y-m-d H:i:s');
 
-            if ($callSync['status'] == 1) {
-              $result = $this->addCall($crmCall, $callSync['call_id'], 0);
-              isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
-              break;
-            }
-            if (
-              $callSync['status'] == 2 && //synchronized
-              ($callSync['call_time'] === $crmCall['time'] || // synchronized by call/sync route
-                $callSync['call_time'] === $datetimePlusTalk || // synchronized by ats
-                (strtotime($datetimePlusTalk) - strtotime($synchronizedDatetimePlusTalk) <= 10) ||
-                $callSync['call_time'] === $datetimePlusSec ||
-                $callSync['call_time'] === $datetimePlus2Sec) // scripts delay
-            ) {
-              $needSync = 0;
-            }
-          }
-          if ($needSync) {
-            $result = $this->addCall($crmCall, 0, 0);
+          if ($callSync['status'] == 1) {
+            $result = $this->addCall($crmCall, $callSync['call_id'], 0);
             isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+            break;
           }
-        } else {
+          if (
+            $callSync['status'] == 2 && //synchronized
+            (
+              // если время старого звонка и нового совпадает, то это один и тот же
+              $callSync['call_time'] === $crmCall['time'] || // synchronized by call/sync route
+
+              // Или если время старого и (время нового + разговор) совпадает, то это один и тот же
+              // (причина: так как звонок был синхронизован атс, после полного разговора, а не в момент когда был начат)
+              // Звонок был в 11:20:23. Разговор - 15 сек. Старый звонок был залит в 11:20:38.
+              // При этом новый звонок пришел со временем как раз 11:20:23,
+              // Чтобы понимать, что это тот же звонок мы должны прибавить время разговора
+              $callSync['call_time'] === $datetimePlusTalk || // synchronized by ats
+
+              // Если разница между временем нового (звонка + разговор) и время старого (звонка + разговор) меньше 10 сек,
+              // то этот один и тот же разговор
+              (strtotime($datetimePlusTalk) - strtotime($synchronizedDatetimePlusTalk) <= 10) ||//
+
+              //В таблицу синхронизации запись поставляется после выполнения скрипта отправки в битрикс.
+              // Он может занимать 1 или 2 сек
+              // Соответственно это нужно тоже учитывать
+              $callSync['call_time'] === $datetimePlusSec ||                                    //
+              $callSync['call_time'] === $datetimePlus2Sec) // scripts delay                    //
+          ) {
+            $needSync = 0;
+          }
+        }
+        if ($needSync) {
+          $result = $this->addCall($crmCall, 0, 0);
+          isset($result['exception']) ? ($exceptions[] = $result) : ($synchronizedCalls[] = $result);
+        }
+      } else {
 //        if (in_array($crmCall['reason'], ['EXITWITHTIMEOUT', 'RINGNOANSWER', 'RINGDECLINE'])) {
 //          $datetimeMinus10Min = DateTime::createFromFormat('Y-m-d H:i:s', date('Y-m-d H:i:s'))->modify('-10 minute')->format('Y-m-d H:i:s');
 //          $callTime = DateTime::createFromFormat('Y-m-d H:i:s', $crmCall['time'])->format('Y-m-d H:i:s');

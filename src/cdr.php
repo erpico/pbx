@@ -452,4 +452,37 @@ class PBXCdr {
       return $name;
     }
   }
+
+  public function getUnSynchronizedCdrs($start, $end, $dir = null) {
+    $cdrs = [];
+
+    $sql = "SELECT calldate as time, src, dst, queue, reason, holdtime as hold, talktime as talk, uniqid, agentname, userfield, status FROM (
+            SELECT 
+                a.calldate, 
+                a.src, 
+                a.agentdev AS dst, 
+                a.queue, 
+                a.reason, 
+                a.holdtime, 
+                a.talktime, 
+                a.uniqid, 
+                a.agentname,
+                a.userfield
+      FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  AND a.calldate >= '$start' AND a.calldate <= '$end'  
+      UNION
+      SELECT calldate, src, dst, cdr.name, disposition, duration - billsec, billsec, uniqueid AS uniqid, acl_user.name, userfield        
+      FROM cdr 
+      LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+      LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
+      WHERE 1=1  AND calldate >= '$start' AND calldate <= '$end'  
+      ) AS c 
+      LEFT JOIN btx_call_sync ON (uniqid = btx_call_sync.u_id) 
+      WHERE status is null " . ($dir ? "AND CHAR_LENGTH($dir) = 11" : "") . "
+      ORDER BY calldate DESC";
+    $res = $this->db->query($sql);
+    while ($row = $res->fetch()) {
+      $cdrs[] = $row;
+    }
+    return $cdrs;
+  }
 }
