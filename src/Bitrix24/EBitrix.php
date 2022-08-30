@@ -302,12 +302,12 @@ class EBitrix {
         if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
         if (mb_strlen($crmCall['dst']) == 11) {
             $type = 1;
-            $intnum = $crmCall['src'];
-            $extnum = $crmCall['dst'];
+            $intnum = (int)$crmCall['src'];
+            $extnum = (int)$crmCall['dst'];
         } else {
             $type = 2;
-            $intnum = $crmCall['dst'];
-            $extnum = $crmCall['src'];
+            $intnum = (int)$crmCall['dst'];
+            $extnum = (int)$crmCall['src'];
         }
         if ($crmCall['userfield'] == "") {
             $crmCall['userfield'] = $settings->getDefaultSettingsByHandle('default_line')['value'];
@@ -413,7 +413,7 @@ class EBitrix {
                 }
                 return ['userPhone' => $intNum, 'userId' => $userFromBtx];
             } else {
-                if ($userFromLine) {
+                if (isset($userFromLine)) {
                     return ['userPhone' => $intNumLine, 'userId' => $userFromLine];
                 } else {
                     return ['userPhone' => $intNumDef, 'userId' => $defaultUser];
@@ -506,7 +506,7 @@ class EBitrix {
         $result = $this->obB24App->call("crm.$entity.update", ['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]);
         $this->logRequest(
           $this->settings->getSettingByHandle('bitrix.api_url')['val'] . "crm.$entity.update",
-          json_encode(['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'], 'VALUE' => $phone]]]]),
+          json_encode(['ID' => $id, 'FIELDS' => ['PHONE' => [['ID' => $result['result']['PHONE'][0]['ID'] ?? 0, 'VALUE' => $phone]]]]), //todo ID => always null
           json_encode($result)
         );
         return true;
