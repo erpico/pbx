@@ -193,8 +193,8 @@ class PBXChannel {
                  "  fromdomain = {$p['host']}\n".                 
                  "  nat = force_rport,comedia\n".
                  "  context = {$p['rules']}\n".                 
-                 "  insecure = port,invite\n".
-                 "  qualify = yes\n";            
+                 "  insecure = port,invite\n";/*.
+                 "  qualify = yes\n";*/
 
       if (strlen($p['login'])) {
         $result .= "  defaultuser = {$p['login']}\n".
