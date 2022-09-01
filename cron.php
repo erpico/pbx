@@ -121,32 +121,40 @@ $yesterdayDatetime->modify('-1 day');
 //$filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
 //$crmCalls = $cdr->getReport($filter, 0, 1000000);
 
-function sync ($crmCalls, &$synchronizedCalls, &$exceptions) {
+function sync ($crmCalls, &$synchronizedCalls, &$exceptions, $action) {
   if (count($crmCalls)) {
     var_dump('Calls count: ' . count($crmCalls));
     foreach ($crmCalls as $crmCall) {
-      if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
-      $helper = new EBitrix(0, $crmCall['uid']);
-      $helper->synchronizeCall($crmCall, $synchronizedCalls, $exceptions);
+      try {
+        if (isset($crmCall['uniqid'])) $crmCall['uid'] = $crmCall['uniqid'];
+        $helper = new EBitrix(0, $crmCall['uid']);
+        $helper->synchronizeCall($crmCall, $synchronizedCalls, $exceptions);
+      } catch (Exception | Error $e) {
+          file_put_contents(
+                  __DIR__."/logs/cron_" . $action . "_errors.log",
+                  date("Y-m-d H:i:s") . " | " . $e->getMessage() . " | " . json_encode($crmCall) . PHP_EOL,
+                  FILE_APPEND
+          );
+      }
     }
   }
 }
 
 if ($action == 'calls_outgoing_even') { //исход_четн
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'dst', 'even'); //dst === 11
-  sync($crmCalls, $synchronizedCalls, $exceptions);
+  sync($crmCalls, $synchronizedCalls, $exceptions, $action);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 
 if ($action == 'calls_outgoing_odd') { //исход_нечетн
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'dst', 'odd'); //dst === 11
-  sync($crmCalls, $synchronizedCalls, $exceptions);
+  sync($crmCalls, $synchronizedCalls, $exceptions, $action);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 
 if ($action == 'calls_incoming') { //вход
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'src'); //src === 11
-  sync($crmCalls, $synchronizedCalls, $exceptions);
+  sync($crmCalls, $synchronizedCalls, $exceptions, $action);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 
