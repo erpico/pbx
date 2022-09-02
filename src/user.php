@@ -1287,4 +1287,8 @@ WHERE acl_user.name = '$phone'";
     $res = $this->db->query($sql);
     return $res->fetch()['bitrix_user_id'] ?? 0;
   }
+
+  public function truncateUsersBitrixId() {
+    $this->db->query('TRUNCATE acl_user_bitrix_id;');
+  }
 }

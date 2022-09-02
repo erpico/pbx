@@ -240,6 +240,7 @@ $app->get('/bitrix24/sync', function (Request $request, Response $response, arra
       if (empty($u['phone'])) continue;
       $eusers[$u['phone']] = $u;
   }
+  $user->truncateUsersBitrixId();
   foreach ($users as &$u) {
       if (isset($eusers[$u['phone']])) {
           $uinfo = $eusers[$u['phone']];
