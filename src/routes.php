@@ -888,6 +888,40 @@ $app->post('/phones/provisioning/start', function (Request $request, Response $r
   $ip_pbx    = "192.168.139.210";
   $port_pbx  = "5060";
 
+  $settings = new PBXSettings();
+  $remoteConfigPhoneDeny = $settings->getSettingByHandle('remote.config.phone.deny')['val'];
+  if ($remoteConfigPhoneDeny === '1') {
+
+    if (!$mac) {
+      return $response->withJson(['result' => false, 'message' => 'Отсутствует мак-адрес телефона'], 400);
+    }
+
+    $PBXPhone = new PBXPhone();
+    $phone = $PBXPhone->fetchList(['mac' => $mac])[0];
+    if (isset($phone['group_id'])) {
+      $groups = $PBXPhone->fetchGroupsList(['id' => $phone['group_id']]);
+      $remoteGroupConfigPhoneAddresses = [];
+      foreach ($groups as $group) {
+        foreach (explode(',', $group['remote_config_phone_addresses']) as $address) {
+          if ($address !== '') $remoteGroupConfigPhoneAddresses[] = $address;
+        }
+      }
+    }
+
+    if (isset($phone['remote_config_phone_addresses']) && $phone['remote_config_phone_addresses'] !== '') {
+      $remoteConfigPhoneAddresses = explode(',', $phone['remote_config_phone_addresses']);
+    } else if ($remoteGroupConfigPhoneAddresses && $remoteGroupConfigPhoneAddresses !== '') {
+      $remoteConfigPhoneAddresses = $remoteGroupConfigPhoneAddresses;
+    } else {
+      $remoteConfigPhoneAddresses = $settings->getSettingByHandle('remote.config.phone.addresses')['val'];
+      $remoteConfigPhoneAddresses = explode(',', $remoteConfigPhoneAddresses);
+    }
+
+    if (!in_array($_SERVER['REMOTE_ADDR'], $remoteConfigPhoneAddresses)) {
+      return $response->withJson(['result' => false, 'message' => 'Incorrect ip address of client'], 400);
+    }
+  }
+
   $phone_user = 'autoprovision_user';
   $sock = socket_create(AF_INET, SOCK_DGRAM, SOL_UDP);
 

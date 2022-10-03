@@ -20,6 +20,7 @@ class PBXPhone
     "rules" => 0,
     "default_phone" => 1,
     "channel_driver" => 0,
+    "remote_config_phone_addresses" => 0,
     "active" => 0,
     "deleted" => 0
   ],
@@ -28,7 +29,8 @@ class PBXPhone
     "code" => 0,
     "pattern" => 0,
     "rules" => 0,
-    "outgoing_phone" => 0
+    "outgoing_phone" => 0,
+    "remote_config_phone_addresses" => 0
   ],
     ERPICO_MODEL = 'erpico';
 
