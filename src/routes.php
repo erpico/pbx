@@ -836,8 +836,42 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
     $mac = trim($nmac, ":");
   }
 
-  // Search for phone with such MAC
   $po = new PBXPhone();
+
+  $settings = new PBXSettings();
+  $remoteConfigPhoneDeny = $settings->getSettingByHandle('remote.config.phone.deny')['val'];
+  if ($remoteConfigPhoneDeny === '1') {
+
+    if (!$mac) {
+      return $response->withJson(['result' => false, 'message' => 'Отсутствует мак-адрес телефона'], 400);
+    }
+
+    $phone = $po->fetchList(['mac' => $mac])[0];
+    if (isset($phone['group_id'])) {
+      $groups = $po->fetchGroupsList(['id' => $phone['group_id']]);
+      $remoteGroupConfigPhoneAddresses = [];
+      foreach ($groups as $group) {
+        foreach (explode(',', $group['remote_config_phone_addresses']) as $address) {
+          if ($address !== '') $remoteGroupConfigPhoneAddresses[] = $address;
+        }
+      }
+    }
+
+    if (isset($phone['remote_config_phone_addresses']) && $phone['remote_config_phone_addresses'] !== '') {
+      $remoteConfigPhoneAddresses = explode(',', $phone['remote_config_phone_addresses']);
+    } else if ($remoteGroupConfigPhoneAddresses && $remoteGroupConfigPhoneAddresses !== '') {
+      $remoteConfigPhoneAddresses = $remoteGroupConfigPhoneAddresses;
+    } else {
+      $remoteConfigPhoneAddresses = $settings->getSettingByHandle('remote.config.phone.addresses')['val'];
+      $remoteConfigPhoneAddresses = explode(',', $remoteConfigPhoneAddresses);
+    }
+
+    if (!in_array($_SERVER['REMOTE_ADDR'], $remoteConfigPhoneAddresses)) {
+      return $response->withJson(['result' => false, 'message' => 'Incorrect ip address of client'], 400);
+    }
+  }
+
+  // Search for phone with such MAC
   $list = $po->fetchList(["mac" => $mac]);
   if (count($list) == 0) {
     return $response->withStatus(404)
