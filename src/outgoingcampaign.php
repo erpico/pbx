@@ -293,8 +293,20 @@ class PBXOutgoingCampaign  {
     $result = [];
     while ($row = $res->fetch()) {
       $row['status_text'] = $this->getSipStatusText($row['hangup_code']);
+      $row['ivr'] = $this->getIvrAction($row['asteriskid']);
       $result[] = $row;
     }
+    return $result;
+  }
+
+  public function getIvrAction($asteriskid) {
+    $sql = "SELECT action FROM calls_ivr WHERE call_id = '$asteriskid' order by time";
+    $res = $this->db->query($sql);
+    $result = [];
+    while ($row = $res->fetch()) {
+      $result[] = $row['action'];
+    }
+
     return $result;
   }
 
