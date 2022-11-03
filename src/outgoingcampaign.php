@@ -300,7 +300,7 @@ class PBXOutgoingCampaign  {
   }
 
   public function getIvrAction($asteriskid) {
-    $sql = "SELECT action FROM calls_ivr WHERE call_id = '$asteriskid' order by time";
+    $sql = "SELECT action FROM ivr_actions WHERE call_id = '$asteriskid' order by time";
     $res = $this->db->query($sql);
     $result = [];
     while ($row = $res->fetch()) {
