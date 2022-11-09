@@ -488,4 +488,79 @@ class PBXCdr {
     }
     return $cdrs;
   }
+
+  public function findRecord(string $uid, $stringFormat = 0) {
+    $uid = str_replace(".mp3", "", $uid);
+    $uid = str_replace(".", "", $uid);
+
+    $cdr = new PBXCdr();
+    $row = $cdr->findById($uid);
+    if (!is_array($row)) {
+      return ['result' => false, 'errorType' => 'database'];
+    }
+
+    $filename = "";
+
+    if (isset($row['agentname'])) {
+      // Queue
+      $date = str_replace(" ", "-", $row['calldate']);
+
+      $agent = str_replace("/", "-", $row['agentname']);
+
+      $uniqid = $row['uniqid'];
+      $cid = $row['src'];
+
+      $fname = "$date-$cid-$agent-q-$uniqid.wav";
+      $path_parts = pathinfo($fname);
+
+      $filename = "/var/spool/asterisk/monitor/queues/" . substr($fname, 0, 10) . "/" . substr($fname, 11, 2) . "/" . $path_parts['dirname'] . '/' . $path_parts['filename'];
+
+      if (file_exists($filename . ".WAV")) {
+        $filename = $filename . ".WAV";
+      } else if (file_exists($filename . ".wav")) {
+        $filename = $filename . ".wav";
+      } else if (file_exists($filename . ".mp3")) {
+        $filename = $filename . ".mp3";
+      } else {
+        $filename = "";
+      }
+    }
+
+    if ($filename == "") {
+      // Regular
+      $date = str_replace(" ", "-", $row['calldate']);
+      $time = strtotime($row['calldate']);
+      $uniqid = $row['uniqueid']; //substr($row['uniqueid'], 0, /*-2*/0);
+      if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
+      $src = $row['src'];
+      $dst = $row['dst'];
+      $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-" . $uniqid . "*");
+      if (!is_array($files) || !count($files)) {
+        // Last change....
+        $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
+        if (!is_array($files) || !count($files)) {
+          $files = glob("/var/spool/asterisk/monitor/queues/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
+          if (!is_array($files) || !count($files)) {
+            return ['result' => false, 'errorType' => 'filesystem'];
+          }
+        }
+      }
+      $filename = $files[0];
+
+      if (!file_exists($filename)) {
+        return ['result' => false, 'errorType' => 'filesystem'];
+      }
+    }
+
+    if ($stringFormat) {
+      return [
+        'file' => file_get_contents($filename),
+        'filename' => $filename
+      ];
+    }
+
+    $fh = fopen($filename, 'rb');
+    $stream = new Slim\Http\Stream($fh);
+    return ['result' => true, 'stream' => $stream, 'filename' => $filename];
+  }
 }

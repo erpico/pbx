@@ -65,7 +65,6 @@ class EBitrix {
     }
 
     public function runInputCall(int $intNum, int $extNum, $type = 2, $crmCreate = 1, $lineNumber = "", $createTime = '', $channel = "", $crmCall = null) {
-        $regStart = time();
         $spe = $this->settings->getSettingByHandle('bitrix.specific_phones_enabled');
         if ($spe && isset($spe['val']) && $spe['val'] === '1' && $type === '2') {
             $numbers = $this->settings->getSpecificPhones();
@@ -133,8 +132,7 @@ class EBitrix {
                     json_encode($result));
             }
             $this->logSync($channel, 1, $result['result']['CALL_ID'], $createTime, json_encode($result));
-            $regEnd = time();
-            var_dump("register '" . $crmCall['uid'] . "': " . ($regEnd - $regStart) . "s");
+
             return $result['result']['CALL_ID'];
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             $e = '"'.$e.'"';
@@ -151,7 +149,6 @@ class EBitrix {
     }
 
     public function uploadRecordedFile($call_id, $recordedfile, $intNum, $duration, $disposition, $lineNumber, $channel = "", $crmCall = null){
-        $finStart = time();
         $res = $this->getUserInnerIdByPhone($intNum, $lineNumber, 'call/record');
         $userId = $res['userId'];
         $intNum = $res['userPhone'];
@@ -180,8 +177,6 @@ class EBitrix {
                     json_encode($result));
             }
             $this->logSync($channel, 2, $call_id, $createTime, json_encode($result));
-            $finEnd = time();
-            var_dump("finish '" . $crmCall['uid'] . "': " . ($finEnd - $finStart) . "s");
             return $result;
         } catch (\Bitrix24\Exceptions\Bitrix24ApiException $e) {
             if (strpos ($e->getMessage(), "Call is not found")) {
@@ -642,5 +637,26 @@ class EBitrix {
         $stmt->bindParam('query', $query);
         $stmt->bindParam('response', $response);
         return $stmt->execute()?true:false;
+    }
+
+    public function attachRecord(string $call_id, string $bitrixId) {
+
+      $cdr = new PBXCdr();
+      $fileInfo = $cdr->findRecord($call_id, 1);
+
+      if (!isset($fileInfo['file'])) return false;
+
+      $fileInfo['filename'] = explode('/', $fileInfo['filename']);
+      $fileInfo['filename'] = $fileInfo['filename'][7];
+
+      $fileBase64 = base64_encode($fileInfo['file']);
+
+      $res = $this->obB24App->call("telephony.externalCall.attachRecord", [
+        'CALL_ID' => $bitrixId,
+        'FILENAME' => $fileInfo['filename'],
+        'FILE_CONTENT' => $fileBase64
+      ]);
+
+      return $res['result'];
     }
 }

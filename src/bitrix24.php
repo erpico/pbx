@@ -456,3 +456,12 @@ $app->get('/bitrix24/lead/{lead_id}/state/{state}', function (Request $request, 
 
   return $response->withJson(['res' => $res]);
 });
+
+$app->get('/bitrix24/attachRecord/{call_id}/{bitrix_id}', function (Request $request, Response $response, array $args) {
+  $helper = new EBitrix($request);
+
+  $call_id = $args['call_id'];
+  $bitrix_id = $args['bitrix_id'];
+
+  return $helper->attachRecord($call_id, $bitrix_id);
+});

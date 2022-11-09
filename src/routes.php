@@ -73,90 +73,28 @@ $app->get('/cdr/list/sync/{id}', function (Request $request, Response $response,
   return $response->withRedirect("/recording/$id"); 
 });*/
 
-$findrecord = function (Request $request, Response $response, array $args) use ($app) {
-  $uid = isset($args['id']) ? $args['id'] : $request->getParam('id', 0);
-  $uid = str_replace(".mp3", "", $uid);
-  $uid = str_replace(".", "", $uid);
-
+$findRecord = function (Request $request, Response $response, array $args) use ($app) {
+  $uid = $args['id'] ?? $request->getParam('id', 0);
   $cdr = new PBXCdr();
-  $row = $cdr->findById($uid);
-  if (!is_array($row)) {
+  $result = $cdr->findRecord($uid);
+
+  if ($result['result'] === false) {
     return $response->withStatus(404)
       ->withHeader('Content-Type', 'text/html')
-      ->write('Record not found in database');
+      ->write('Record not found in ' . $result['errorType']);
   }
 
-  $filename = "";
-
-  if (isset($row['agentname'])) {
-    // Queue
-    $date = str_replace(" ", "-", $row['calldate']);
-
-    $agent = str_replace("/", "-", $row['agentname']);
-
-    $uniqid = $row['uniqid'];
-    $cid = $row['src'];
-
-    $fname = "$date-$cid-$agent-q-$uniqid.wav";
-    $path_parts = pathinfo($fname);
-
-    $filename = "/var/spool/asterisk/monitor/queues/" . substr($fname, 0, 10) . "/" . substr($fname, 11, 2) . "/" . $path_parts['dirname'] . '/' . $path_parts['filename'];
-
-    if (file_exists($filename . ".WAV")) {
-      $filename = $filename . ".WAV";
-    } else if (file_exists($filename . ".wav")) {
-      $filename = $filename . ".wav";
-    } else if (file_exists($filename . ".mp3")) {
-      $filename = $filename . ".mp3";
-    } else if (file_exists($filename)) {
-    } else {
-      $filename = "";
-    }
-  }
-
-  if ($filename == "") {
-    // Regular
-    $date = str_replace(" ", "-", $row['calldate']);
-    $time = strtotime($row['calldate']);
-    $uniqid = $row['uniqueid']; //substr($row['uniqueid'], 0, /*-2*/0);
-    if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
-    $src = $row['src'];
-    $dst = $row['dst'];
-    $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-" . $uniqid . "*");
-    if (!is_array($files) || !count($files)) {
-      // Last change....
-      $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
-      if (!is_array($files) || !count($files)) {
-        $files = glob("/var/spool/asterisk/monitor/queues/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
-        if (!is_array($files) || !count($files)) {
-          return $response->withStatus(404)
-            ->withHeader('Content-Type', 'text/html')
-            ->write('Record not found in filesystem');
-        }
-      }
-    }
-    $filename = $files[0];
-
-    if (!file_exists($filename)) {
-      return $response->withStatus(404)
-        ->withHeader('Content-Type', 'text/html')
-        ->write('Record not found in filesystem');
-    }
-  }
-  //  die($filename);
-  $fh = fopen($filename, 'rb');
-  $stream = new Slim\Http\Stream($fh);
   return $response
-    ->withBody($stream)
+    ->withBody($result['stream'])
     ->withHeader('Content-Type', 'audio/mpeg')
     ->withHeader('Accept-Ranges', 'bytes')
-    ->withHeader('Content-Length', filesize($filename))
+    ->withHeader('Content-Length', filesize($result['filename']))
     ->withHeader('Content-Transfer-Encoding', 'binary')
-    ->withHeader('Content-Disposition', 'attachment; filename="' . basename($filename) . '"');
+    ->withHeader('Content-Disposition', 'attachment; filename="' . basename($result['filename']) . '"');
 };
 
-$app->get('/recording/{id}', $findrecord)->setOutputBuffering(false); //->add('\App\Middleware\OnlyAuthUser');
-$app->get('/controllers/findrecord.php', $findrecord)->setOutputBuffering(false); //->add('\App\Middleware\OnlyAuthUser');
+$app->get('/recording/{id}', $findRecord)->setOutputBuffering(false); //->add('\App\Middleware\OnlyAuthUser');
+$app->get('/controllers/findrecord.php', $findRecord)->setOutputBuffering(false); //->add('\App\Middleware\OnlyAuthUser');
 
 
 $app->post('/action/call', function (Request $request, Response $response, array $args) use ($app) {
