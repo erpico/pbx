@@ -118,9 +118,6 @@ $currentDatetime = new DateTime();
 $yesterdayDatetime = new DateTime();
 $yesterdayDatetime->modify('-1 day');
 
-//$filter['time'] = '{"start":"' . $yesterdayDatetime->format('Y-m-d H:i:00') . '","end":"' . $currentDatetime->format('Y-m-d H:i:59') . '"}';
-//$crmCalls = $cdr->getReport($filter, 0, 1000000);
-
 function sync ($crmCalls, &$synchronizedCalls, &$exceptions, $action) {
   if (count($crmCalls)) {
     var_dump('Calls count: ' . count($crmCalls));
@@ -156,6 +153,15 @@ if ($action == 'calls_incoming') { //вход
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'src'); //src === 11
   sync($crmCalls, $synchronizedCalls, $exceptions, $action);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
+}
+
+if ($action == 'attaching_records') {
+  $helper = new EBitrix(0);
+  $calls = $helper->getCallsWithUnAttachedRecord($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'));
+
+  foreach ($calls as $call) {
+      $helper->attachRecord($call['u_id'], $call['bitrix_id']);
+  }
 }
 
 unlink($lockfile);

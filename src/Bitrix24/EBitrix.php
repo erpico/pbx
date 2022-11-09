@@ -17,7 +17,7 @@ class EBitrix {
     protected $settings;
     protected $channel;
 
-    public function __construct($request, $channel = 0)
+    public function __construct($channel = 0)
     {
         $settings = new PBXSettings();
         $this->settings = $settings;
@@ -271,6 +271,7 @@ class EBitrix {
             "', call_id = ".($callId ? "'$callId'" : "null");
         if (!$row) $sql .= ", call_time = '".$time."'";
         $sql .= ", result = '".$result."'";
+        $sql .= ", attached_record = 0";
         if ($row) $sql .= " WHERE id=".$row['id'];
         $this->db->query($sql);
     }
@@ -639,10 +640,9 @@ class EBitrix {
         return $stmt->execute()?true:false;
     }
 
-    public function attachRecord(string $call_id, string $bitrixId) {
-
+    public function attachRecord(string $internalId, string $bitrixId) {
       $cdr = new PBXCdr();
-      $fileInfo = $cdr->findRecord($call_id, 1);
+      $fileInfo = $cdr->findRecord($internalId, 1);
 
       if (!isset($fileInfo['file'])) return false;
 
@@ -657,6 +657,30 @@ class EBitrix {
         'FILE_CONTENT' => $fileBase64
       ]);
 
+      $sql ="UPDATE btx_call_sync SET attached_record = '1' WHERE u_id = '$internalId' AND call_id = '$bitrixId'";
+      $this->db->query($sql);
+
+      $this->logRequest(
+        $this->settings->getSettingByHandle('bitrix.api_url')['val'] . "telephony.externalCall.attachRecord",
+        json_encode(['CALL_ID' => $bitrixId, 'FILENAME' => $fileInfo['filename']]),
+        json_encode($res['result'])
+      );
+
       return $res['result'];
+    }
+
+    public function getCallsWithUnAttachedRecord ($start, $end) {
+      $sql =
+        "SELECT u_id, call_id as bitrix_id" . PHP_EOL .
+        "FROM btx_call_sync " . PHP_EOL .
+        "WHERE call_time BETWEEN '$start' AND '$end' AND attached_record = '0' AND status = '2' AND u_id != ''";
+      $res = $this->db->query($sql);
+
+      $calls = [];
+      while ($row = $res->fetch()) {
+          $calls[] = $row;
+      }
+
+      return $calls;
     }
 }
