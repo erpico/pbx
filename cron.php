@@ -137,19 +137,25 @@ function sync ($crmCalls, &$synchronizedCalls, &$exceptions, $action) {
   }
 }
 
-if ($action == 'calls_outgoing_even') { //исход_четн
+if ($action == 'calls') { // все звонки
+  $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59')); //src === 11
+  sync($crmCalls, $synchronizedCalls, $exceptions, $action);
+  var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
+}
+
+if ($action == 'calls_outgoing_even') { // исход_четн
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'dst', 'even'); //dst === 11
   sync($crmCalls, $synchronizedCalls, $exceptions, $action);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 
-if ($action == 'calls_outgoing_odd') { //исход_нечетн
+if ($action == 'calls_outgoing_odd') { // исход_нечетн
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'dst', 'odd'); //dst === 11
   sync($crmCalls, $synchronizedCalls, $exceptions, $action);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
 }
 
-if ($action == 'calls_incoming') { //вход
+if ($action == 'calls_incoming') { // вход
   $crmCalls = $cdr->getUnSynchronizedCdrs($yesterdayDatetime->format('Y-m-d H:i:00'), $currentDatetime->format('Y-m-d H:i:59'), 'src'); //src === 11
   sync($crmCalls, $synchronizedCalls, $exceptions, $action);
   var_dump(['synchronizedCalls' => $synchronizedCalls, 'exception' => $exceptions]);
