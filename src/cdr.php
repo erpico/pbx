@@ -111,21 +111,24 @@ class PBXCdr {
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
+
         if ($dates['start']) {
-          $d = strtotime($dates['start']);            
-          $qwsql .= "AND a.calldate >= '".date("Y-m-d H:i:00", $d)."' ";
-          $cwsql .= "AND calldate >= '".date("Y-m-d H:i:00", $d)."' ";
+          $d = new DateTime($dates['start']);
+          $qwsql .= "AND a.calldate >= '".$d->format("Y-m-d H:i:00")."' ";
+          $cwsql .= "AND calldate >= '".$d->format("Y-m-d H:i:00")."' ";
           $timeisset++;
         }
         if ($dates['end']) {
-          $d = strtotime($dates['end']);
-          if (date("H", $d) == 0 && date("i",$d) == 0) $d += 86399;
-          $qwsql .= "AND a.calldate <= '".date("Y-m-d H:i:59", $d)."' ";
-          $cwsql .= "AND calldate <= '".date("Y-m-d H:i:59", $d)."' ";
+          $d = new DateTime($dates['end']);
+          if ($d->format("H") == 0 && $d->format("i") == 0) {
+            $d->modify('+1 day')->modify('-1 sec');
+          }
+          $qwsql .= "AND a.calldate <= '".$d->format("Y-m-d H:i:59")."' ";
+          $cwsql .= "AND calldate <= '".$d->format("Y-m-d H:i:59")."' ";
           $timeisset++;
         } else {
-          $qwsql .= "AND a.calldate <= '".date("Y-m-d 23:59:59", $d)."'";
-          $cwsql .= "AND calldate <= '".date("Y-m-d 23:59:59", $d)."'";
+          $qwsql .= "AND a.calldate <= '".$d->format("Y-m-d 23:59:59")."'";
+          $cwsql .= "AND calldate <= '".$d->format("Y-m-d 23:59:59")."'";
           $timeisset++;
         }
       }
