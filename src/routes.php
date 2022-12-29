@@ -4,13 +4,14 @@ use Slim\Http\Request;
 use Slim\Http\Response;
 use Erpico\User;
 use Erpico\PBXRules;
-use App\Middleware\OnlyAdmin;
 use App\Middleware\SecureRouteMiddleware;
 use App\Middleware\SetRoles;
 use App\helpers\ErpicoFileUploader;
 use PHPMailer\PHPMailer\PHPMailer;
-use GuzzleHttp\Client;
-use Supervisor\Supervisor;
+use OneSignal\Config;
+use OneSignal\OneSignal;
+use Symfony\Component\HttpClient\Psr18Client;
+use Nyholm\Psr7\Factory\Psr17Factory;
 // Routes
 
 $app->post('/auth/login', function (Request $request, Response $response, array $args) {
@@ -1314,3 +1315,49 @@ $app->post("/specific_phones/save", function (Request $request, Response $respon
 
     return $response->withJson($settings->setSpecificPhones($data));
 })->add('\App\Middleware\OnlyAuthUser');
+
+$app->post("/onesignal", function (Request $request, Response $response, $args) {
+  $settings = new PBXSettings();
+  $oneSignalEnable = $settings->getSettingByHandle('onesignal.enable');
+  $appId = $settings->getSettingByHandle('onesignal.app_id');
+  $restApiKey = $settings->getSettingByHandle('onesignal.rest_api_key');
+  $userId = $request->getParam('user_id', 0);
+  $callId = $request->getParam('call_id', 0);
+
+  if (!$oneSignalEnable || $oneSignalEnable['val'] !== '1' ||
+      !$appId || $appId['val'] === '' ||
+      !$restApiKey || $restApiKey['val'] === '' ||
+      $userId === 0
+  ) {
+    return $response->withJson(['result' => false]);
+  }
+
+  $config = new Config($appId['val'], $restApiKey['val']);
+  $httpClient = new Psr18Client();
+  $streamFactory = new Psr17Factory();
+  $requestFactory = $streamFactory;
+  $oneSignal = new OneSignal($config, $httpClient, $requestFactory, $streamFactory);
+
+  $sendingResult = $oneSignal->notifications()->add([
+//    'contents' => [
+//      'en' => 'Вам поступил звонок',
+//    ],
+//    'headings' => [
+//      'en' => '123', // title
+//    ],
+    'filters' => [
+      [
+        'field' => 'tag',
+        'key' => 'user_id',
+        'relation' => '=',
+        'value' => $userId
+      ],
+    ],
+    'template_id' => '674dd021-51a8-4491-aebc-bdb569ce5ffc',
+    'data' => [
+      'call_id' => $callId
+    ]
+  ]);
+
+  return $response->withJson(['result' => true, 'sendingResult' => $sendingResult]);
+}); // todo: check permission

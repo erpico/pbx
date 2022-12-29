@@ -30,7 +30,10 @@
         "mesilov/bitrix24-php-sdk": "^1.2",
         "symfony/http-client": "^5.4",
         "ext-ftp": "*",
-        "gladcodes/keygen": "^1.1"
+        "gladcodes/keygen": "^1.1",
+        "symfony/options-resolver": "^5.4.11",
+        "norkunas/onesignal-php-api": "^2.10",
+        "nyholm/psr7": "^1.5"
     },
     "require-dev": {
         "phpunit/phpunit": ">=4.8 < 6.0"
