@@ -1,9 +1,12 @@
 <?php
 
 use App\ExportImport;
+use App\Journal\PBXJournal;
 
 class PBXChannel {
   protected $db;
+  private $journal;
+
   const FIELDS = [
     "provider" => 0,
     "login" => 0,
@@ -20,12 +23,14 @@ class PBXChannel {
   ];
 
   public function __construct() {
-    global $app;    
+    global $app;
+    global $user;
     $container = $app->getContainer();
     $this->db = $container['db'];
     $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
     $this->utils = new Erpico\Utils();
+    if ($user) $this->journal = new PBXJournal($user->getId() || 0);
   }
 
   private function getTableName() {
@@ -108,7 +113,9 @@ class PBXChannel {
       if (!intval($id)) {
         return ["result" => false, "message" => "# канала не может быть пустым"];
       }
-      if ($this->db->query("DELETE FROM ".self::getTableName()." WHERE id = ".intval($id))) {
+      $res = $this->db->query("DELETE FROM ".self::getTableName()." WHERE id = ".intval($id));
+      if ($res) {
+        $this->journal->log(PBXJournal::DELETE_CHANNEL, ['channel' => $id]);
         return ["result" => true, "message" => "Удаление прошло успешно"];
       }
     } catch (Exception $ex) {
@@ -169,7 +176,22 @@ class PBXChannel {
         if (isset($values['id']) && intval($values['id'])) {
           $sql .= " WHERE id ='".intval($values['id'])."'";
         }
+
+        if ($values['id']) {
+          $this->journal->log(PBXJournal::MODIFY_CHANNEL,
+            ["channel" => $values['id'], "changes" => $this->getChannelChanges($values)]
+          );
+        }
+
         $this->db->query($sql);
+
+        if (!(isset($values['id']) && intval($values['id']))) {
+          $id = $this->db->lastInsertId();
+          $this->journal->log(PBXJournal::CREATE_CHANNEL,
+            ["channel" => $id, "data" => $values]
+          );
+        }
+
         return [ "result" => true, "message" => "Операция прошла успешно"];
       }
     }
@@ -326,5 +348,12 @@ class PBXChannel {
     }
 
     return $result;
+  }
+
+  private function getChannelChanges($newData) {
+    $channel = new PBXChannel();
+    $oldData = $channel->fetchList(['id' => $newData['id']])[0];
+
+    return $this->journal->getEssenceDiffs($oldData, $newData);
   }
 }

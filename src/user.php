@@ -42,6 +42,7 @@ class OnlyAuthUser
 namespace Erpico;
 
 use App\ExportImport;
+use App\Journal\PBXJournal;
 use phpDocumentor\Reflection\Types\This;
 
 class User
@@ -50,6 +51,7 @@ class User
   private $token;
   private $token_id = 0;
   private $id = 0;
+  private $journal;
   
   const ALLOWED_CONFIG_HANDLES = ['cfwd.all',
     'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from',
@@ -58,13 +60,17 @@ class User
     'cfwd.notify', 'cfwd.notify.message'];
 
   public function __construct($db = null, $_id = 0) {
+    global $user;
+
     if (isset($db)) {
       $this->db = $db;
     } else {
-      global $app;    
+      global $app;
       $container = $app->getContainer();
       $this->db = $container['db'];
     }
+
+    $this->journal = new PBXJournal($user->getId() || 0);
     if (!intval($_id)) {
       $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
         self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
@@ -190,7 +196,7 @@ class User
     if (!$this->id) return 0;
     $sql = "SELECT id, name, fullname, photo
             FROM acl_user
-            WHERE id = {$this->id}";            
+            WHERE id = {$this->id}";
     $res = $this->db->query($sql);
     if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {    
       return [
@@ -747,6 +753,19 @@ order by max(m.created_at) desc;";
         $sql .= $endsql;
       }
 
+      $paramsCopy = $params;
+      unset($paramsCopy['password']);
+      unset($paramsCopy['config']);
+
+      if ($params['id']) {
+        $this->journal->log(PBXJournal::MODIFY_USER, [
+          "user" => $params['id'],
+          "changes" => $this->getUserChanges($params)
+        ]);
+      }
+
+      if ($params['state'] === '3') $this->journal->log(PBXJournal::DELETE_USER, ['user' => $params['id']]);
+
       $res = $this->db->query($sql);
       if ($res) {
         $sql = "";
@@ -756,6 +775,10 @@ order by max(m.created_at) desc;";
           $end_sql = " WHERE acl_user_id = {$id} AND handle = 'cti.ext' LIMIT 1";
         } else {
           $id = $this->db->lastInsertId();
+          $this->journal->log(PBXJournal::CREATE_USER, [
+            "user" => $id,
+            "data" => $paramsCopy
+          ]);
           $start_sql = "INSERT INTO cfg_user_setting SET ";
         }
         if (!$disable_rules) {
@@ -794,10 +817,9 @@ order by max(m.created_at) desc;";
           }
         }
       }
-    } catch (\Throwable $th) {
-      return ["result" => false, "message" => "Произошла ошибка выполнения операции", "info" => $th];
+    } catch (\ErrorException $e) {
+      return ["result" => false, "message" => "Произошла ошибка выполнения операции", "info" => $e->getMessage()];
     }
-
     return ["result" => true, "message" => $params['id'] ? "Пользователь успешно обновлен" : "Пользователь успешно добавлен", "id" => $id];
 
   }
@@ -897,6 +919,9 @@ order by max(m.created_at) desc;";
       if (!intval($id)) {
         return ["result" => false, "message" => "# пользователя не может быть пустым"];
       }
+
+      $this->journal->log(PBXJournal::DELETE_USER, ['user' => $id]);
+
       if ($this->db->query("UPDATE acl_user SET state=3 WHERE id = ".intval($id))) {
 //        $this->deleteUserGroupsExceptFor([0],$id);
         return ["result" => true, "message" => "Удаление прошло успешно"];
@@ -1290,5 +1315,28 @@ WHERE acl_user.name = '$phone'";
 
   public function truncateUsersBitrixId() {
     $this->db->query('TRUNCATE acl_user_bitrix_id;');
+  }
+
+  private function getUserChanges($newData) {
+    $user = new User($this->db, $newData['id']);
+    $oldData = $user->fetchList(['id' => $newData['id']])[0];
+
+    $oldData['rules'] = implode(",", $oldData['rules']);
+    $oldData['user_groups_ids'] = implode(",", $oldData['user_groups_ids']);
+
+    return $this->journal->getEssenceDiffs($oldData, $newData);
+  }
+
+  public function getInfoForTable() {
+    if (!intval($this->id)) return "";
+    $client_name = [];
+
+    $clientInfo = $this->getInfo();
+    $phoneInfo = $this->getPhone($this->id);
+
+    if ($clientInfo) $client_name[] = $clientInfo['fullname'];
+    if ($phoneInfo) $client_name[] = $phoneInfo;
+
+    return implode(", ", $client_name);
   }
 }

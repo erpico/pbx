@@ -1,10 +1,5 @@
 <?php
 
-
-use Bitrix24\Exceptions\Bitrix24EmptyResponseException;
-use Bitrix24\Exceptions\Bitrix24Exception;
-use Bitrix24\Exceptions\Bitrix24IoException;
-use Bitrix24\Exceptions\Bitrix24SecurityException;
 use Erpico\User;
 use Monolog\Logger;
 use Monolog\Handler\StreamHandler;

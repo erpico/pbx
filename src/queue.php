@@ -1,9 +1,11 @@
 <?php
 
 use App\ExportImport;
+use App\Journal\PBXJournal;
 
 class PBXQueue {
   protected $db;
+  private $journal;
   const FIELDS = [
     "name" => 0,
     "fullname" => 0,
@@ -22,12 +24,14 @@ class PBXQueue {
   ];
 
   public function __construct() {
-    global $app;    
+    global $app;
+    global $user;
     $container = $app->getContainer();
     $this->db = $container['db'];
     $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
-    $this->utils = new Erpico\Utils();    
+    $this->utils = new Erpico\Utils();
+    if ($user) $this->journal = new PBXJournal($user->getId() || 0);
   }
 
   private function getTableName() {
@@ -45,6 +49,7 @@ class PBXQueue {
         return ["result" => false, "message" => "# очереди не может быть пустым"];
       }
       if ($this->db->query("SET FOREIGN_KEY_CHECKS=0; DELETE FROM ".self::getTableName()." WHERE id = ".intval($id). "; SET FOREIGN_KEY_CHECKS = 1; ")) {
+        $this->journal->log(PBXJournal::DELETE_QUEUE, ['queue' => $id]);
         return ["result" => true, "message" => "Удаление прошло успешно"];
       }
     } catch (Exception $ex) {
@@ -186,11 +191,21 @@ class PBXQueue {
         if (isset($values['id']) && intval($values['id'])) {
           $sql .= " WHERE id ='".intval($values['id'])."'";
         }
+
+        if ($values['id']) {
+          $this->journal->log(PBXJournal::MODIFY_QUEUE,
+            ["queue" => $values['id'], "changes" => $this->getQueueChanges($values)]
+          );
+        }
+
         $this->db->query($sql);
         if (isset($values['id']) && intval($values['id'])) {
           $id = intval($values['id']);
         } else {
           $id = $this->db->lastInsertId();
+          $this->journal->log(PBXJournal::CREATE_QUEUE,
+            ["queue" => $id, "data" => $values]
+          );
         }
         //$this->deleteQueueAgents($id);
         $agents = json_decode($values["agents"], true);
@@ -345,5 +360,21 @@ class PBXQueue {
   {
     $result = $this->db->query("SELECT id FROM {$this->getTableName()} WHERE name = '{$name}'");
     return $result->fetchColumn();
+  }
+
+  private function getQueueChanges($newData) {
+    $queue = new PBXQueue();
+    $oldData = $queue->fetchList(['id' => $newData['id']])[0];
+
+    $oldDataAlarms = json_decode($oldData['alarms'], 1);
+    $newDataAlarms = json_decode($newData['alarms'], 1);
+    ksort($oldDataAlarms);
+    ksort($newDataAlarms);
+    $oldData['alarms'] = $oldDataAlarms;
+    $newData['alarms'] = $newDataAlarms;
+
+    $oldData['agents'] = json_encode($oldData['agents']);
+
+    return $this->journal->getEssenceDiffs($oldData, $newData);
   }
 }

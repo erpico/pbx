@@ -1,6 +1,8 @@
 <?php
 
 use App\ExportImport;
+use App\Journal\PBXJournal;
+use Erpico\User;
 use PAMI\Client\Impl\ClientImpl;
 use PAMI\Message\Action\SIPPeersAction;
 
@@ -10,6 +12,7 @@ class PBXPhone
 
   protected $ami;
   private $cfgSettings;
+  private $journal;
   const FIELDS = [
     "phone" => 0,
     "model" => 0,
@@ -37,6 +40,7 @@ class PBXPhone
   public function __construct()
   {
     global $app;
+    global $user;
     $container = $app->getContainer();
     $this->db = $container['db'];
     $this->ami = $container['ami'];
@@ -44,6 +48,7 @@ class PBXPhone
     $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
     $this->utils = new Erpico\Utils();
+    if ($user) $this->journal = new PBXJournal($user->getId() || 0);
   }
 
   private function getTableName()
@@ -238,12 +243,21 @@ class PBXPhone
           }
         }
 
+        if ($values['id']) {
+          $this->journal->log(PBXJournal::MODIFY_PHONE,
+            ["phone" => $values['id'], "changes" => $this->getPhoneChanges($values)]
+          );
+        }
+
         $this->db->query($sql);
         if (isset($values['user_id']) && intval($values['user_id'])) {
           $new_user_id = intval($values["user_id"]);
         }
         if (!isset($id)) {
           $id = $this->db->lastInsertId();
+          $this->journal->log(PBXJournal::CREATE_PHONE,
+            ["phone" => $id, "data" => $values]
+          );
         }
         if (isset($values["group_id"]) && intval($values["group_id"])) {
           $this->deletePhoneFromGroup($id);
@@ -288,8 +302,10 @@ class PBXPhone
       if (!intval($id)) {
         return ["result" => false, "message" => "# телефона не может быть пустым"];
       }
-      if ($this->deleteOtherPhonesFromGroup(intval($id)) && $this->db->query("DELETE FROM " . self::getTableName()
-          . " WHERE id = " . intval($id))) {
+      $res = $this->deleteOtherPhonesFromGroup(intval($id)) &&
+        $this->db->query("DELETE FROM " . self::getTableName() . " WHERE id = " . intval($id));
+      if ($res) {
+        $this->journal->log(PBXJournal::DELETE_PHONE, ['phone' => $id]);
         return ["result" => true, "message" => "Удаление прошло успешно"];
       }
     } catch (Exception $ex) {
@@ -801,5 +817,12 @@ class PBXPhone
         }
       }
     }
+  }
+
+  private function getPhoneChanges($newData) {
+    $phone = new PBXPhone();
+    $oldData = $phone->fetchList(['id' => $newData['id']])[0];
+
+    return $this->journal->getEssenceDiffs($oldData, $newData);
   }
 }

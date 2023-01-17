@@ -7,6 +7,7 @@ use Erpico\PBXRules;
 use App\Middleware\SecureRouteMiddleware;
 use App\Middleware\SetRoles;
 use App\helpers\ErpicoFileUploader;
+use App\Journal\PBXJournal;
 use PHPMailer\PHPMailer\PHPMailer;
 use OneSignal\Config;
 use OneSignal\OneSignal;
@@ -139,8 +140,9 @@ $app->post('/users/{id}/save[/{disable_rules}]', function (Request $request, Res
   $params = $request->getParams();
   $id = intval($args['id']);
   $user = new User();
-  $result = $args['disable_rules'] ? $response->withJson($user->addUpdate($params, true)) : $response->withJson($user->addUpdate($params));
-  return $result;
+  return (isset($args['disable_rules']) && $args['disable_rules'])
+    ? $response->withJson($user->addUpdate($params, true))
+    : $response->withJson($user->addUpdate($params));
 });
 
 $app->post('/users/{id}/remove', function (Request $request, Response $response, array $args) use ($app) {
@@ -1361,3 +1363,24 @@ $app->post("/onesignal", function (Request $request, Response $response, $args) 
 
   return $response->withJson(['result' => true, 'sendingResult' => $sendingResult]);
 }); // todo: check permission
+
+$app->get('/journal/list', function ($request, $response, $args) {
+  global $user;
+
+  $journal = new PBXJournal($user->getId());
+  $filter = $request->getParam("filter", "");
+  $start = $request->getParam("start", 0);
+  $count = $request->getParam("count", 20);
+  return $response->withJson([
+    "data" => $journal->getList($filter, $start, $count),
+    "pos" => $start,
+    "total_count" => $journal->getList($filter, $start, $count, 1)
+  ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/journal/events', function ($request, $response, $args) {
+  global $user;
+
+  $journal = new PBXJournal($user->getId());
+  return $response->withJson($journal->getActions());
+})->add('\App\Middleware\OnlyAuthUser');
