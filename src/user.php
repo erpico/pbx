@@ -70,7 +70,7 @@ class User
       $this->db = $container['db'];
     }
 
-    $this->journal = new PBXJournal($user->getId() || 0);
+    if ($user) $this->journal = new PBXJournal($user->getId() || 0);
     if (!intval($_id)) {
       $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
         self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
