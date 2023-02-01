@@ -2,9 +2,9 @@
 
 class CMBitrix {
 
-	protected $db;
+  protected $db;
   protected $ami;
-	protected $channel = "";
+  protected $channel = "";
   protected $server_host;
   protected $logger;
   protected $user;
