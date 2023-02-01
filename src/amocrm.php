@@ -84,7 +84,7 @@ $app->any('/amocrm[/]', function (Request $request, Response $response, array $a
         $amo->saveDeafaultSettings($accessToken);
       }
     } catch (Exception $e) {
-        die((string)$e);
+        return $response->withJson(['result' => false, 'message' => ((string)$e)], 400);
     }
 
     /** @var \AmoCRM\OAuth2\Client\Provider\AmoCRMResourceOwner $ownerDetails */
@@ -110,7 +110,7 @@ $app->any('/amocrm/users', function (Request $request, Response $response, array
   $provider = $amo->getProvider();
 
   if (!$amo->domain || !$amo->accessToken || !$amo->refreshToken || !$amo->expire) {
-    exit('Invalid domain'); // return $response->withJson('result' => false, 'message' => 'Invalid domain');
+    return $response->withJson(['result' => false, 'message' => 'Ошибка интеграции'], 400);
   }  
 
   $users = json_decode($amo->settings->getSettingByHandle('amocrm.users')['val'], 1);
@@ -138,7 +138,7 @@ $app->any('/amocrm/users', function (Request $request, Response $response, array
 
             $amo->saveDeafaultSettings();
         } catch (Exception $e) {
-            die((string)$e);
+          return $response->withJson(['result' => false, 'message' => ((string)$e)], 400);
         }
     }
     
@@ -203,7 +203,7 @@ $app->get('/amocrm/contact', function (Request $request, Response $response, arr
   $provider = $amo->getProvider();
 
   if (!$amo->domain || !$amo->accessToken || !$amo->refreshToken || !$amo->expire) {
-    exit('Invalid domain');
+    return $response->withJson(['result' => false, 'message' => 'Ошибка интеграции'], 400);
   }
 
   $accessToken = new \League\OAuth2\Client\Token\AccessToken([
@@ -229,17 +229,16 @@ $app->get('/amocrm/contact', function (Request $request, Response $response, arr
 
             $amo->saveDeafaultSettings();
         } catch (Exception $e) {
-            die((string)$e);
+          return $response->withJson(['result' => false, 'message' => ((string)$e)], 400);
         }
     }
 
     try {
         return $response->withJson($amo->getContact($phone));
     } catch (GuzzleHttp\Exception\GuzzleException $e) {
-        print "Error: ";
-        var_dump((string)$e);
+        return $response->withJson(['result' => false, 'message' => ((string)$e)], 400);
     }
-    die("API ERROR");
+    return $response->withJson(['result' => false, 'message' => 'API ERROR'], 400);
 });
 
 // Добавление звонка в АМО из нашей СРМ
@@ -258,7 +257,7 @@ $app->any('/amocrm/add', function (Request $request, Response $response, array $
   $webUrl = $amo->settings->getSettingByHandle('web.url')['val'];
 
   if (!$amo->domain || !$amo->accessToken || !$amo->refreshToken || !$amo->expire || !$webUrl) {
-    return $response->withJson('Не достаточно параметров', 400);
+    return $response->withJson('Ошибка интеграции', 400);
   }
 
   $instance = $amo->settings->getSettingByHandle('amocrm.domain')['val'];
@@ -317,7 +316,7 @@ $app->any('/amocrm/add', function (Request $request, Response $response, array $
 
             $amo->saveDeafaultSettings();
         } catch (Exception $e) {
-            die((string)$e);
+          return $response->withJson(['result' => false, 'message' => ((string)$e)], 400);
         }
     }
 
@@ -326,12 +325,12 @@ $app->any('/amocrm/add', function (Request $request, Response $response, array $
         return $response->withJson($result);
     } catch (GuzzleHttp\Exception\GuzzleException $e) {
         print "Error: ";
-        var_dump((string)$e);
+        return $response->withJson(['result' => false, 'message' => ((string)$e)], 400);
     }
     die("OK");
 });
 
-// Здесь видимо совершение звонка из АМО в нашу АТС
+// Проигрывание файла. В принципе можно роут не использовать так как можно просто получать по ссылке
 $app->get("/amocrm/record/{instance}/{id}", function (Request $request, Response $response, array $args) {
   // Reverse proxy to instance
   $id = str_replace(".mp3", "", $args['id']);
