@@ -407,11 +407,12 @@ class PBXCdr {
   }
 
   public function findById($uid) {
-    $sql = "SELECT * FROM queue_cdr WHERE REPLACE(uniqid, '.', '') = '".addslashes($uid)."' order by id desc limit 1";
+    $uid = substr_replace($uid, '.', 10, 0);
+    $sql = "SELECT agentname, calldate, uniqid, src FROM queue_cdr WHERE uniqid = '".addslashes($uid)."' order by id desc limit 1";
     $res = $this->db->query($sql);      
     $row = $res->fetch(\PDO::FETCH_ASSOC);
     if (!$row) {
-        $sql = "SELECT * FROM cdr WHERE REPLACE(uniqueid, '.', '') = '".addslashes($uid)."' order by id desc limit 1";
+        $sql = "SELECT * FROM cdr WHERE uniqueid = '".addslashes($uid)."' order by id desc limit 1";
         $res = $this->db->query($sql);      
         $row = $res->fetch(\PDO::FETCH_ASSOC);
     
@@ -536,7 +537,6 @@ class PBXCdr {
       $uniqid = $row['uniqueid']; //substr($row['uniqueid'], 0, /*-2*/0);
       if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
       $src = $row['src'];
-      $dst = $row['dst'];
       $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-" . $uniqid . "*");
       if (!is_array($files) || !count($files)) {
         // Last change....
