@@ -1362,7 +1362,82 @@ $app->post("/onesignal", function (Request $request, Response $response, $args) 
   ]);
 
   return $response->withJson(['result' => true, 'sendingResult' => $sendingResult]);
-}); // todo: check permission
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post("/firebase/link", function (Request $request, Response $response) {
+  global $user;
+  $settings = new PBXSettings();
+  $FCMEnabled = $settings->getSettingByHandle('fcm.enable');
+  $fcm_token = $request->getParam('fcm_token');
+
+  if (!isset($FCMEnabled['val']) || $FCMEnabled['val'] === '0') {
+    $message = 'Интеграция с FCM не включена';
+    if (!$fcm_token) $message = 'FCM Token is required';
+
+    return $response->withJson(['result' => false, 'message' => $message], 400);
+  }
+
+  $res = $user->setFCMToken($fcm_token);
+
+  return $response->withJson(['result' => $res]);
+
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->post("/firebase/send", function (Request $request, Response $response, $args) {
+  global $user;
+  $settings = new PBXSettings();
+  $FCMEnabled = $settings->getSettingByHandle('fcm.enable');
+  $serverKey = $settings->getSettingByHandle('fcm.server.key')['val'];
+  $user_id = $request->getParam('user_id');
+
+  if (!isset($FCMEnabled['val']) || $FCMEnabled['val'] === '0' || !$user_id) {
+    $message = 'Интеграция с FCM не включена';
+    if (!$user_id) $message = 'User ID is required';
+
+    return $response->withJson(['result' => false, 'message' => $message], 400);
+  }
+
+  function sendPushNotification($fields = [], $serverKey) {
+      $headers = [
+        'Authorization: key=' . $serverKey,
+        'Content-Type: application/json'
+      ];
+      $ch = curl_init();
+      curl_setopt( $ch,CURLOPT_URL, 'https://fcm.googleapis.com/fcm/send' );
+      curl_setopt( $ch,CURLOPT_POST, true );
+      curl_setopt( $ch,CURLOPT_HTTPHEADER, $headers );
+      curl_setopt( $ch,CURLOPT_RETURNTRANSFER, true );
+      curl_setopt( $ch, CURLOPT_SSL_VERIFYPEER, false );
+      curl_setopt( $ch,CURLOPT_POSTFIELDS, json_encode($fields));
+      $result = curl_exec($ch);
+      curl_close( $ch );
+      return $result;
+  }
+
+  $fcm_token = $user->getFCMTokenByID($user_id);
+
+  if (!$fcm_token) {
+    return $response->withJson(['result' => false, 'message' => 'User does not have a token'], 400);
+  }
+
+
+  $fields = [
+      'to'  => $fcm_token['fcm_token'],
+      'priority' => 'high',
+      'notification' => [
+          'body' => 'test',
+          'title' => 'test'
+      ],
+      'data' => [
+          'message' => 'test',
+          'title' => 'test'
+      ]
+    ];
+
+  $res = sendPushNotification($fields, $serverKey);
+
+  return $response->withJson(['result' => true, 'sendingResult' => json_decode($res)]);
+})->add('\App\Middleware\OnlyAuthUser');
 
 $app->get('/journal/list', function ($request, $response, $args) {
   global $user;

@@ -1339,4 +1339,17 @@ WHERE acl_user.name = '$phone'";
 
     return implode(", ", $client_name);
   }
+
+  public function setFCMToken(string $token) {
+    $sql = "UPDATE acl_user SET fcm_token = '$token' WHERE id = '$this->id'";
+
+    return $this->db->query($sql) ? true : false;
+  }
+
+  public function getFCMTokenByID($id) {
+    $sql = "SELECT fcm_token FROM acl_user WHERE id = '$id'";
+    $res = $this->db->query($sql);
+
+    return $res->fetch()['fcm_token'];
+  }
 }
