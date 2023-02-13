@@ -14,7 +14,8 @@ require_once __DIR__."/EAmoCRM/EAmoCRM.php";
 $app->any('/amocrm/register', function (Request $request, Response $response, array $args) use($app) {
     // $id = $request->getParam("id", "fc13c3a7-8990-4af3-bc42-88b6c742964e"/*"e268e13f-dcbf-4f5e-b55a-db5ac6abcb1f"*/);     // ID интеграции erpicoPBX
     $container = $app->getContainer();
-    $id = $container->get('settings')['amocrm']['client_id'];
+    $conf = $app->getContainer()->get('dbConfig');
+    $id = $conf['amo_client_id'];
     
     // Параметр состояния, который будет передан в модальное окно
     $instance = $request->getParam("instance", $app->getContainer()['instance_id']); // дефолтный инстанс? берется из настроек (vpn_name)
@@ -104,8 +105,6 @@ $app->any('/amocrm[/]', function (Request $request, Response $response, array $a
 // Пользователи АМО
 $app->any('/amocrm/users', function (Request $request, Response $response, array $args) use($app) {  
   $container = $app->getContainer();
-  $db = $container['db'];
-  $settings = new PBXSettings();
   $amo = new EAmoCRM();
   $provider = $amo->getProvider();
 

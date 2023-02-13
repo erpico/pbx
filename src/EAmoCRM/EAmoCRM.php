@@ -16,12 +16,13 @@ class EAmoCRM {
     {
         global $app;
         $container = $app->getContainer();
+        $conf = $container['dbConfig'];
         $this->db = $container['db'];
         $this->settings = new PBXSettings();
         $this->provider = new AmoCRM([
-            'clientId' => $container->get('settings')['amocrm']['client_id'],
-            'clientSecret' => $container->get('settings')['amocrm']['secret'],
-            'redirectUri' => $container->get('settings')['amocrm']['redirect_uri'],
+            'clientId' => $conf['amo_client_id'],
+            'clientSecret' => $conf['amo_secret'],
+            'redirectUri' => $conf['amo_redirect_uri'],
         ]);
         $this->domain = $this->settings->getSettingByHandle('amocrm.domain')['val'];
         $this->accessToken = $this->settings->getSettingByHandle('amocrm.access_token')['val'];
