@@ -1422,7 +1422,7 @@ $app->post("/firebase/send", function (Request $request, Response $response, $ar
 
 
   $fields = [
-      'to'  => $fcm_token['fcm_token'],
+      'to'  => $fcm_token,
       'priority' => 'high',
       'notification' => [
           'body' => 'test',
