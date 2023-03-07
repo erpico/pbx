@@ -24,8 +24,12 @@ class RoleProvider implements RoleProviderInterface
   {
     $result = ['guest'];
     
+    // take from the container, because the user can be used by api key
+    $user_id = $this->container->get('auth')->getId();
+
     /** @var User $user */
-    $user = new User($this->container->get('db'));
+    $user = new User($this->container->get('db'), $user_id);
+
     if ($user && $user->isAuth()) {
       $userRoles = $user->getUserRoles();
       $result = $userRoles ? $userRoles : ['user'];
