@@ -72,9 +72,9 @@ class User
 
     if ($user) $this->journal = new PBXJournal($user->getId() || 0);
     if (!intval($_id)) {
-      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
-        self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
-          isset($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
+      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : ((isset($_GET['token']) ?
+        self::checkToken($_GET['token']) : ((isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
+          (isset($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0))))));
       if (is_array($token_data)) {
         $this->id = $token_data['acl_user_id'];
         $this->token_id = $token_data['id'];
