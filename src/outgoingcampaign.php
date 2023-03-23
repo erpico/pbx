@@ -575,8 +575,12 @@ ORDER BY id";
         $id = $this->db->lastInsertId();
       }
       if (isset($values['phones']) && $values['phones'] !== "[]") {
-        $phones = json_decode($values['phones']);
-
+        if (gettype($values['phones']) === 'string') {
+          $phones = json_decode($values['phones'], 1);
+        } else {
+          $phones = $values['phones'];
+        }
+        
         $of = $this->getMainSettings($values['id'])['outgoing_filtering'];
 
         if ($of === '1') {
@@ -585,7 +589,7 @@ ORDER BY id";
             $contacts = array_merge($queue, $results);
 
             $filteredFromBitrix = array_filter($phones, function ($phone) {
-                return $phone->fromBitrix;
+                return $phone['fromBitrix'];
             });
 
             foreach ($contacts as $contact) {
@@ -596,7 +600,7 @@ ORDER BY id";
                     } else {
                         $this->deleteContact($contact['id']);
                         foreach ($phones as $k => $v) {
-                            if ($v->phone == $contact['phone']) unset($phones[$k]);
+                            if ($v['phone'] == $contact['phone']) unset($phones[$k]);
                         }
                     }
                 }
@@ -604,11 +608,11 @@ ORDER BY id";
         }
 
         foreach ($phones as $phone) {
-          if ($phone->id && (!$phone->phone || $phone == "")) {
-            $this->deleteContact($phone->id);
+          if ($phone['id'] && (!$phone['phone'] || $phone == "")) {
+            $this->deleteContact($phone['id']);
             continue;
           }
-          $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
+          $resPhone = $this->savePhone($phone['id'], $id, $phone['phone'], $phone['name'], $phone['description'], $phone['state']);
           if (isset($resPhone)) {
             $errors[] = $resPhone;
           }
