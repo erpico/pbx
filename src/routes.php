@@ -1389,10 +1389,11 @@ $app->post("/firebase/send", function (Request $request, Response $response, $ar
   $FCMEnabled = $settings->getSettingByHandle('fcm.enable');
   $serverKey = $settings->getSettingByHandle('fcm.server.key')['val'];
   $user_id = $request->getParam('user_id');
+  $number = $request->getParam('number');
 
-  if (!isset($FCMEnabled['val']) || $FCMEnabled['val'] === '0' || !$user_id) {
+  if (!isset($FCMEnabled['val']) || $FCMEnabled['val'] === '0' || (!$user_id && !$number)) {
     $message = 'Интеграция с FCM не включена';
-    if (!$user_id) $message = 'User ID is required';
+    if (!$user_id && !$number) $message = 'Required User ID or number';
 
     return $response->withJson(['result' => false, 'message' => $message], 400);
   }
@@ -1414,7 +1415,8 @@ $app->post("/firebase/send", function (Request $request, Response $response, $ar
       return $result;
   }
 
-  $fcm_token = $user->getFCMTokenByID($user_id);
+  if ($user_id) $fcm_token = $user->getFCMTokenByID($user_id);
+  if ($number) $fcm_token = $user->getFCMTokenByNumber($number);
 
   if (!$fcm_token) {
     return $response->withJson(['result' => false, 'message' => 'User does not have a token'], 400);

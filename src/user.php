@@ -1352,4 +1352,11 @@ WHERE acl_user.name = '$phone'";
 
     return $res->fetch()['fcm_token'];
   }
+
+  public function getFCMTokenByNumber($number) {
+    $sql = "SELECT fcm_token FROM acl_user WHERE name = '$number'";
+    $res = $this->db->query($sql);
+
+    return $res->fetch()['fcm_token'];
+  }
 }
