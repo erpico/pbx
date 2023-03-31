@@ -225,6 +225,32 @@ $app->get('/settings/dialingRules', function (Request $request, Response $respon
   return $response->withJson($settings->getDialingRules());
 });
 
+$app->get('/settings/mobileapp', function (Request $request, Response $response, array $args) use ($app) {
+  $settings = new PBXSettings();
+  $number = $request->getParam('number');
+
+  if (!$number) {
+    return $response->withJson(['result' => false, 'message' => 'Incorrect number'], 400);
+  }
+
+  $res = [];
+
+  $phone = new PBXPhone();
+
+  $phoneInfo = $phone->fetchList(['phone' => $number]);
+
+  if (count($phoneInfo) === 0) {
+    return $response->withJson(['result' => false, 'message' => 'Phone not found']);
+  }
+
+  $res['login'] = $phoneInfo[0]['login'];
+  $res['password'] = $phoneInfo[0]['password'];
+  $res['webrtc_url'] = $settings->getDefaultSettingsByHandle('web.url')['value'];
+  $res['asterisk_http_port'] = $settings->getDefaultSettingsByHandle('asterisk_http_port')['value'];
+
+  return $response->withJson($res);
+})->add('\App\Middleware\OnlyAuthUser');
+
 $app->post('/settings/dialingRules/save', function (Request $request, Response $response, array $args) use ($app) {
   $params = $request->getParam("dialingRules", "");
   $set = new PBXSettings();
