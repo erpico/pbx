@@ -273,13 +273,11 @@ $app->get('/bitrix24/call/add', function (Request $request, Response $response, 
     $line_number = $request->getParam('line_number', ''); //Номер внешней линии, через который совершался звонок
     $channel = $request->getParam('channel', '');
 
-    $helper = new EBitrix($request, $channel);
+    $helper = new EBitrix($channel);
 
     $result = $helper->runInputCall($intnum, $extnum, $type, $crm_create, $line_number, '', $channel);
 
-    print $result;
-
-    die();
+    return $response->withJson($result);
 });
 
 $app->any('/bitrix24/call/record', function (Request $request, Response $response, array $args) {
@@ -291,7 +289,7 @@ $app->any('/bitrix24/call/record', function (Request $request, Response $respons
     $lineNumber = $request->getParam('line_number', '');
     $channel = $request->getParam('channel', '');
 
-    $helper = new EBitrix($request, $channel);
+    $helper = new EBitrix($channel);
 
     $result = $helper->uploadRecordedFile($call_id, $FullFname, $CallIntNum, $CallDuration, $CallDisposition, $lineNumber, $channel);
 
@@ -342,7 +340,7 @@ $app->get('/bitrix24/{entity}/search', function (Request $request, Response $res
     $entity = $args['entity'];
     if (in_array(['lead', 'deal', 'contact'], $entity)) return $response->withJson(['res' => false, 'message' => 'Wrong entity type.']);
 
-    $helper = new EBitrix($request, $channel);
+    $helper = new EBitrix($channel);
     $settings = new PBXSettings();
     $domain = $settings->getSettingByHandle('bitrix.domain')['val'];
 
