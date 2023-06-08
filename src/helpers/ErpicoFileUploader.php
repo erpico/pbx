@@ -13,10 +13,30 @@ class ErpicoFileUploader {
      * @param $uploadPath int|null Upload dir
      * @return bool True if a successfull file move
      */
-    public static function moveFile($file, $userId, $uploadPath = null) {
+    public static function moveFile($file, $userId) {
+        $config = require(__DIR__ . '/../settings.php');
+
+        $uploadPaths = $config['settings']['uploadPath'];
+
         if ($file['error'] == UPLOAD_ERR_OK) {
             $name = $file["name"];
             $fileInfo = pathinfo($name);
+
+            if (isset($file['type'])) {
+                $type = explode('/', $file['type'])['0'];
+
+                switch($type) {
+                    case 'image':
+                        $uploadPath = $uploadPaths['photos'];
+                        break;
+                    case 'audio':
+                        $uploadPath = $uploadPaths['audio'];
+                        break;
+                    default:
+                        return [ 'status' => "error"];
+                        break;
+                }
+            }
 
             switch (strtolower($fileInfo['extension'])) {
                 case 'php':
@@ -33,13 +53,14 @@ class ErpicoFileUploader {
             $fullFileName = $randomFileName . "." . $fileInfo['extension'];
 
             if (!move_uploaded_file($file["tmp_name"], "$uploadPath/$fullFileName")) {
-                return [ 'status' => "error"];
+                return ['status' => $file["error"]];
             }
 
             $data = [
                 'name' => $name,
-                'time' => Date('y-m-d h:i:s'),
-                'user' => $userId
+                'time' => (new \DateTime())->format('Y-m-d H:i:s'),
+                'user' => $userId,
+                'extension' => strtolower($fileInfo['extension'])
             ];
 
             file_put_contents($uploadPath . '/' . $randomFileName . '.info.txt', json_encode($data));

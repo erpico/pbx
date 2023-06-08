@@ -16,6 +16,9 @@ return [
             'path' => isset($_ENV['docker']) ? 'php://stdout' : __DIR__ . '/../logs/app.log',
             'level' => \Monolog\Logger::DEBUG,
         ],
-        'uploadPath' => __DIR__ . '/../public/photos'
+        'uploadPath' => [
+            "photos" => __DIR__ . '/../public/photos',
+            "audio" => __DIR__ . '/../public/audio'
+        ]
     ],
 ];

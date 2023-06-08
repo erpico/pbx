@@ -1272,12 +1272,9 @@ $app->post('/export', function (Request $request, Response $response, array $arg
     });
 //});
 
-$app->post('/upload', function ($request, $response, $args) {
-    $userId = $request->getParam('userId', 0);
+$app->post('/upload', function ($request, $response, $args) use ($app, $user) {
+    $userId = $user->getId();
     if ($userId == 0) return $response->withJson([ "status" => "error", "message" => "Неверный идентификатор пользователя"]);
-    $config = require(__DIR__ . '/settings.php');
-
-    $uploadPath = $config['settings']['uploadPath'];
 
     if (isset($_FILES['file'])) {
         $_FILES['upload'] = $_FILES['file'];
@@ -1287,10 +1284,133 @@ $app->post('/upload', function ($request, $response, $args) {
         return $response->withJson([ "status" => "error"]);
     }
 
-    $result = ErpicoFileUploader::moveFile($_FILES['upload'], $userId, $uploadPath);
+    $result = ErpicoFileUploader::moveFile($_FILES['upload'], $userId);
 
     return $response->withJson($result);
 });
+
+$app->get('/mediafiles', function ($request, $response, $args) use ($app, $user) {
+  $userId = $user->getId();
+  
+  $filter = $request->getParam('filter', "");
+  $start = $request->getParam('start', 0);
+  $count = $request->getParam('count', 20);
+
+  if ($userId == 0) return $response->withJson([ "status" => "error", "message" => "Неверный идентификатор пользователя"]);
+
+  $audioPath = __DIR__ . '/../public/audio/';
+  $imagePath = __DIR__ . '/../public/photos/';
+
+  $filesInfo = [];
+  $audioFiles = scandir($audioPath);
+  $imageFiles = scandir($imagePath);
+
+  $audioFiles = array_filter($audioFiles, function($file) {
+      return str_contains($file, '.info.txt');
+  });
+
+  $imageFiles = array_filter($imageFiles, function($file) {
+      return str_contains($file, '.info.txt');
+  });
+  
+  foreach($audioFiles as $file) {
+    $info = json_decode(file_get_contents($audioPath . $file), 1);
+    $info['id'] = str_replace('.info.txt', '', $file);
+    $info['type'] = 'audio';
+
+    $filesInfo[] = $info;
+  }
+
+  foreach($imageFiles as $file) {
+    $info = json_decode(file_get_contents($imagePath . $file), 1);
+    $info['id'] = str_replace('.info.txt', '', $file);
+    $info['type'] = 'image';
+
+    $filesInfo[] = $info;
+  }
+
+  usort($filesInfo, function($a, $b) {
+    return $a['time'] < $b['time'] ? 1 : -1;
+  });
+
+  $totalCount = count($filesInfo);
+  $filesInfo = array_slice($filesInfo, $start, $count);
+
+  foreach($filesInfo as $key => $file) {
+    $userName = $user->getNameById($file['user']);
+    $filesInfo[$key]['user'] = $userName;
+  }
+
+  return $response->withJson([
+    "data" => $filesInfo,
+    "pos" => (int)$start,
+    "total_count" => $totalCount
+  ]);
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->get('/mediafiles/{name}', function ($request, $response, $args) use ($app, $user) {
+  $userId = $user->getId();
+  if ($userId == 0) return $response->withJson([ "status" => "error", "message" => "Неверный идентификатор пользователя"]);
+
+  $name = $args['name'];
+
+  $audioPath = __DIR__ . '/../public/audio/';
+  $imagePath = __DIR__ . '/../public/photos/';
+
+  if (file_exists($audioPath.$name)) {
+    $file = file_get_contents($audioPath.$name);
+    $type = 'audio';
+  }
+
+  if (file_exists($imagePath.$name)) {
+    $file = file_get_contents($imagePath.$name);
+    $type = 'image';
+  }
+
+  if ($type === 'audio') {
+    $fh = fopen($audioPath.$name, 'rb');
+    $stream = new Slim\Http\Stream($fh);
+    
+    return $response
+    ->withBody($stream)
+    ->withHeader('Content-Type', 'audio/mpeg')
+    ->withHeader('Accept-Ranges', 'bytes')
+    // ->withHeader('Content-Length', filesize($imagePath.$name))
+    ->withHeader('Content-Transfer-Encoding', 'binary');
+    // ->withHeader('Content-Disposition', 'attachment; filename="' . basename($imagePath.$name) . '"');
+  }
+
+  if ($type === 'image') {
+    $response->write($file);
+    return $response->withHeader('Content-Type', 'image/png');
+  }
+})->add('\App\Middleware\OnlyAuthUser');
+
+$app->delete('/mediafiles/{name}', function ($request, $response, $args) use ($app, $user) {
+  $userId = $user->getId();
+  if ($userId == 0) return $response->withJson([ 'result' => false, 'message' => 'Неверный идентификатор пользователя']);
+
+  $name = $args['name'];
+
+  $audioPath = __DIR__ . '/../public/audio/';
+  $imagePath = __DIR__ . '/../public/photos/';
+
+  if (file_exists($audioPath.$name)) {
+    unlink($audioPath.$name);
+    $fileId = explode('.', $name)[0];
+    unlink($audioPath.$fileId.".info.txt");
+    return $response->withJson(['result' => true, 'message' => 'Аудио успешно удалено']);
+  }
+
+  if (file_exists($imagePath.$name)) {
+    unlink($imagePath.$name);
+    $fileId = explode('.', $name)[0];
+    unlink($imagePath.$fileId.".info.txt");
+    return $response->withJson(['result' => true, 'message' => 'Изображение успешно удалено']);
+  }
+
+  return $response->withJson(['result' => false, 'message' => 'Файл не найден']);
+})->add('\App\Middleware\OnlyAuthUser');
 
 // API_KEYS
 $app->get('/api_key', function ($request, $response, $args) {

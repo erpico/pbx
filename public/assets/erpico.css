@@ -1106,3 +1106,12 @@ a:hover {
 .webix_comments_menu {
     display: none;
 }
+
+.media-image {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.mediafile-image, .mediafile-audio {
+    text-align: center;
+}

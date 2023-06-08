@@ -5,9 +5,7 @@ use Keygen\Keygen;
 class PBXApi_keys {
     protected $db;
     private $id = 0;
-    const FIELDS = [
-        "id", "value", "client_id", "last_request", "deleted"
-    ];
+    const FIELDS = [ "id", "value", "client_id", "last_request", "deleted" ];
 
     public function __construct($id = 0) {
         global $app;

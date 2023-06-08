@@ -8,6 +8,10 @@ class PBXCdr {
   private string $direction;
   private int $answered;
   private int $missed;
+  /** @var Erpico\Utils $utils */
+  private $utils;
+  private array $mapQueues;
+  private array $mapUsers;
 
   public function __construct(string $direction = '', int $answered = -1, int $missed = 0) {
     global $app;    
@@ -97,6 +101,7 @@ class PBXCdr {
     if ($this->user->getId()) {
       $userPhone = addslashes($this->user->getPhone($this->user->getId()));
       $userName = addslashes($this->user->getInfo()['name']);
+     // allow you to see only yours calls
       $isCanSeeOthers = in_array('phc.reports', $this->user->getUserRoles()) || in_array('erpico.admin', $this->user->getUserRoles());
       if (isset($_SERVER['REMOTE_ADDR'])) {
         if (!$isCanSeeOthers) {

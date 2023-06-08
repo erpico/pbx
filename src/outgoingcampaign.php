@@ -2,6 +2,8 @@
 
 class PBXOutgoingCampaign  {
   protected $db;
+  public $user;
+  public $utils;
 
   //if value is 1, it's means that field is int type
   const FIELDS = [

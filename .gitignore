@@ -7,3 +7,5 @@
 /tmp/*
 composer.phar
 /.idea/*
+/public/photos/*
+/public/audio/*
