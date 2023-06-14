@@ -52,7 +52,12 @@ class ErpicoFileUploader {
             $randomFileName = static::getRandomFileName($name, $userId);
             $fullFileName = $randomFileName . "." . $fileInfo['extension'];
 
-            if (!move_uploaded_file($file["tmp_name"], "$uploadPath/$fullFileName")) {
+            if (!is_dir($uploadPath)) {
+                $res = mkdir($uploadPath);
+            }
+
+            $moveRes = move_uploaded_file($file["tmp_name"], "$uploadPath/$fullFileName");
+            if (!$moveRes) {
                 return ['status' => $file["error"]];
             }
 
