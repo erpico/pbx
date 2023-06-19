@@ -105,9 +105,15 @@ class EBitrix {
         }
 
         if ((int)$this->settings->getSettingByHandle('bitrix.leadcreate')['val'] == 0) $crmCreate = 0;
+
         $show = 0;
         if ($this->settings->getSettingByHandle('bitrix.leadshow')['val']) $show = 1;
-        $createTime = $createTime == '' ? date("Y-m-d H:i:s") : date("Y-m-d H:i:s", strtotime($createTime));
+
+        $createTime = $createTime == '' ? new DateTime() : DateTime::createFromFormat("Y-m-d H:i:s", $createTime);
+        $timezone = $this->settings->getSettingByHandle('timezone')['val'];
+        if ($timezone) $createTime->setTimezone($timezone);
+        $createTime = $createTime->format("Y-m-d H:i:s");
+
         try {
             $query = [
               'USER_PHONE_INNER' => $intNum,
