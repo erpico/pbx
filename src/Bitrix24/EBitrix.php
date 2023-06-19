@@ -111,8 +111,8 @@ class EBitrix {
 
         $createTime = $createTime == '' ? new DateTime() : DateTime::createFromFormat("Y-m-d H:i:s", $createTime);
         $timezone = $this->settings->getSettingByHandle('timezone')['val'];
-        if ($timezone) $createTime->setTimezone($timezone);
-        $createTime = $createTime->format("Y-m-d H:i:s");
+        if ($timezone) $createTime->setTimezone(new DateTimeZone($timezone));
+        $createTime = $createTime->format(DateTime::ATOM);
 
         try {
             $query = [
