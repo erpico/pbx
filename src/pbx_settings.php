@@ -28,9 +28,8 @@ class PBXSettings {
     $sql = "SELECT  id, handle, val FROM cfg_setting WHERE handle = '$handle'";
     $res = $this->db->query($sql);
     $row = $res->fetch();
-    
-    $res = isset($row['val']);
-    return ['result' => $res, 'value' => $row['val'] ?? ''];
+
+    return $row['val'] ?? false;
   }
 
   public function getDefaultSettings() {

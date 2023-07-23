@@ -361,13 +361,14 @@ $app->get('/bitrix24/lead/import', function (Request $request, Response $respons
   $channel = $request->getParam('channel', '');
   $helper = new CMBitrix($channel);
   $settings = new PBXSettings();
-  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
   $filters = $request->getParam('filters');
   $next = $request->getParam('next');
 
   $res = $helper->getLeadsByFilters($filters, $next);
+
   if ($res) {
-    if (isset($res['res']) && $res['res'] == false) return $response->withJson($res);
+    if (isset($res['res']) && !$res['res']) return $response->withJson($res);
     return $response->withJson(['res'=> true, 'data' => $res]);
   } else {
     return $response->withJson(['res'=> false, "message" => 'Лиды с указаными фильтрами не найдены!']);
@@ -377,7 +378,7 @@ $app->get('/bitrix24/lead/import', function (Request $request, Response $respons
 $app->get('/bitrix24/users', function (Request $request, Response $response, array $args) {
     $helper = new EBitrix($request);
     $settings = new PBXSettings();
-    if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+    if (!$settings->getDefaultSettingsByHandle('bitrix.enable')) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
 
     $res = $helper->getUsers();
     if ($res) {
@@ -390,10 +391,9 @@ $app->get('/bitrix24/users', function (Request $request, Response $response, arr
 $app->get('/bitrix24/status', function (Request $request, Response $response, array $args) {
   $helper = new EBitrix($request);
   $settings = new PBXSettings();
-  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
 
-  $res = $helper->getStatuses();
-  if ($res) {
+  if ($res = $helper->getStatuses()) {
     $result = [];
     foreach ($res as $e) {
       if (!isset($e['STATUS_ID'])) continue;
@@ -411,7 +411,7 @@ $app->get('/bitrix24/status', function (Request $request, Response $response, ar
 $app->get('/bitrix24/source', function (Request $request, Response $response, array $args) {
   $helper = new EBitrix($request);
   $settings = new PBXSettings();
-  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
 
   $res = $helper->getSources();
   if ($res) {
@@ -432,7 +432,7 @@ $app->get('/bitrix24/source', function (Request $request, Response $response, ar
 $app->get('/bitrix24/lead/{lead_id}/state', function (Request $request, Response $response, array $args) {
     $helper = new EBitrix($request);
     $settings = new PBXSettings();
-    if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+    if (!$settings->getDefaultSettingsByHandle('bitrix.enable')) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
 
     $leadId = intval($args['lead_id']);
 
@@ -444,7 +444,7 @@ $app->get('/bitrix24/lead/{lead_id}/state', function (Request $request, Response
 $app->get('/bitrix24/lead/{lead_id}/state/{state}', function (Request $request, Response $response, array $args) {
   $helper = new EBitrix($request);
   $settings = new PBXSettings();
-  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')['value']) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
+  if (!$settings->getDefaultSettingsByHandle('bitrix.enable')) return $response->withJson(["res" => false, "message" => 'Интеграция с Битрикс24 выключена!']);
 
   $leadId = intval($args['lead_id']);
   $state = intval($args['state']);

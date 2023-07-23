@@ -169,6 +169,21 @@ $app->post('/settings/{key}/{id}/save', function (Request $request, Response $re
   return $response->withJson(["result" => FALSE]);
 });
 
+$app->get('/settings/default[/{key}]', function (Request $request, Response $response, array $args) use ($app) {
+  $settings = new PBXSettings();
+
+  if (isset($args['key'])) {
+    $setting = $settings->getDefaultSettingsByHandle($args['key']);
+
+    return $response->withJson(
+      ['res' => (bool)$setting, 'value' => $setting],
+      $setting ? 200 : 400
+    );
+  }
+
+  return $response->withJson($settings->getDefaultSettings());
+});
+
 $app->get('/settings/{key}/{id}', function (Request $request, Response $response, array $args) use ($app) {
   $id = intval($args['id']);
   $settings = new PBXSettings();
@@ -200,12 +215,6 @@ $app->get('/settings/group/{group_id}/default/{handle}', function (Request $requ
     }
 
     return $response->withJson($settings->deleteGroupSettingByHandle(trim($args['handle']), (int)$args['group_id']));
-});
-
-$app->get('/settings/default', function (Request $request, Response $response, array $args) use ($app) {
-  $settings = new PBXSettings();
-
-  return $response->withJson($settings->getDefaultSettings());
 });
 
 $app->post('/settings/default/save', function (Request $request, Response $response, array $args) use ($app) {
@@ -245,8 +254,8 @@ $app->get('/settings/mobileapp', function (Request $request, Response $response,
 
   $res['login'] = $phoneInfo[0]['login'];
   $res['password'] = $phoneInfo[0]['password'];
-  $res['webrtc_url'] = $settings->getDefaultSettingsByHandle('web.url')['value'];
-  $res['asterisk_http_port'] = $settings->getDefaultSettingsByHandle('asterisk_http_port')['value'];
+  $res['webrtc_url'] = $settings->getDefaultSettingsByHandle('web.url') || '';
+  $res['asterisk_http_port'] = $settings->getDefaultSettingsByHandle('asterisk_http_port') || '';
 
   return $response->withJson($res);
 })->add('\App\Middleware\OnlyAuthUser');

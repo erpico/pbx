@@ -292,7 +292,7 @@ class EBitrix {
 
     public function addCall($crmCall, $callId = 0, $crmCreate = 1) {
         $settings = new PBXSettings();
-        $sip_url = $settings->getDefaultSettingsByHandle('web.url')['value'];
+        $sip_url = $settings->getDefaultSettingsByHandle('web.url') || '';
         if (!is_numeric($crmCall['dst'])) $crmCall['dst'] = preg_replace('/[^0-9]/', '', $crmCall['dst']);
         if (!is_numeric($crmCall['src'])) $crmCall['src'] = preg_replace('/[^0-9]/', '', $crmCall['src']);
         if (mb_strlen($crmCall['dst']) == 11) {
@@ -305,7 +305,7 @@ class EBitrix {
             $extnum = (int)$crmCall['src'];
         }
         if ($crmCall['userfield'] == "") {
-            $crmCall['userfield'] = $settings->getDefaultSettingsByHandle('default_line')['value'];
+            $crmCall['userfield'] = $settings->getDefaultSettingsByHandle('default_line') || '';
         }
         if ($callId) {
             return $this->uploadRecordedFile($callId, $sip_url.'/recording/'.$crmCall['uid'].'.mp3', $intnum, $crmCall['talk'], $crmCall['reason'], $crmCall['userfield'], $crmCall['uid'], $crmCall);
@@ -358,7 +358,7 @@ class EBitrix {
         }
 
         $settings = new PBXSettings();
-        $result = $settings->getDefaultSettingsByHandle($lineNumber)['value'];
+        $result = $settings->getDefaultSettingsByHandle($lineNumber) || '';
         if ($result) {
             $userFromLine = $user->getBitrixIdByUserId($result);
             $result = $user->getNameById($result);
@@ -374,21 +374,21 @@ class EBitrix {
           if ($userId) $groups = $user->getUserGroups($userId);
 
           if (empty($groups['names'])) {
-            $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
+            $result = $settings->getDefaultSettingsByHandle('default_user_msk') || '';
           } else {
             foreach ($groups['names'] as $group) {
               if ($group === 'msk') {
-                $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
+                $result = $settings->getDefaultSettingsByHandle('default_user_msk') || '';
                 break;
               }
               if ($group === 'spb') {
-                $result = $settings->getDefaultSettingsByHandle('default_user_spb')['value'];
+                $result = $settings->getDefaultSettingsByHandle('default_user_spb') || '';
                 break;
               }
             }
           }
         } else {
-          $result = $settings->getDefaultSettingsByHandle('default_user_msk')['value'];
+          $result = $settings->getDefaultSettingsByHandle('default_user_msk') || '';
         }
         $defaultUser = $user->getBitrixIdByUserId($result);
         $result = $user->getNameById($result);
