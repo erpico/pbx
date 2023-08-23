@@ -97,7 +97,7 @@ class Lost_calls {
     if ($onlycount) {
       $ssql = " COUNT(*) ";
     } else {
-      $ssql = " DISTINCT src  ";
+      $ssql = " DISTINCT src, queue  ";
     }
 
     if(isset($filter['t1']) && isset($filter['t2'])) $sql = "
