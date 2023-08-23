@@ -156,8 +156,9 @@ class Lost_calls {
             $managerCalledBack = $this->isManagerCalledBack($src, $filter.$callDateFilter);
             $managerCallbackCount += $managerCalledBack ? 1 : 0;
             if (!$clientCalledBack && !$managerCalledBack) {
-                $lostCals[$lostCount]['list_losted_calls'] = $src;
-                $lostCals[$lostCount]['calldate_last_calls'] = $lastAbandonedCallDate;
+                $lostCals[$lostCount]['number'] = $src;
+                $lostCals[$lostCount]['date'] = $lastAbandonedCallDate;
+                $lostCals[$lostCount]["queue"] = $this->auth->fullname_queue($lost_calls_arr[$j][1]);
                 $lostCount++;
             }
         }
