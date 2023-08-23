@@ -354,7 +354,10 @@ $app->get('/legacy/grouped_reports_total_chart7', function (Request $request, Re
   
 })->add(new SecureRouteMiddleware($app->getContainer()->get('roleProvider')))->add(new SetRoles(['phc.reports','erpico.admin']));
 
-$app->get('/legacy/lost_calls_list', function (Request $request, Response $response, array $args) use ($app) {
+$app->map(['GET', 'OPTIONS'], '/legacy/lost_calls_list', function (Request $request, Response $response, array $args) use ($app) {
+    if ($request->getMethod() === 'OPTIONS') {
+      return $response->withJson([]);
+    }
     $filter = $request->getParam('filter', []);
     $pos = intval($request->getParam('start', 0));
     $count = $request->getParam('count', 20);
@@ -367,7 +370,10 @@ $app->get('/legacy/lost_calls_list', function (Request $request, Response $respo
 
 })->add('\App\Middleware\OnlyAuthUser');
 
-$app->get('/legacy/lost_calls_total', function (Request $request, Response $response, array $args) use ($app) {
+$app->map(['GET', 'OPTIONS'], '/legacy/lost_calls_total', function (Request $request, Response $response, array $args) use ($app) {
+    if ($request->getMethod() === 'OPTIONS') {
+      return $response->withJson([]);
+    }
     $filter = $request->getParam('filter', []);
     $pos = intval($request->getParam('start', 0));
     $count = $request->getParam('count', 20);
