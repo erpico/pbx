@@ -436,7 +436,7 @@ class Operators_work_report {
           $agent_queues = $this->auth->fullname_queue($event['queues']);
           $doo['queue'] = implode(", ", $agent_queues);
           // Check prevision record and if it same - add queue
-          if (count($datas_of_operator)) {
+          if (is_array($datas_of_operator) && count($datas_of_operator)) {
               $pe = $datas_of_operator[count($datas_of_operator) - 1];
               if ($pe['type'] == $doo['type'] &&
                   abs($pe['calldate'] - $doo['calldate']) < 2 &&
@@ -452,7 +452,7 @@ class Operators_work_report {
 
       $string_of_operator['type'] = $name_of_operator;
       for ($z = 0; $z < count($datas_of_operator); $z++) {
-        $datas_of_operator[$z]['calldate'] = date('d.m.Y H:i:s', $datas_of_operator[$z]['calldate']);
+        $datas_of_operator[$z]['calldate'] = date('d.m.Y H:i:s', (int)$datas_of_operator[$z]['calldate']);
         if ($datas_of_operator[$z]['duration']) {
             $datas_of_operator[$z]['duration'] = $this->parse_timestamp($datas_of_operator[$z]['duration']);
         } else {

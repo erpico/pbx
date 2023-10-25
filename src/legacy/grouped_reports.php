@@ -546,13 +546,13 @@ class Grouped_reports {
       $cdr_report[$num]['sum_holdtime_chart'] = '
             <div style="float:left;width:120px;">
                 <div class="chart_calls_default_left">'.$cdr_report[$num]['sum_holdtime'].'</div>
-                <div class="chart_calls_unserved" style="width:'.round(($list[2]*100/($list[1]+$list[2])),1).'%;"></div>
+                <div class="chart_calls_unserved" style="width:'.($list[1]+$list[2]?round(($list[2]*100/($list[1]+$list[2])),1):10).'%;"></div>
             </div>
         ';
       $cdr_report[$num]['sum_talktime_chart'] = '
             <div style="float:right;width:120px;">
                 <div class="chart_calls_default_right">'.$cdr_report[$num]['sum_talktime'].'</div>
-                <div class="chart_calls_served" style="width:'.round(($list[1]*100/($list[1]+$list[2])),1).'%;"></div>
+                <div class="chart_calls_served" style="width:'.($list[1]+$list[2]?round(($list[1]*100/($list[1]+$list[2])),1):10).'%;"></div>
             </div>
         ';
       $cdr_report[$num]['chart_call_time2'] = $cdr_report[$num]['sum_holdtime']." - ".$cdr_report[$num]['sum_talktime'];
