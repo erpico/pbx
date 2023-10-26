@@ -259,11 +259,11 @@ class Grouped_reports {
       $data_list_arr[$j] = next($data_list);
     };
 
-    $total_served = "";
-    $total_unserved = "";
+    $total_served = 0;
+    $total_unserved = 0;
     for($k=0; $k<$count_data_list; $k++) {
-      $total_served+= $data_list_arr[$k]['3'] + $data_list_arr[$k]['4'] + $data_list_arr[$k]['5'];
-      $total_unserved+= $data_list_arr[$k]['6'] + $data_list_arr[$k]['7'] + $data_list_arr[$k]['8'] + $data_list_arr[$k]['9'] + $data_list_arr[$k]['10'];
+      $total_served+= (int)$data_list_arr[$k]['3'] + (int)$data_list_arr[$k]['4'] + (int)$data_list_arr[$k]['5'];
+      $total_unserved+= (int)$data_list_arr[$k]['6'] + (int)$data_list_arr[$k]['7'] + (int)$data_list_arr[$k]['8'] + (int)$data_list_arr[$k]['9'] + (int)$data_list_arr[$k]['10'];
     };
 
     for($k=0; $k<$count_data_list; $k++) {
@@ -293,7 +293,7 @@ class Grouped_reports {
 		';
         $data_list_result[$k]['chart_count_call2'] = $data_list_result[$k]['served_call_per']."% - ".$data_list_result[$k]['unserved_call_per']."%";
 
-        $data_list_result[$k]['investment_served'] = round($served_call*100/$total_served, 1);
+        $data_list_result[$k]['investment_served'] = $total_served?round($served_call*100/$total_served, 1):0;
         $data_list_result[$k]['investment_unserved'] = intval($total_unserved) ? round($unserved_call*100/$total_unserved, 1): 0;
 
         $data_list_result[$k]['time_sum_talk'] = $utils->time_format($data_list_arr[$k]['1']);
