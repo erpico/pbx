@@ -94,13 +94,13 @@ LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id " : "
     if(isset($filter['filter'])) {
       if($filter['filter']==2) {
           $demand = isset($filter['groupByUuid'])
-              ? $demand . " AND (a.reason = 'COMPLETEAGENT' OR a.reason = 'COMPLETECALLER' OR a.reason = 'TRANSFER') AND !a.outgoing "
-              : $demand . " AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND !outgoing ";
+              ? $demand . " AND (a.reason = 'COMPLETEAGENT' OR a.reason = 'COMPLETECALLER' OR a.reason = 'TRANSFER') "
+              : $demand . " AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') ";
       }
       else if($filter['filter']==3) {
           $demand = isset($filter['groupByUuid'])
-          ? $demand . " AND (a.reason = 'ABANDON' OR a.reason = 'EXITWITHTIMEOUT' OR a.reason = 'EXITEMPTY' OR a.reason = 'EXITWITHTKEY') AND !a.outgoing "
-          : $demand . " AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') AND !outgoing ";
+          ? $demand . " AND (a.reason = 'ABANDON' OR a.reason = 'EXITWITHTIMEOUT' OR a.reason = 'EXITEMPTY' OR a.reason = 'EXITWITHTKEY') "
+          : $demand . " AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY') ";
       }
       else if($filter['filter']==4) {
           $demand = isset($filter['groupByUuid'])
@@ -109,13 +109,13 @@ LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id " : "
       }
       else {
           $demand = isset($filter['groupByUuid'])
-            ? $demand . " AND !a.outgoing AND a.reason != 'RINGNOANSWER' "
-            : $demand . " AND !outgoing AND reason != 'RINGNOANSWER' ";
+            ? $demand . " AND a.reason != 'RINGNOANSWER' "
+            : $demand . " AND reason != 'RINGNOANSWER' ";
       }
     } else {
         $demand = isset($filter['groupByUuid'])
-            ? $demand . " AND !a.outgoing AND a.reason != 'RINGNOANSWER' "
-            : $demand . " AND !outgoing AND reason != 'RINGNOANSWER' ";
+            ? $demand . " AND a.reason != 'RINGNOANSWER' "
+            : $demand . " AND reason != 'RINGNOANSWER' ";
     }
 
     if(isset($filter['src'])) {

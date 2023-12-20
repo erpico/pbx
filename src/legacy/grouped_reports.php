@@ -33,7 +33,7 @@ class Grouped_reports {
                 GROUP_CONCAT(DISTINCT agentname)
             FROM queue_cdr 
              ";
-    $wsql = " WHERE !outgoing ";
+    $wsql = " WHERE 1=1 ";
 
     if(isset($filter['t1']) && isset($filter['t2']))  $wsql .="
         AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
@@ -346,7 +346,7 @@ class Grouped_reports {
 					MIN(IF(talktime,talktime,NULL)),
 					queue
 				FROM queue_cdr
-				WHERE reason != 'RINGNOANSWER' AND !outgoing ".$sql.$sql_agent;
+				WHERE reason != 'RINGNOANSWER' AND 1=1 ".$sql.$sql_agent;
 
     if(isset($filter['t1']) && isset($filter['t2'])) $sql = $sql."
 				AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
@@ -618,7 +618,7 @@ class Grouped_reports {
 					count(IF((reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND holdtime BETWEEN 76 AND 90,1,NULL)) AS total_answered_calls_90,
 					count(IF((reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND holdtime > 90,1,NULL)) AS total_answered_calls_over90   ";
 
-    $sql.= "	FROM queue_cdr WHERE reason != 'RINGNOANSWER' AND !outgoing ";
+    $sql.= "	FROM queue_cdr WHERE reason != 'RINGNOANSWER' AND 1=1 ";
 
 //  Time settings
     if (intval($filter['t1']) && isset($filter['t2']) && strval($filter['t1']) && strval($filter['t2'])) {

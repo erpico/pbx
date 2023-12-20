@@ -52,7 +52,7 @@ class Record_contact_center {
  				LEFT JOIN acl_user AS C ON (A.agentname=C.`name`)
  				WHERE 1=1 $wsql";
 
-    $sql.= "	AND !outgoing AND LENGTH(record_file) ";
+    $sql.= "	AND LENGTH(record_file) ";
 
     $deny_num = $this->auth->deny_numbers();
     $deny = $utils->sql_deny_numbers_for_records($deny_num);

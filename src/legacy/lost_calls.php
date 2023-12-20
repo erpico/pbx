@@ -19,7 +19,7 @@ class Lost_calls {
         $query = "
         SELECT COUNT(*) AS count_calls
         FROM queue_cdr
-        WHERE !outgoing AND src LIKE '%".substr($src,2)."' AND reason != 'ABANDON' AND reason != 'EXITWITHTIMEOUT' AND
+        WHERE src LIKE '%".substr($src,2)."' AND reason != 'ABANDON' AND reason != 'EXITWITHTIMEOUT' AND
         reason != 'EXITEMPTY' AND reason != 'EXITWITHTKEY' AND reason != 'RINGNOANSWER' ".$sql;
 
         $que = $this->auth->allowed_queues();
@@ -111,7 +111,7 @@ class Lost_calls {
     $query = "
       SELECT ".$ssql."
       FROM queue_cdr 
-      WHERE !outgoing ".$sql;
+      WHERE 1=1 ".$sql;
 
     $que = $this->auth->allowed_queues();
     $queues = $utils->sql_allowed_queues($que);
@@ -196,7 +196,7 @@ class Lost_calls {
     $query = "
       SELECT ".$ssql." 
       FROM queue_cdr LEFT JOIN queue ON queue.name = queue_cdr.queue
-      WHERE LENGTH(src) > 4 AND !outgoing ".$sql;
+      WHERE LENGTH(src) > 4 ".$sql;
 
     $que = $this->auth->allowed_queues();
     $queues = $utils->sql_allowed_queues($que);
