@@ -858,7 +858,10 @@ $app->any('/config/phone/{mac}', function (Request $request, Response $response,
   $data = $list[0];
 
   $data['server'] = $container['server_host'];
-
+   $sipserver = explode(':', $settings->getSettingByHandle("sipphone.server")['val']);
+  $data['sipserver'] = $sipserver[0];
+  $data['sipport'] =$sipserver[1];
+  
   $template = file_get_contents(__DIR__ . "/../templates/phones/yealink-t.tpl");
 
   foreach ($data as $k => $v) {
