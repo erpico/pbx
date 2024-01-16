@@ -41,10 +41,10 @@ $app->any('/amocrm[/]', function (Request $request, Response $response, array $a
   $client_id = $request->getParam("client_id", null);
   $instance_id = $request->getParam("state", null);
 
-  if (str_contains($instance_id, "http")) {
+  /*if (str_contains($instance_id, "http")) {
       header("Location: $instance_id/amocrm?code=$code&referer=$referer&platform=$platform&client_id=$client_id");
       die();
-  }
+  }*/
 
   $amo = new EAmoCRM();
 

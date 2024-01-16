@@ -39,7 +39,7 @@ class EAmoCRM {
             data-compact="false"
             data-class-name="className"
             data-color="default"
-            data-state="' . $instance . '"
+            data-state="erpicopbx"
             data-error-callback="handleOauthError"
             data-mode="post_message"
             src="https://www.amocrm.ru/auth/button.min.js"
