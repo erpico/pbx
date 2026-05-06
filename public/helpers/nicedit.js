@@ -20,7 +20,7 @@ webix.protoUI({
 
 		var sources = [];
 		
-		var cdn = this.config.cdn ? this.config.cdn : "https://cdnjs.cloudflare.com/ajax/libs/NicEdit/0.93";
+		var cdn = this.config.cdn ? this.config.cdn : "/assets/vendor/nicedit";
 
 		sources.push(cdn+"/nicEdit.js")
 
