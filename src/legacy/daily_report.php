@@ -31,6 +31,9 @@ class Daily_report {
     if (is_array($filter) && isset($filter['dst']) && strlen($filter['dst'])) {
       $wsql .= " AND dst LIKE '%".trim(addslashes($filter['dst']))."%' ";
     }
+    if (is_array($filter) && isset($filter['queue']) && strlen($filter['queue'])) {
+      $wsql .= " AND SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) = " . $filter['queue'] . " ";
+    }
 
     if ($onlycount) {
       $res = $this->db->query("

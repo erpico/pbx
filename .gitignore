@@ -5,8 +5,7 @@
 /queues
 /deprecated
 /tmp/*
-composer.lock
 composer.phar
-public/package-lock.json
 /.idea/*
-
+/public/photos/*
+/public/audio/*

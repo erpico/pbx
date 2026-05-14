@@ -33,7 +33,7 @@ class Grouped_reports {
                 GROUP_CONCAT(DISTINCT agentname)
             FROM queue_cdr 
              ";
-    $wsql = " WHERE !outgoing ";
+    $wsql = " WHERE 1=1 ";
 
     if(isset($filter['t1']) && isset($filter['t2']))  $wsql .="
         AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
@@ -259,11 +259,11 @@ class Grouped_reports {
       $data_list_arr[$j] = next($data_list);
     };
 
-    $total_served = "";
-    $total_unserved = "";
+    $total_served = 0;
+    $total_unserved = 0;
     for($k=0; $k<$count_data_list; $k++) {
-      $total_served+= $data_list_arr[$k]['3'] + $data_list_arr[$k]['4'] + $data_list_arr[$k]['5'];
-      $total_unserved+= $data_list_arr[$k]['6'] + $data_list_arr[$k]['7'] + $data_list_arr[$k]['8'] + $data_list_arr[$k]['9'] + $data_list_arr[$k]['10'];
+      $total_served+= (int)$data_list_arr[$k]['3'] + (int)$data_list_arr[$k]['4'] + (int)$data_list_arr[$k]['5'];
+      $total_unserved+= (int)$data_list_arr[$k]['6'] + (int)$data_list_arr[$k]['7'] + (int)$data_list_arr[$k]['8'] + (int)$data_list_arr[$k]['9'] + (int)$data_list_arr[$k]['10'];
     };
 
     for($k=0; $k<$count_data_list; $k++) {
@@ -293,7 +293,7 @@ class Grouped_reports {
 		';
         $data_list_result[$k]['chart_count_call2'] = $data_list_result[$k]['served_call_per']."% - ".$data_list_result[$k]['unserved_call_per']."%";
 
-        $data_list_result[$k]['investment_served'] = round($served_call*100/$total_served, 1);
+        $data_list_result[$k]['investment_served'] = $total_served?round($served_call*100/$total_served, 1):0;
         $data_list_result[$k]['investment_unserved'] = intval($total_unserved) ? round($unserved_call*100/$total_unserved, 1): 0;
 
         $data_list_result[$k]['time_sum_talk'] = $utils->time_format($data_list_arr[$k]['1']);
@@ -346,7 +346,7 @@ class Grouped_reports {
 					MIN(IF(talktime,talktime,NULL)),
 					queue
 				FROM queue_cdr
-				WHERE reason != 'RINGNOANSWER' AND !outgoing ".$sql.$sql_agent;
+				WHERE reason != 'RINGNOANSWER' AND 1=1 ".$sql.$sql_agent;
 
     if(isset($filter['t1']) && isset($filter['t2'])) $sql = $sql."
 				AND calldate>'".$filter['t1']."' AND calldate<'".$filter['t2']."' ";
@@ -546,13 +546,13 @@ class Grouped_reports {
       $cdr_report[$num]['sum_holdtime_chart'] = '
             <div style="float:left;width:120px;">
                 <div class="chart_calls_default_left">'.$cdr_report[$num]['sum_holdtime'].'</div>
-                <div class="chart_calls_unserved" style="width:'.round(($list[2]*100/($list[1]+$list[2])),1).'%;"></div>
+                <div class="chart_calls_unserved" style="width:'.($list[1]+$list[2]?round(($list[2]*100/($list[1]+$list[2])),1):10).'%;"></div>
             </div>
         ';
       $cdr_report[$num]['sum_talktime_chart'] = '
             <div style="float:right;width:120px;">
                 <div class="chart_calls_default_right">'.$cdr_report[$num]['sum_talktime'].'</div>
-                <div class="chart_calls_served" style="width:'.round(($list[1]*100/($list[1]+$list[2])),1).'%;"></div>
+                <div class="chart_calls_served" style="width:'.($list[1]+$list[2]?round(($list[1]*100/($list[1]+$list[2])),1):10).'%;"></div>
             </div>
         ';
       $cdr_report[$num]['chart_call_time2'] = $cdr_report[$num]['sum_holdtime']." - ".$cdr_report[$num]['sum_talktime'];
@@ -618,7 +618,7 @@ class Grouped_reports {
 					count(IF((reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND holdtime BETWEEN 76 AND 90,1,NULL)) AS total_answered_calls_90,
 					count(IF((reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND holdtime > 90,1,NULL)) AS total_answered_calls_over90   ";
 
-    $sql.= "	FROM queue_cdr WHERE reason != 'RINGNOANSWER' AND !outgoing ";
+    $sql.= "	FROM queue_cdr WHERE reason != 'RINGNOANSWER' AND 1=1 ";
 
 //  Time settings
     if (intval($filter['t1']) && isset($filter['t2']) && strval($filter['t1']) && strval($filter['t2'])) {

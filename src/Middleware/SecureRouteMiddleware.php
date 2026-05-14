@@ -53,7 +53,7 @@ class SecureRouteMiddleware
         }
 
         if ($allowed === false) {
-          $response = $response->withJson(['result' => FALSE, 'message' => 'Permission denied'], 403);
+          return $response->withJson(["error" => 1, "message" => "No auth"], 403);
         }
 
         return $next($request, $response);

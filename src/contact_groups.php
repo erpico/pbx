@@ -1,4 +1,6 @@
 <?php
+
+use App\ExportImport;
 use Erpico\User;
 
 class PBXContactGroups {
@@ -330,5 +332,102 @@ class PBXContactGroups {
     }
     return $result;
   }
-  
+
+  public function export() {
+    $result = [];
+
+    $queueObject =  new PBXQueue();
+    //
+    foreach ($this->fetchList(null, 0, null, 0) as $item) {
+
+      $queues_in = [];
+      foreach ($item['queues'] as $queue_in) {
+        $queues_in[] = $queueObject->getName($queue_in['id']);
+      }
+
+      $queues_in_group = [];
+      foreach ($item['items']['queues'] as $queue_in_group) {
+        $queues_in_group[] = $queueObject->getName($queue_in_group['id']);
+      }
+
+      $users_in_group = [];
+      foreach ($item['items']['queues'] as $user_in_group) {
+        $users_in_group[] = $this->user->getNameById($user_in_group['id']);
+      }
+
+      unset($item['id']);
+      unset($item['queues']);
+      unset($item['items']);
+
+      $item['queues_in'] = $queues_in;
+      $item['queues_in_group'] = $queues_in_group;
+      $item['users_in_group'] = $users_in_group;
+
+      $result['contact_groups'][] = $item;
+    }
+
+    return $result;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    $queueObject = new PBXQueue();
+
+    //
+    if ($delete) {
+      $exportImport->truncateTables([
+        "contact_groups",
+        "contact_groups_items",
+        "contact_groups_queues"
+      ]);
+    }
+
+    $contact_groups = $data->contact_groups;
+
+    foreach ($contact_groups as $item) {
+      $item->queue = intval($queueObject->getIdByName($item->queue_in))?:null;
+      // группы
+      $contactGroupId = $exportImport->importAction($item, ["name", "queue"], "contact_groups");
+      // очереди
+      foreach ($item->queues_in as $queue_in) {
+        $queueId = $queueObject->getIdByName($queue_in);
+        $array = [
+          "contact_groups_id" => $contactGroupId,
+          "queue_id" => $queueId
+          ];
+
+        $exportImport->importAction($array, ["contact_groups_id", "queue_id"],"contact_groups_queues");
+      }
+      // юзеры и очереди в группе
+      foreach ($item->queues_in_group as $queue_in_group) {
+        //$userId = $this->user->getIdByName($item->user);
+        $arrayQueue = [
+          "contact_groups_id" => $contactGroupId,
+          "queue" => $queue_in_group,
+          "queue_id" => $queueObject->getIdByName($queue_in_group),
+          "acl_user_id" => null,
+          "phone" => null
+        ];
+        $exportImport->importAction($arrayQueue, ["contact_groups_id", "queue", "queue_id", "acl_user_id", "phone"],"contact_groups_items");
+      }
+
+      foreach ($item->users_in_group as $users_in_group) {
+
+        $userId = $this->user->getIdByName($users_in_group);
+        $arrayUsers = [
+          "contact_groups_id" => $contactGroupId,
+          "queue" => "",
+          "queue_id" => null,
+          "acl_user_id" => $userId,
+          "phone" => $this->user->getPhone($userId)
+        ];
+
+        $exportImport->importAction($arrayUsers, ["contact_groups_id", "queue", "queue_id", "acl_user_id", "phone"],"contact_groups_items");
+      }
+    }
+
+    return $result;
+  }
 }

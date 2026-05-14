@@ -16,6 +16,7 @@
         "slim/slim": "^3.1",
         "slim/php-view": "^2.0",
         "monolog/monolog": "^1.17",
+        "lulco/phoenix": "^1.8",
         "akrabat/rka-ip-address-middleware": "^0.6.0",
         "tkhamez/slim-role-auth": "1.0.0",
         "marcelog/pami": "^2.0",
@@ -25,7 +26,17 @@
         "http-interop/http-factory-guzzle": "^1.0",
         "php-http/httplug": "^2.2",
         "php-http/message": "^1.11",
-        "supervisorphp/supervisor": "^4.0"
+        "supervisorphp/supervisor": "^4.0",
+        "mesilov/bitrix24-php-sdk": "^1.2",
+        "symfony/http-client": "^5.4",
+        "ext-ftp": "*",
+        "gladcodes/keygen": "^1.1",
+        "symfony/options-resolver": "^5.4.11",
+        "norkunas/onesignal-php-api": "^2.10",
+        "nyholm/psr7": "^1.5",
+        "ext-pdo": "*",
+        "ext-json": "*",
+        "amocrm/oauth2-amocrm": "^2.0"
     },
     "require-dev": {
         "phpunit/phpunit": ">=4.8 < 6.0"
@@ -41,7 +52,10 @@
         }
     },
     "config": {
-        "process-timeout" : 0
+        "process-timeout" : 0,
+        "allow-plugins": {
+            "php-http/discovery": true
+        }
     },
     "scripts": {
         "start": "php -S localhost:8080 -t public",

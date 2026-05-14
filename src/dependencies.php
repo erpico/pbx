@@ -6,6 +6,7 @@ use App\Services\RequestTypeService;
 use PAMI\Client\Impl\ClientImpl;
 
 $container = $app->getContainer();
+$app_request = $container->get('request');
 
 // Replace to localhost on $_SERVER
 if (in_array(getenv('env'), ['dev','test'])) {
@@ -37,6 +38,7 @@ $container['server_host'] = function ($c) {
 };
 $container['errorHandler'] = function ($c) {
   return function ($request, $response, $exception) use ($c) {
+    $c['logger']->error('Exception: ' . $exception->getMessage() . " ON " . $exception->getFile() . ":" . $exception->getLine() . " Trace: " . $exception->getTraceAsString());
     return $response->withStatus(500)->withJson([
      'result' => false, 'message' => $exception->getMessage()
    ]);
@@ -44,6 +46,7 @@ $container['errorHandler'] = function ($c) {
 };
 $container['phpErrorHandler'] = function ($c) {
   return function ($request, $response, $exception) use ($c) {
+    $c['logger']->error('Exception: ' . $exception->getMessage() . " ON " . $exception->getFile() . ":" . $exception->getLine() . " Trace: " . $exception->getTraceAsString());
     return $response->withStatus(500)->withJson([
      'result' => false, 'message' => $exception->getMessage()
      ]);
@@ -57,24 +60,31 @@ $container['notAllowedHandler'] = function ($c) {
   };
 };
 
-$container['db'] = function ($c)  use ($container, $app) {
-  $db = $c->get('settings')['db'];
+$container['dbConfig'] = function ($c) {
   $filename = "/etc/erpico.conf";
   if (file_exists($filename)) {
     $fcfg = fopen($filename, "r");
     $config = [];
     while ($s = fgets($fcfg)) {
-      list($key,$value) = explode("=", $s, 2);
+      if ($s == "\n") continue;
+      list($key, $value) = explode("=", $s, 2);
       $key = trim($key);
       $value = trim($value, " \"\t\n\r\0\x0B");
       $config[$key] = $value;
     };
     fclose($fcfg);
-    $db['host'] = $config['db_host'];
-    $db['user'] = $config['db_user'];
-    $db['password'] = $config['db_password'];
-    $db['schema'] = $config['db_schema'];
-    $container['instance_id'] = $config['vpn_name'];
+  }
+  return $config;
+};
+
+$container['db'] = function ($c)  use ($container, $app) {
+  $db = $c->get('settings')['db'];
+  if ($container['dbConfig']) {
+    $db['host'] = $container['dbConfig']['db_host'];
+    $db['user'] = $container['dbConfig']['db_user'];
+    $db['password'] = $container['dbConfig']['db_password'];
+    $db['schema'] = $container['dbConfig']['db_schema'];
+    $container['instance_id'] = $container['dbConfig']['vpn_name'];
   }
   try {
     $pdo = new PDO("mysql:host=" . $db['host'] . ";dbname=" . $db['schema'].";charset=UTF8", $db['user'], $db['password']);
@@ -98,6 +108,7 @@ $container['ami'] = function ($c)  use ($container, $app) {
     $fcfg = fopen($filename, "r");
     $config = [];
     while ($s = fgets($fcfg)) {
+      if ($s == "\n") continue;
       list($key,$value) = explode("=", $s, 2);
       $key = trim($key);
       $value = trim($value, " \"\t\n\r\0\x0B");
@@ -115,8 +126,15 @@ $container['ami'] = function ($c)  use ($container, $app) {
   return $ami;
 };
 
-$container['auth'] = function ($c) use ($app){
-    return new \Erpico\User($app->getContainer()['db']);
+$container['auth'] = function ($c) use ($app, $app_request){
+    $key = $app_request->getHeaderLine('X-PBXAPIKEY');
+    if (!strlen($key)) {
+        $key = $app_request->getParam('X-PBXAPIKEY');
+    }
+
+    $api_user = PBXApi_keys::getUserByKey($key);
+
+    return new \Erpico\User($app->getContainer()['db'], $api_user);
 };
 $container['roleProvider'] = function ($container) {
   $myService = new RoleProvider($container);
@@ -132,6 +150,9 @@ $container[RequestTypeService::class] = function ($container) {
   $requestTypeService = new RequestTypeService();
   
   return $requestTypeService;
+};
+$container[\App\Chat\ChatMessageRepository::class] = function ($container) {
+    return new \App\Chat\MySQLChatMessageRepository($container['db']);
 };
 
 require_once( __DIR__ . "/legacy/utils.php");
@@ -175,3 +196,4 @@ require_once( __DIR__ . "/old_contact_cdr.php");
 require_once( __DIR__ . "/Providers/RoleProvider.php");
 require_once( __DIR__ . "/aliases.php");
 require_once( __DIR__ . "/blacklist.php");
+require_once( __DIR__ . "/api_key.php");

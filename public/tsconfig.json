@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es6",
+    "lib": ["es2016", "dom"],
+    "baseUrl":".",
+    "paths": {
+      "models/*":["sources/models/*"],
+      "views/*":["sources/views/*"]
+    },
+    "sourceMap": true,
+    "types": ["webpack-env"]
+  },
+  "include":[
+    "sources/**/*.ts"
+  ],
+  "files": [
+    "webix/types/webix.global.d.ts",
+  ]
+}

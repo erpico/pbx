@@ -1,7 +1,11 @@
 <?php
 
+use App\ExportImport;
+use App\Journal\PBXJournal;
+
 class PBXQueue {
   protected $db;
+  private $journal;
   const FIELDS = [
     "name" => 0,
     "fullname" => 0,
@@ -20,12 +24,14 @@ class PBXQueue {
   ];
 
   public function __construct() {
-    global $app;    
+    global $app;
+    global $user;
     $container = $app->getContainer();
     $this->db = $container['db'];
     $this->logger = $container['logger'];
     $this->user = $container['auth'];//new Erpico\User($this->db);
-    $this->utils = new Erpico\Utils();    
+    $this->utils = new Erpico\Utils();
+    if ($user) $this->journal = new PBXJournal($user->getId() || 0);
   }
 
   private function getTableName() {
@@ -43,6 +49,7 @@ class PBXQueue {
         return ["result" => false, "message" => "# очереди не может быть пустым"];
       }
       if ($this->db->query("SET FOREIGN_KEY_CHECKS=0; DELETE FROM ".self::getTableName()." WHERE id = ".intval($id). "; SET FOREIGN_KEY_CHECKS = 1; ")) {
+        $this->journal->log(PBXJournal::DELETE_QUEUE, ['queue' => $id]);
         return ["result" => true, "message" => "Удаление прошло успешно"];
       }
     } catch (Exception $ex) {
@@ -112,9 +119,10 @@ class PBXQueue {
   }
   
   public function getQueueAgent($id) {
-    $sql = "SELECT queue_agent.acl_user_id, acl_user.name, queue_agent.phone, queue_agent.static, queue_agent.penalty FROM queue_agent 
-    LEFT JOIN acl_user ON (acl_user.id = queue_agent.acl_user_id)
-    WHERE queue_agent.queue_id = '{$id}'";
+    $sql = "SELECT queue_agent.acl_user_id, acl_user.name, queue_agent.phone, queue_agent.static, queue_agent.penalty, acl_user_phone.id AS phone_id FROM queue_agent 
+                  LEFT JOIN acl_user ON (acl_user.id = queue_agent.acl_user_id)
+                  LEFT JOIN acl_user_phone ON (acl_user_phone.phone = queue_agent.phone)
+                  WHERE queue_agent.queue_id = '{$id}'";
     $res = $this->db->query($sql);
     $result = [];
     while ($row = $res->fetch()) {
@@ -122,6 +130,7 @@ class PBXQueue {
     }
     return $result; 
   }
+
   private function isUniqueColumn($column, $name, $id) {
     if (in_array($column, SELF::FIELDS)) {
       $data = $this->fetchList([$column => $name], 0, 3, 0, 0, 0);
@@ -182,11 +191,21 @@ class PBXQueue {
         if (isset($values['id']) && intval($values['id'])) {
           $sql .= " WHERE id ='".intval($values['id'])."'";
         }
+
+        if ($values['id']) {
+          $this->journal->log(PBXJournal::MODIFY_QUEUE,
+            ["queue" => $values['id'], "changes" => $this->getQueueChanges($values)]
+          );
+        }
+
         $this->db->query($sql);
         if (isset($values['id']) && intval($values['id'])) {
           $id = intval($values['id']);
         } else {
           $id = $this->db->lastInsertId();
+          $this->journal->log(PBXJournal::CREATE_QUEUE,
+            ["queue" => $id, "data" => $values]
+          );
         }
         //$this->deleteQueueAgents($id);
         $agents = json_decode($values["agents"], true);
@@ -258,7 +277,13 @@ class PBXQueue {
       if (is_array($p['agents'])) {
         foreach ($p['agents'] as $a) {
           if ($a['static'] && strlen($a['phone'])) {
-            $result .= "member => Local/{$a['phone']}@queue_member,{$a['penalty']},{$a['phone']}\n";
+            if ($a['phone_id'] != 0) {
+              // SIP member
+              $result .= "member => SIP/{$a['phone']},{$a['penalty']},{$a['phone']},SIP/{$a['phone']}\n";
+            } else {
+              // Other member
+              $result .= "member => Local/{$a['phone']}@queue_member,{$a['penalty']},{$a['phone']}\n";
+            }
           }
         }
       }
@@ -280,4 +305,76 @@ class PBXQueue {
     return  $value .= $i ? $i : "";
   }
 
+  public function export(){
+    $result = [];
+
+    // queues
+    foreach ($this->fetchList(null, 0, null, 0) as $item) {
+      $agents = $item['agents'];
+      unset($item['id']);
+      unset($item['agents']);
+      $item['agents'] = [];
+      foreach ($agents as $agent) {
+        unset($agent['id']);
+        $item['agents'][] = $agent;
+      }
+
+      $result["queues"][] = $item;
+    }
+
+    return $result;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    //queue
+    //queue_agent
+
+    if ($delete) {
+      $exportImport->truncateTables([
+        "queue", "queue_agent"
+      ]);
+    }
+
+    $queues = $data->queues;
+    $agents = $data->agents;
+
+    foreach ($queues as $item) {
+      // queue
+      $exportImport->importAction($item,array_keys(self::FIELDS),'queue');
+      // queue_agent
+      foreach ($agents as $agent) {
+        $agent['acl_user_id'] = (new \Erpico\User())->getIdByName($agent->name);
+        if (!empty($agent['acl_user_id'])) {
+          $exportImport->importAction($agent, ['acl_user_id', 'name', 'phone', 'static', 'penalty'], "queue_agent");
+        }
+      }
+    }
+
+    return $result;
+  }
+
+  public function getIdByName($name)
+  {
+    $result = $this->db->query("SELECT id FROM {$this->getTableName()} WHERE name = '{$name}'");
+    return $result->fetchColumn();
+  }
+
+  private function getQueueChanges($newData) {
+    $queue = new PBXQueue();
+    $oldData = $queue->fetchList(['id' => $newData['id']])[0];
+
+    $oldDataAlarms = json_decode($oldData['alarms'], 1);
+    $newDataAlarms = json_decode($newData['alarms'], 1);
+    ksort($oldDataAlarms);
+    ksort($newDataAlarms);
+    $oldData['alarms'] = $oldDataAlarms;
+    $newData['alarms'] = $newDataAlarms;
+
+    $oldData['agents'] = json_encode($oldData['agents']);
+
+    return $this->journal->getEssenceDiffs($oldData, $newData);
+  }
 }

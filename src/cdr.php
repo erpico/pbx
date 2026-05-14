@@ -4,11 +4,23 @@ class PBXCdr {
   protected $db;
   /** @var \Erpico\User $user */
   private $user;
-  
-  public function __construct() {
+
+  private string $direction;
+  private int $answered;
+  private int $missed;
+  /** @var Erpico\Utils $utils */
+  private $utils;
+  private array $mapQueues;
+  private array $mapUsers;
+
+  public function __construct(string $direction = '', int $answered = -1, int $missed = 0) {
     global $app;    
     $container = $app->getContainer();
     $this->db = $container['db'];
+
+    $this->direction = $direction;
+    $this->answered = $answered;
+    $this->missed = $missed;
 
     $this->user = $container['auth'];//new Erpico\User($this->db);
     $this->utils = new Erpico\Utils();
@@ -16,8 +28,8 @@ class PBXCdr {
   
   private function normalizePhone(&$_phone) {
     $_phone = preg_replace("/[^\d]/", "", trim($_phone));
-    if ($_phone[0] == '7' && strlen($phone) > 8) $_phone = "8".substr($_phone, 1);
-    if (strlen($_phone) == 10) $_phone = "8".$_phone;
+    if (isset($_phone[0]) && $_phone[0] == '7' && strlen($_phone) > 8) $_phone = "8" . substr($_phone, 1);
+    if (strlen($_phone) == 10) $_phone = "8" . $_phone;
     return $_phone;
   }
 
@@ -25,72 +37,113 @@ class PBXCdr {
     return 'cdr';
   }
 
-  public function getReportsByUid($id) {
+  public function getReportsByUid($id, $main = null) {
     $sql =  "SELECT 
-          calldate AS time, 
-          src, 
-          agentdev AS dst, 
-          queue, 
-          reason, 
-          holdtime AS hold, 
-          talktime AS talk, 
-          uniqid, 
-          agentname,
-          queue,
-          channel,
-          dstchannel
-    FROM queue_cdr WHERE uniqid = '{$id}' 
+          ".($main ? 'a.' : '')."calldate AS time,
+          ".($main ? 'a.' : '')."src, 
+          ".($main ? 'a.' : '')."agentdev AS dst,
+          ".($main ? 'a.' : '')."queue, 
+          ".($main ? 'a.' : '')."reason,
+          ".($main ? 'a.' : '')."holdtime AS hold, 
+          ".($main ? 'a.' : '')."talktime AS talk,
+          ".($main ? 'a.' : '')."uniqid, 
+          fullname as agentname,
+          ".($main ? 'a.' : '')."queue,
+          ".($main ? 'a.' : '')."channel,
+          ".($main ? 'a.' : '')."dstchannel,
+          ".($main ? 'a.' : '')."userfield 
+          FROM queue_cdr ".($main ? 'a ' : '')
+        .($main ? 'LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id ' : '')
+        ."LEFT JOIN acl_user on (".($main ? 'a.' : '')."agentname = acl_user.name)
+    WHERE ".($main ? 'a.' : '')."uniqid = '{$id}' ".($main ? 'AND b.uniqid IS NULL ' : '')."
      UNION ALL
-    SELECT calldate AS time, src, dst, name, disposition AS reason, duration - billsec AS hold , billsec AS talk, uniqueid AS uniqid, '', '', channel, dstchannel
-    FROM cdr WHERE uniqueid = '{$id}'";
-    $result_cdr = $this->db->query($sql);      
+    SELECT calldate AS time, src, dst, cdr.name, disposition AS reason, duration - billsec AS hold , billsec AS talk, uniqueid AS uniqid, fullname as agentname, '', channel, dstchannel, userfield
+    FROM cdr 
+    LEFT JOIN acl_user on (SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) = acl_user.name)
+    WHERE uniqueid = '{$id}'";
+    $result_cdr = $this->db->query($sql);
     $cdr = $result_cdr->fetchAll(\PDO::FETCH_ASSOC);
 
     return $cdr;      
   }
 
-  public function getReport($filter, $start = 0, $limit = 20, $onlyCount = 0, $serverFooter = 0, $_lcd = 0) {
-    $ext = $this->user->allow_extens();
-    $extens = $this->utils->sql_allow_extens($ext);
+  public function getSyncByUid($id) {
+    $sql = "SELECT id, sync_time, u_id, status, call_id, call_time, result FROM phc.btx_call_sync WHERE u_id='".$id."'";
+    $res = $this->db->query($sql);
 
-    $que = $this->user->allowed_queues();
-    $queues = $this->utils->sql_allowed_queues_for_records($que);
+    $syncCalls = [];
+    while ($row = $res->fetch()) {
+      $syncCalls[] = $row;
+    }
 
+    return $syncCalls;
+  }
+
+  public function getReport($filter, $start = 0, $limit = 20, $onlyCount = 0, $serverFooter = 0, $_lcd = 0)
+  {
+    $extens = "";
+    $queues = "";
+
+    if (isset($_SERVER['REMOTE_ADDR'])) {
+      $ext = $this->user->allow_extens();
+      $extens = $this->utils->sql_allow_extens($ext);
+
+
+      $que = $this->user->allowed_queues();
+      $queues = $this->utils->sql_allowed_queues_for_records($que);
+    }
     $users_list = $this->user->getUsersList();
 
     $qwsql = "";
     $cwsql = "";
 
     $timeisset = 0;
-    $userPhone = addslashes($this->user->getPhone($this->user->getId()));
-    $userName = addslashes($this->user->getInfo()['name']);
-    $isCanSeeOthers = in_array('phc.reports',$this->user->getUserRoles()) || in_array('erpico.admin',$this->user->getUserRoles());
-
-    if (!$isCanSeeOthers) {
-      $cwsql .= "	AND (cdr.src = '".$userPhone."' OR cdr.dst = '".$userPhone."') "; //Ignore CDR
-      $qwsql .= "	AND ( a.agentname = '".$userName."' OR a.src = '".$userPhone."' OR a.agentdev  = '".$userPhone."')";
+    if ($this->user->getId()) {
+      $userPhone = addslashes($this->user->getPhone($this->user->getId()));
+      $userName = addslashes($this->user->getInfo()['name']);
+     // allow you to see only yours calls
+      $isCanSeeOthers = in_array('phc.reports', $this->user->getUserRoles()) || in_array('erpico.admin', $this->user->getUserRoles());
+      if (isset($_SERVER['REMOTE_ADDR'])) {
+        if (!$isCanSeeOthers) {
+          $cwsql .= "	AND (cdr.src = '" . $userPhone . "' OR cdr.dst = '" . $userPhone . "') "; //Ignore CDR
+          $qwsql .= "	AND ( a.agentname = '" . $userName . "' OR a.src = '" . $userPhone . "' OR a.agentdev  = '" . $userPhone . "')";
+        }
+      }
     }
-  
+
+    if ($this->missed) $filter['reason'] = 'ABANDON';
+
     if (is_array($filter)) {
       if (isset($filter['time']) && strlen($filter['time'])) {
         $dates = json_decode($filter['time'], 1);
+
         if ($dates['start']) {
-          $d = strtotime($dates['start']);            
-          $qwsql .= "AND a.calldate >= '".date("Y-m-d H:i:00", $d)."' ";
-          $cwsql .= "AND calldate >= '".date("Y-m-d H:i:00", $d)."' ";
-          $timeisset++;
+          try {
+            $d = new DateTime($dates['start']);
+            $qwsql .= "AND a.calldate >= '".$d->format("Y-m-d H:i:00")."' ";
+            $cwsql .= "AND calldate >= '".$d->format("Y-m-d H:i:00")."' ";
+            $timeisset++;
+          }catch (\Exception $e) {
+            // Just ignore time filter
+          }
         }
         if ($dates['end']) {
-          $d = strtotime($dates['end']);
-          if (date("H", $d) == 0 && date("i",$d) == 0) $d += 86399;
-          $qwsql .= "AND a.calldate <= '".date("Y-m-d H:i:59", $d)."' ";
-          $cwsql .= "AND calldate <= '".date("Y-m-d H:i:59", $d)."' ";
+          try {
+            $d = new DateTime($dates['end']);
+            if ($d->format("H") == 0 && $d->format("i") == 0) {
+              $d->modify('+1 day')->modify('-1 sec');
+            }
+            $qwsql .= "AND a.calldate <= '".$d->format("Y-m-d H:i:59")."' ";
+            $cwsql .= "AND calldate <= '".$d->format("Y-m-d H:i:59")."' ";
+            $timeisset++;
+          } catch (\Exception $e) {
+            // Just ignore time filter
+          }
+        } /*else {
+          $qwsql .= "AND a.calldate <= '".$d->format("Y-m-d 23:59:59")."'";
+          $cwsql .= "AND calldate <= '".$d->format("Y-m-d 23:59:59")."'";
           $timeisset++;
-        } else {
-          $qwsql .= "AND a.calldate <= '".date("Y-m-d 23:59:59", $d)."'";
-          $cwsql .= "AND calldate <= '".date("Y-m-d 23:59:59", $d)."'";
-          $timeisset++;
-        }
+        }*/
       }
       if(isset($filter['userfield']) && strlen($filter['userfield'])) {
         
@@ -149,24 +202,53 @@ class PBXCdr {
           $qwsql .= "AND a.holdtime <= '".intval($hold['to'])."' ";
           $cwsql .= "AND duration - billsec <= '".intval($hold['to'])."' ";
         }
-      }      
+      }
+      if ($this->direction === 'in') {
+          $qwsql .= " AND LENGTH(a.src) > 4 ";
+          $cwsql .= " AND LENGTH(src) > 4 ";
+      }
+      if ($this->direction === 'out') {
+          $qwsql .= " AND LENGTH(a.src) <= 4 ";
+          $cwsql .= " AND LENGTH(src) <= 4 ";
+      }
+        if ($this->answered === 1) {
+            $qwsql .= " \nAND a.reason NOT REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+            $cwsql .= " \nAND disposition NOT REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+        }
+        if ($this->answered === 0) {
+            $qwsql .= " \nAND a.reason REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+            $cwsql .= " \nAND disposition REGEXP 'ABANDON|BUSY|EXITWITHTIMEOUT|FAILED|NO ANSWER|RINGDECLINE|RINGNOANSWER' ";
+        }
     }
 
     if (intval($onlyCount)) {
       if ($timeisset != 2) return 100000; // Return infinite for scrolling
-      $sql = "SELECT SUM(n) FROM (SELECT SUM(n) AS n FROM (SELECT COUNT(*) AS n FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  $queues $qwsql) as u 
-              UNION 
-              SELECT COUNT(uniqueid) AS n FROM cdr 
-              LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
-              LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)     
-              WHERE 1=1 $extens $cwsql) as c";                              
-              
-      $res = $this->db->query($sql);      
+      $sql = "SELECT count(*) FROM (
+              SELECT 
+                  a.calldate, 
+                  a.src, 
+                  a.agentdev AS dst, 
+                  a.queue, 
+                  a.reason, 
+                  a.holdtime, 
+                  a.talktime, 
+                  a.uniqid, 
+                  a.agentname,
+                  a.userfield
+        FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL $queues $qwsql 
+        UNION
+        SELECT calldate, src, dst, cdr.name, disposition, duration - billsec, billsec, uniqueid AS uniqid, acl_user.name, userfield        
+        FROM cdr 
+        LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+        LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
+        WHERE 1=1 $extens $cwsql 
+        ) AS c ORDER BY calldate DESC ";
+      $res = $this->db->query($sql);
       $row = $res->fetch(PDO::FETCH_NUM);      
       return $row[0]; 
     }
 
-    
+
     if (intval($serverFooter)) {
       if ($timeisset != 2) return []; // only with selected date
       $sql = "SELECT        
@@ -231,14 +313,13 @@ class PBXCdr {
         LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
         WHERE 1=1 $extens $cwsql 
         ".($limit != 1000000 ? "AND calldate >= '".date('Y-m-d H:i:s', $fcd)."' AND calldate <= '".date('Y-m-d H:i:s', $lcd)."' " : "")."
-        ) AS c ORDER BY calldate DESC ";        
-      
+        ) AS c ORDER BY calldate DESC ";
+
       /*if (isset($start) && isset($limit)){
         $sql .= " LIMIT ".intval($start).", ".intval($limit);
       }*/
       //$sql .= " LIMIT 100"; // No more for now
-      $cdr = [];                
-      // die($sql);
+      $cdr = [];
       $res = $this->db->query($sql);
       //die(var_dump($res));
       $lcd -= 3600*24;
@@ -339,11 +420,12 @@ class PBXCdr {
   }
 
   public function findById($uid) {
-    $sql = "SELECT * FROM queue_cdr WHERE REPLACE(uniqid, '.', '') = '".addslashes($uid)."' order by id desc limit 1";
+    $uid = substr_replace($uid, '.', 10, 0);
+    $sql = "SELECT agentname, calldate, uniqid, src FROM queue_cdr WHERE uniqid = '".addslashes($uid)."' order by id desc limit 1";
     $res = $this->db->query($sql);      
     $row = $res->fetch(\PDO::FETCH_ASSOC);
     if (!$row) {
-        $sql = "SELECT * FROM cdr WHERE REPLACE(uniqueid, '.', '') = '".addslashes($uid)."' order by id desc limit 1";
+        $sql = "SELECT * FROM cdr WHERE uniqueid = '".addslashes($uid)."' order by id desc limit 1";
         $res = $this->db->query($sql);      
         $row = $res->fetch(\PDO::FETCH_ASSOC);
     
@@ -386,5 +468,115 @@ class PBXCdr {
     } else {
       return $name;
     }
+  }
+
+  public function getUnSynchronizedCdrs($start, $end, $dir = null, $parity = null) {
+    $cdrs = [];
+
+    $sql = "SELECT calldate as time, src, dst, queue, reason, holdtime as hold, talktime as talk, uniqid, agentname, userfield, status FROM (
+            SELECT 
+                a.calldate, 
+                a.src, 
+                a.agentdev AS dst, 
+                a.queue, 
+                a.reason, 
+                a.holdtime, 
+                a.talktime, 
+                a.uniqid, 
+                a.agentname,
+                a.userfield
+      FROM queue_cdr a LEFT OUTER JOIN queue_cdr b ON a.uniqid = b.uniqid AND a.id < b.id WHERE b.uniqid IS NULL  AND a.calldate >= '$start' AND a.calldate <= '$end'  
+      UNION
+      SELECT calldate, src, dst, cdr.name, disposition, duration - billsec, billsec, uniqueid AS uniqid, acl_user.name, userfield        
+      FROM cdr 
+      LEFT JOIN cfg_user_setting ON (cfg_user_setting.val = SUBSTRING(channel,POSITION('/' IN channel)+1,LENGTH(channel)-POSITION('-' IN REVERSE(channel))-POSITION('/' IN channel)) AND cfg_user_setting.handle = 'cti.ext')
+      LEFT JOIN acl_user ON (acl_user.id = cfg_user_setting.acl_user_id)
+      WHERE 1=1  AND calldate >= '$start' AND calldate <= '$end'  
+      ) AS c 
+      LEFT JOIN btx_call_sync ON (uniqid = btx_call_sync.u_id) 
+      WHERE status IS NULL 
+      " . ($dir ? "AND CHAR_LENGTH($dir) = 11" : "") . "
+      AND reason NOT IN ('EXITWITHTIMEOUT', 'RINGNOANSWER', 'RINGDECLINE')
+      " . ($parity ? (($parity === "even") ? "AND uniqid %2 < 1" : "AND uniqid %2 >= 1" ) : "") . " 
+      ORDER BY calldate DESC";
+    $res = $this->db->query($sql);
+    while ($row = $res->fetch()) {
+      $cdrs[] = $row;
+    }
+    return $cdrs;
+  }
+
+  public function findRecord(string $uid, $stringFormat = 0) {
+    $uid = str_replace(".mp3", "", $uid);
+    $uid = str_replace(".", "", $uid);
+
+    $cdr = new PBXCdr();
+    $row = $cdr->findById($uid);
+    if (!is_array($row)) {
+      return ['result' => false, 'errorType' => 'database'];
+    }
+
+    $filename = "";
+
+    if (isset($row['agentname'])) {
+      // Queue
+      $date = str_replace(" ", "-", $row['calldate']);
+
+      $agent = str_replace("/", "-", $row['agentname']);
+
+      $uniqid = $row['uniqid'];
+      $cid = $row['src'];
+
+      $fname = "$date-$cid-$agent-q-$uniqid.wav";
+      $path_parts = pathinfo($fname);
+
+      $filename = "/var/spool/asterisk/monitor/queues/" . substr($fname, 0, 10) . "/" . substr($fname, 11, 2) . "/" . $path_parts['dirname'] . '/' . $path_parts['filename'];
+
+      if (file_exists($filename . ".WAV")) {
+        $filename = $filename . ".WAV";
+      } else if (file_exists($filename . ".wav")) {
+        $filename = $filename . ".wav";
+      } else if (file_exists($filename . ".mp3")) {
+        $filename = $filename . ".mp3";
+      } else {
+        $filename = "";
+      }
+    }
+
+    if ($filename == "") {
+      // Regular
+      $date = str_replace(" ", "-", $row['calldate']);
+      $time = strtotime($row['calldate']);
+      $uniqid = $row['uniqueid']; //substr($row['uniqueid'], 0, /*-2*/0);
+      if (strlen($uniqid) == 0) $uniqid = $row['uniqid'];
+      $src = $row['src'];
+      $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-" . $uniqid . "*");
+      if (!is_array($files) || !count($files)) {
+        // Last change....
+        $files = glob("/var/spool/asterisk/monitor/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
+        if (!is_array($files) || !count($files)) {
+          $files = glob("/var/spool/asterisk/monitor/queues/" . date('Y-m-d', $time) . "/" . date('H', $time) . "/*-$src-*" . substr($uniqid, 0, -2) . "*");
+          if (!is_array($files) || !count($files)) {
+            return ['result' => false, 'errorType' => 'filesystem'];
+          }
+        }
+      }
+      $filename = $files[0];
+
+      if (!file_exists($filename)) {
+        return ['result' => false, 'errorType' => 'filesystem'];
+      }
+    }
+
+    if ($stringFormat) {
+      return [
+        'file' => file_get_contents($filename),
+        'filename' => $filename
+      ];
+    }
+
+    $fh = fopen($filename, 'rb');
+    $stream = new Slim\Http\Stream($fh);
+    return ['result' => true, 'stream' => $stream, 'filename' => $filename];
   }
 }

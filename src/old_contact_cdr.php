@@ -61,13 +61,13 @@ class PBXOldContactCdr {
     WHERE UNIX_TIMESTAMP(Now())-UNIX_TIMESTAMP(calldate) < 86400 ";
   if(isset($filter['filter'])) {
   if($filter['filter']==2) $demand = $demand." 
-    AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND !outgoing ";
+    AND (reason = 'COMPLETEAGENT' OR reason = 'COMPLETECALLER' OR reason = 'TRANSFER') AND 1=1 ";
   else if($filter['filter']==3) $demand = $demand."
-    AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY' OR reason = 'RINGNOANSWER') AND !outgoing ";
+    AND (reason = 'ABANDON' OR reason = 'EXITWITHTIMEOUT' OR reason = 'EXITEMPTY' OR reason = 'EXITWITHTKEY' OR reason = 'RINGNOANSWER') AND 1=1 ";
   else if($filter['filter']==4) $demand = $demand."
     AND outgoing=1 ";
   else $demand = $demand."
-    AND !outgoing ";
+    AND 1=1 ";
   };
   if(isset($filter['src'])) $demand = $demand.
   "	AND src LIKE '%".$filter['src']."%' ";

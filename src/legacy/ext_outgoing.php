@@ -17,6 +17,7 @@ class Ext_outgoing {
     
     $utils = new Utils($this->container);
     $users = $this->auth->getUsersList();
+    $analysis_outgoing_calls = new \Erpico\Analysis_outgoing_calls($this->container);
     
     $sql = "SELECT 
             count(*) AS total,
@@ -70,8 +71,14 @@ class Ext_outgoing {
     $extens = $this->auth->allow_extens();
     $sql.= $utils->sql_allow_extens($extens);
 
+    if (is_array($filter) && isset($filter["total"]) && strlen($filter["total"])) {
+      $tsql .= "HAVING count(*) ".trim(addslashes($filter["total"]))." ";
+    } else {
+      $tsql = "";
+    }
+
     if (!$onlycount) {
-      $sql.= "GROUP BY src, fullname ORDER BY src ";
+      $sql.= "GROUP BY src, fullname ".$tsql." ORDER BY src ";
     }
     
 
@@ -99,6 +106,13 @@ class Ext_outgoing {
       $cdr_report[$num]['avg_wait'] = $utils->time_format($list['avg_wait']);
       $cdr_report[$num]['max_wait'] = $utils->time_format($list['max_wait']);
       $cdr_report[$num]['min_wait'] = $utils->time_format($list['min_wait']);
+
+      $traffic_for_period = $analysis_outgoing_calls->getTraffic_for_period($filter, $pos, $count, 0, $list['src']);
+      $cdr_report[$num]['internal'] = "{$traffic_for_period[0]['count']}, {$traffic_for_period[0]['duration']}";
+      $cdr_report[$num]['urban'] = "{$traffic_for_period[1]['count']}, {$traffic_for_period[1]['duration']}";
+      $cdr_report[$num]['cellular'] = "{$traffic_for_period[2]['count']}, {$traffic_for_period[2]['duration']}";
+      $cdr_report[$num]['intercity'] = "{$traffic_for_period[3]['count']}, {$traffic_for_period[3]['duration']}";
+      $cdr_report[$num]['international'] = "{$traffic_for_period[4]['count']}, {$traffic_for_period[4]['duration']}";
 
       $num++;
     };

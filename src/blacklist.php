@@ -1,5 +1,7 @@
 <?php
 
+use App\ExportImport;
+
 class PBXBlacklist
 {
   private $container;
@@ -125,6 +127,41 @@ class PBXBlacklist
       return "Перевод";
     else
       return $action;
+  }
+
+  public function export(){
+    $res = [];
+    foreach ($this->fetchList(null, 0, null, 0) as $item) {
+      unset($item['id']);
+      $res["blacklist"][] = $item;
+    }
+
+    return $res;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    if ($delete) {
+      $exportImport->truncateTables([$this->getTableName()]);
+    }
+
+    $blacklist = $data->blacklist;
+    foreach ($blacklist as $item) {
+
+      $item->action = json_encode([
+        "action" => $item->action,
+        "message" => $item->message,
+        "number" => $item->number
+        ], JSON_FORCE_OBJECT | JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+
+      $item->deleted = 0;
+
+      $exportImport->importAction($item, ["phone", "comment", "action", "deleted"], $this->getTableName());
+    }
+
+    return $result;
   }
 }
 

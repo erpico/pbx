@@ -369,6 +369,9 @@ input::-ms-reveal, input::-ms-clear {
 .bad-row {
   background-color: rgb(255,168,168);
 }
+.duplicate-row {
+    background-color: rgb(251, 255, 123);
+}
 
 .greencircle, .greencircle_state{
     background-color: #33ff33;
@@ -502,6 +505,12 @@ border-left: 1px solid #22B7E1;
 .webix_icon_button .webix_icon {
     color: #94a1b3;
 }
+.fa-comment {
+    color: white !important;
+}
+.webix_badge {
+    top: 10px;
+}
 .webix_tree_item.webix_sidebar_selected .webix_tree_branch_2 .webix_tree_item.webix_selected{
     background-color: #384448;
     color: #22B7E1;
@@ -561,7 +570,7 @@ border-left: 1px solid #22B7E1;
 .webix_checkbox_1 .webix_custom_checkbox,
 .webix_checkbox_0 .webix_custom_checkbox{
     color: #1CA1C1;
-    margin-top: 11px;
+    /* margin-top: 11px; */
     overflow: hidden;
 }
 .webix_checkbox_1 .webix_custom_checkbox{
@@ -876,6 +885,7 @@ line-height: 114%;
 .webix_window .webix_view{
     border-bottom: none;
     border-top: none;
+    border-right: none;
 }
 
 .webix_window .webix_win_body > .webix_layout_line{
@@ -926,7 +936,10 @@ line-height: 114%;
 /* .webix_window .webix_form .webix_view, */
 .webix_window .webix_form .webix_multiview .webix_view{
     padding: 0 0 15px;
-} 
+}
+.lead_wnd {
+    padding: 0 !important;
+}
 .webix_window .webix_form .webix_control{
     /* padding: 0 0 15px; */
     /*margin-left: 0px !important;
@@ -940,7 +953,7 @@ line-height: 114%;
     padding: 0 0 0 !important;
 }
 .webix_inp_label {
-    padding-left: 10px;
+    /* padding-left: 10px; */
 }
 .webix_multicombo_value .webix_multicombo_delete:after {
     color: #fff;
@@ -1054,4 +1067,51 @@ a {
 a:hover {
     color: #22B7E1;;
     cursor: hand;
+}
+
+.wxi-eye, .wxi-eye-slash {
+    padding-right: 5px;
+}
+
+.export_btn .webix_el_box .webix_button{
+    padding-bottom: 10px;
+}
+
+.sync_btn {
+    height:26px;
+    width:110px;
+    background: #22B7E1;
+    color: white;
+    border: none;
+}
+
+.webix_setup_tab .webix_item_tab {
+    color: black !important;
+}
+
+.webix_chat_toolbar_tmpl {
+    margin-top: 0 !important;
+    margin-left: 0 !important;
+    width: 100% !important;
+    height: 94% !important;
+}
+
+.webix_comments .webix_list .webix_list_item {
+    margin-top: 12px;
+    margin-bottom: 12px;
+    border: none;
+    cursor: default;
+}
+
+.webix_comments_menu {
+    display: none;
+}
+
+.media-image {
+    max-width: 100%;
+    max-height: 100%;
+}
+
+.mediafile-image, .mediafile-audio {
+    text-align: center;
 }

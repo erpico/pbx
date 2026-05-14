@@ -28,10 +28,8 @@ class PBXSettings {
     $sql = "SELECT  id, handle, val FROM cfg_setting WHERE handle = '$handle'";
     $res = $this->db->query($sql);
     $row = $res->fetch();
-    
-    $res = strlen($row['val']) ? true : false;
 
-    return ['result' => $res, 'value' => $row['val']];
+    return $row['val'] ?? false;
   }
 
   public function getDefaultSettings() {
@@ -62,6 +60,30 @@ class PBXSettings {
     }
 
     return $result;
+  }
+
+    public function deleteGroupSettingByHandle($handle, $group_id) {
+        try {
+            $sql = "DELETE FROM cfg_group_setting WHERE handle = '".trim(addslashes($handle))."' AND acl_user_group_id = '".intval($group_id)."'";
+            $res = $this->db->query($sql);
+            $result = ['result' => true, 'message' => ''];
+        } catch (\Throwable $th) {
+            $result = ['result' => false, 'message' => $th->getMessage()];
+        }
+
+        return $result;
+    }
+
+  public function deleteAllQueues() {
+      try {
+          $sql = "SET SQL_SAFE_UPDATES = 0; DELETE FROM cfg_setting WHERE handle REGEXP '^[0-9]+$'; SET SQL_SAFE_UPDATES = 1;";
+          $this->db->query($sql);
+          $result = ['result' => true, 'message' => ''];
+      } catch (\Throwable $th) {
+          $result = ['result' => false, 'message' => $th->getMessage()];
+      }
+
+      return $result;
   }
 
   private function getGroupSettingByHandle($handle = "", $group_id) {
@@ -145,10 +167,11 @@ class PBXSettings {
     return false;
   }
 
-  public function setDefaultSettings ($settings) {
+  public function setDefaultSettings ($settings, $queues = 0) {
     if (is_string($settings)) {
       if (strlen($settings)) {
         $settings = json_decode($settings);
+        if ($queues) $this->deleteAllQueues();
         foreach($settings as $setting) {
           $s = $this->getSettingByHandle($setting->handle);
           if (isset($s['id']) && intval($s['id']) && $s['handle'] == $setting->handle) {
@@ -169,7 +192,50 @@ class PBXSettings {
     return false;
   }
 
-  private function getSettingByHandle($handle) {
+  public function getDialingRules ($rule_name = false)
+  {
+    $sql = "SELECT dialing_rule, channel, caller_id, updated FROM dialing_rules_settings";
+    if ($rule_name) {
+      $sql .= " WHERE dialing_rule = '$rule_name'";
+      return $this->db->query($sql)->fetch();
+    } else {
+      $rules = [];
+      $res = $this->db->query($sql);
+      while ($row = $res->fetch()) {
+        $rules[] = $row;
+      }
+
+      return $rules;
+    }
+  }
+
+  public function  clearRules() {
+   $sql = "TRUNCATE TABLE dialing_rules_settings";
+   $this->db->query($sql);
+  }
+
+  public function setDialingRulesSettings ($rules) {
+    if (is_string($rules) && strlen($rules)) {
+      try {
+        $rules = json_decode($rules, true);
+        $this->clearRules();
+        foreach($rules as $rule) {
+          $sql = "INSERT INTO dialing_rules_settings SET updated = NOW(), ";
+          foreach ($rule as $k => $v) {
+            $sql .= "`$k` = '$v', ";
+          }
+          $sql = rtrim($sql, ', ');
+          $this->db->query($sql);
+        }
+        return true;
+      } catch (Exception | Error $e) {
+        return $e->getMessage();
+      }
+    }
+    return false;
+  }
+
+  public function getSettingByHandle($handle) {
     $sql = "SELECT id, handle, val FROM cfg_setting WHERE handle ='".trim(addslashes($handle))."'";
     // die($sql);
     $res = $this->db->query($sql);
@@ -230,5 +296,31 @@ class PBXSettings {
       }
     }
     return false;
+  }
+
+  public function getSpecificPhones() {
+      $sql = 'SELECT id, number FROM specific_phones';
+      $res = $this->db->query($sql);
+
+      $result = [];
+      while ($row = $res->fetch()) {
+          $result[] = $row;
+      }
+
+      return $result;
+  }
+
+  public function setSpecificPhones($data) {
+      $sql = 'TRUNCATE TABLE specific_phones';
+      $this->db->query($sql);
+
+      $sql = 'INSERT INTO specific_phones (`number`) VALUES ';
+      foreach ($data as $number) {
+               $sql .= "(" . $number['number'] . "), ";
+      }
+      $sql = rtrim($sql, ', ');
+      $this->db->query($sql);
+
+      return ['result' => true];
   }
 }

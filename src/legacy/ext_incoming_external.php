@@ -65,9 +65,9 @@ class Ext_incoming_external {
     $sql.= $queues;
 
     if (!isset($filter['queue'])) {
-      $sql.= "AND reason != 'RINGNOANSWER' AND !outgoing	GROUP BY queue ORDER BY queue ";
+      $sql.= "AND reason != 'RINGNOANSWER' AND 1=1	GROUP BY queue ORDER BY queue ";
     } else {
-      $sql.= "AND reason != 'RINGNOANSWER' AND queue = '{$filter['queue']}' AND !outgoing GROUP BY agentname ORDER BY agentname ";
+      $sql.= "AND reason != 'RINGNOANSWER' AND queue = '{$filter['queue']}' AND 1=1 GROUP BY agentname ORDER BY agentname ";
     }
 
     if ($count) {
@@ -178,9 +178,9 @@ class Ext_incoming_external {
     $sql.= $queues;
 
     if (!isset($filter['queue'])) {
-      $sql.= "AND reason != 'RINGNOANSWER' AND !outgoing GROUP BY queue ORDER BY queue ";
+      $sql.= "AND reason != 'RINGNOANSWER' AND 1=1 GROUP BY queue ORDER BY queue ";
     } else {
-        $sql.= "AND reason != 'RINGNOANSWER' AND queue = '{$filter['queue']}' AND !outgoing GROUP BY agentname ORDER BY agentname ";
+        $sql.= "AND reason != 'RINGNOANSWER' AND queue = '{$filter['queue']}' AND 1=1 GROUP BY agentname ORDER BY agentname ";
     }    
 
     if ($count) {

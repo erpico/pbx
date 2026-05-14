@@ -423,31 +423,31 @@ class Ext_dashboard {
         $pTime = 0;
 
         foreach ($userEvents as $etime => $event) {
-            if ($cState == '') $pTime = $etime+0;
+            if ($cState == '') $pTime = (int)$etime;
             switch ($event['action']) {
                 case 'PAUSE': {
                     if ($cState == "work") {
-                        $total['worktime'] += ($etime+0)-$pTime;
+                        $total['worktime'] += ((int)$etime)-$pTime;
                         $total['work_cnt']++;
                     }
                     if ($cState == "notready") {
-                        $total['notready_time'] += ($etime+0)-$pTime;//$event['duration'];
+                        $total['notready_time'] += ((int)$etime)-$pTime;//$event['duration'];
                         $total['notready_cnt']++;
                     }
                     else if ($cState == "afterwork") {
-                        $total['afterwork_time'] += ($etime+0)-$pTime;//$event['duration'];
+                        $total['afterwork_time'] += ((int)$etime)-$pTime;//$event['duration'];
                         $total['afterwork_cnt']++;
                     } else if ($cState == "lunch") {
-                        $total['lunch_time'] += ($etime+0)-$pTime;//$event['duration'];
+                        $total['lunch_time'] += ((int)$etime)-$pTime;//$event['duration'];
                         $total['lunch_cnt']++;
                     }  else if ($cState == "rest") {
-                        $total['rest_time'] += ($etime+0)-$pTime;//$event['duration'];
+                        $total['rest_time'] += ((int)$etime)-$pTime;//$event['duration'];
                         $total['rest_cnt']++;
                     } else if ($cState == "meeting") {
-                        $total['meeting_time'] += ($etime+0)-$pTime;//$event['duration'];
+                        $total['meeting_time'] += ((int)$etime)-$pTime;//$event['duration'];
                         $total['meeting_cnt']++;
                     } else if ($cState == "tasks") {
-                        $total['tasks_time'] += ($etime+0)-$pTime;//$event['duration'];
+                        $total['tasks_time'] += ((int)$etime)-$pTime;//$event['duration'];
                         $total['tasks_cnt']++;
                     }
 
@@ -456,7 +456,7 @@ class Ext_dashboard {
                     else if ($event['reason'] == "meeting") $cState = "meeting";
                     else if ($event['reason'] == "lunch") $cState = "lunch";
                     else $cState = "notready";
-                    $pTime = $etime+0;
+                    $pTime = (int)$etime;
 
                     $readyinqueues -= count($event['queues']);
                     if ($readyinqueues < 0) $readyinqueues = 0;
@@ -465,26 +465,26 @@ class Ext_dashboard {
                 case 'UNPAUSE': {
                     if ($cState != "work") {
                         if ($cState == "notready") {
-                            $total['notready_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['notready_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['notready_cnt']++;
                         }
                         else if ($cState == "afterwork") {
-                            $total['afterwork_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['afterwork_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['afterwork_cnt']++;
                         } else if ($cState == "lunch") {
-                            $total['lunch_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['lunch_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['lunch_cnt']++;
                         }  else if ($cState == "rest") {
-                            $total['rest_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['rest_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['rest_cnt']++;
                         }  else if ($cState == "meeting") {
-                            $total['meeting_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['meeting_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['meeting_cnt']++;
                         }  else if ($cState == "tasks") {
-                            $total['tasks_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['tasks_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['tasks_cnt']++;
                         }
-                        $pTime = $etime+0;
+                        $pTime = (int)$etime;
                         $cState = "work";
                     }
 
@@ -494,9 +494,9 @@ class Ext_dashboard {
                 case 'STARTWORK': {
                     //print "Начало смены";
                     $total['sessions']++;
-                    if ($total['first_login'] == 0) $total['first_login'] = $etime+0;
+                    if ($total['first_login'] == 0) $total['first_login'] = (int)$etime;
                     foreach ($event['queues'] as $queue) if (!in_array($queue, $total['queues'])) array_push($total['queues'], $queue);
-                    $t = $etime+0;
+                    $t = (int)$etime;
                     if ($curqueues == 0) $pTime = $etime + 0;
                     $curqueues += count($event['queues']);
 
@@ -513,35 +513,35 @@ class Ext_dashboard {
                     break;
                 }
                 case 'ENDWORK': {
-                    $total['last_logoff'] = $etime+0;
+                    $total['last_logoff'] = (int)$etime;
                     $curqueues -= count($event['queues']);
                     if ($curqueues == 0) {
                         if ($cState == "work") {
-                            $total['worktime'] += ($etime+0)-$pTime;
+                            $total['worktime'] += ((int)$etime)-$pTime;
                             $total['work_cnt']++;
                         }
                         else if ($cState == "notready") {
-                            $total['notready_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['notready_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['notready_cnt']++;
                         }
                         else if ($cState == "afterwork") {
-                            $total['afterwork_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['afterwork_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['afterwork_cnt']++;
                         }
                         else if ($cState == "lunch") {
-                            $total['lunch_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['lunch_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['lunch_cnt']++;
                         }
                         else if ($cState == "rest") {
-                            $total['rest_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['rest_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['rest_cnt']++;
                         }
                         else if ($cState == "meeting") {
-                            $total['meeting_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['meeting_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['meeting_cnt']++;
                         }
                         else if ($cState == "tasks") {
-                            $total['tasks_time'] += ($etime+0)-$pTime;//$event['duration'];
+                            $total['tasks_time'] += ((int)$etime)-$pTime;//$event['duration'];
                             $total['tasks_cnt']++;
                         }
                         $pTime = 0;
@@ -845,8 +845,8 @@ class Ext_dashboard {
             $cdr_report[$num]['served_call_per'] = round($cdr_report[$num]['served']*100/$cdr_report[$num]['total'], 1);
             $cdr_report[$num]['unserved_call_per'] = round($cdr_report[$num]['unserved']*100/$cdr_report[$num]['total'], 1);
 
-            $cdr_report[$num]['rcr'] = ($cdr_report[$num]['served']-$list['cnt_unique_src'])." (".round(($cdr_report[$num]['served']-$list['cnt_unique_src'])/$cdr_report[$num]['served']*100)."%)";;
-            $cdr_report[$num]['fcr'] = $list['cnt_unique_src']." (".round($list['cnt_unique_src']/$cdr_report[$num]['served']*100)."%)";
+            $cdr_report[$num]['rcr'] = ($cdr_report[$num]['served']-$list['cnt_unique_src'])." (".($cdr_report[$num]['served']?round(($cdr_report[$num]['served']-$list['cnt_unique_src'])/$cdr_report[$num]['served']*100):0)."%)";;
+            $cdr_report[$num]['fcr'] = $list['cnt_unique_src']." (".($cdr_report[$num]['served']?round($list['cnt_unique_src']/$cdr_report[$num]['served']*100):0)."%)";
         }
 
         $cdr_report[$num]['agent'] = $list['agentname'];

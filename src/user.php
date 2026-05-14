@@ -41,33 +41,48 @@ class OnlyAuthUser
 
 namespace Erpico;
 
+use App\ExportImport;
+use App\Journal\PBXJournal;
+use phpDocumentor\Reflection\Types\This;
+
 class User
 {
   private $db;
   private $token;
   private $token_id = 0;
   private $id = 0;
+  private $journal;
   
-  const ALLOWED_CONFIG_HANDLES = ['cfwd.all', 'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from', 'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules', 'cfwd.duration.of.redirection', 'cfwd.divert'];
+  const ALLOWED_CONFIG_HANDLES = ['cfwd.all',
+    'cfwd.noanswer', 'cfwd.noanswer.timeout', 'cfwd.limit.from',
+    'cfwd.limit.to', 'cfwd.limit.days', 'cfwd.rules',
+    'cfwd.duration.of.redirection', 'cfwd.divert',
+    'cfwd.notify', 'cfwd.notify.message'];
 
   public function __construct($db = null, $_id = 0) {
+    global $user;
+
     if (isset($db)) {
       $this->db = $db;
     } else {
-      global $app;    
+      global $app;
       $container = $app->getContainer();
       $this->db = $container['db'];
     }
+
+    if ($user) $this->journal = new PBXJournal($user->getId() || 0);
     if (!intval($_id)) {
-      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : (isset($_GET['token']) ?
-        self::checkToken($_GET['token']) : (isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
-          isset($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0)));
+      $token_data = (isset($_POST['token']) ? self::checkToken($_POST['token']) : ((isset($_GET['token']) ?
+        self::checkToken($_GET['token']) : ((isset($_COOKIE['pbx_token']) ? self::checkToken(trim($_COOKIE['pbx_token'], '"')) :
+          (isset($_COOKIE['token']) ? self::checkToken(trim($_COOKIE['token'], '"')) : 0))))));
       if (is_array($token_data)) {
         $this->id = $token_data['acl_user_id'];
         $this->token_id = $token_data['id'];
         $this->updateToken();
         $this->token = $token_data['token'];
       }
+    } else {
+        $this->id = $_id;
     }
   }
 
@@ -131,6 +146,33 @@ class User
     }
   }
 
+  public function trustedLogin($login, $ip) {
+    $sql = "SELECT id, name, fullname
+	          FROM acl_user
+	          WHERE name='".addslashes($login)."'";
+    $res = $this->db->query($sql);
+    if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {
+      $token = substr(sha1(sprintf("%s%d", $row['name'], round(microtime(1) * 1000))), 0, 32); 
+      $sql = "INSERT INTO acl_auth_token (acl_user_id,token,pcode,version,ip,hwid,issued,updated,expire)
+              VALUES ('" . $row['id'] . "','" . $token . "','web','3.0','" . $ip . "','',Now(),Now(),DATE_ADD(Now(), INTERVAL 24 HOUR))";
+      if (!$this->db->query($sql)) return 0;
+      $this->token = $token;
+      return [
+        'error'    => 0,
+        'token'    => $token,
+        'fullname' => $row['fullname'],
+        'name'     => $row['name'],
+        'id'       => $row['id'],
+        'ip'       => $ip
+      ];
+    } else {
+      return [
+        'error' => 1,
+        'message' => 'Bad login or password'
+      ];
+    }
+  }
+
   private function updateToken() {
     $sql = "UPDATE acl_auth_token SET updated = Now(), expire = Now() + INTERVAL 5 DAY WHERE id = '".$this->token_id."' LIMIT 1";
     $this->db->query($sql);
@@ -152,9 +194,9 @@ class User
 
   public function getInfo() {
     if (!$this->id) return 0;
-    $sql = "SELECT id, name, fullname
+    $sql = "SELECT id, name, fullname, photo
             FROM acl_user
-            WHERE id = {$this->id}";            
+            WHERE id = {$this->id}";
     $res = $this->db->query($sql);
     if ($row = $res->fetch(\PDO::FETCH_ASSOC)) {    
       return [
@@ -162,6 +204,7 @@ class User
         'roles' => $this->getUserRoles() ? $this->getUserRoles()  : ['user'],
         'name' => $row['name'],
         'fullname' => $row['fullname'],    
+        'photo' => $row['photo'],
       ];
     } else {
       return [
@@ -221,7 +264,8 @@ class User
     SELECT val
     FROM cfg_user_setting
     WHERE handle = 'cti.extens.allow.mask'
-    AND acl_user_id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") ";
+    AND acl_user_id = ";
+    $demand_user_extens .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") " : "$this->id";
     $result_user_extens = $this->db->query($demand_user_extens);
     while ($myrow_user_extens = $result_user_extens->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_extens['val'] != "") {
@@ -241,8 +285,9 @@ class User
     FROM cfg_group_setting AS A
     LEFT JOIN acl_user_group_has_users AS B ON (A.acl_user_group_id = B.acl_user_group_id)
     LEFT JOIN acl_user AS C ON (B.acl_user_id = C.id)
-    WHERE C.id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") 
-    AND A.handle = 'cti.extens.allow.mask' ";
+    WHERE C.id = ";
+    $demand_user_group_extens .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.")" : "$this->id ";
+    $demand_user_group_extens .= "AND A.handle = 'cti.extens.allow.mask' ";
     $result_user_group_extens = $this->db->query($demand_user_group_extens);
     while ($myrow_user_group_extens = $result_user_group_extens->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_group_extens['val'] != "") {
@@ -289,7 +334,8 @@ class User
     SELECT val
     FROM cfg_user_setting
     WHERE handle = 'cti.queues.allowed'
-    AND acl_user_id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") ";
+    AND acl_user_id = ";
+    $demand_user_queues .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") " : "$this->id";
     $result_user_queues = $this->db->query($demand_user_queues);
     while ($myrow_user_queues = $result_user_queues->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_queues['val'] != "") {
@@ -307,8 +353,9 @@ class User
     FROM cfg_group_setting AS A
     LEFT JOIN acl_user_group_has_users AS B ON (A.acl_user_group_id = B.acl_user_group_id)
     LEFT JOIN acl_user AS C ON (B.acl_user_id = C.id)
-    WHERE C.id = (SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.") 
-    AND A.handle = 'cti.queues.allowed' ";
+    WHERE C.id = ";
+    $demand_user_group_queues .= $token ? "(SELECT acl_user_id FROM acl_auth_token WHERE token=".$token.")" : "$this->id ";
+    $demand_user_group_queues .= "AND A.handle = 'cti.queues.allowed' ";
     $result_user_group_queues = $this->db->query($demand_user_group_queues);
     while ($myrow_user_group_queues = $result_user_group_queues->fetch(\PDO::FETCH_ASSOC)) {
         if ($myrow_user_group_queues['val'] != "") {
@@ -458,7 +505,7 @@ class User
     ";
     } else {
       $sql = "SELECT 
-      U.id, U.name, U.fullname, U.description, C.val as phone, U.state
+      U.id, U.name, U.fullname, U.photo, U.description, C.val as phone, U.state
       FROM acl_user as U
       LEFT JOIN cfg_user_setting AS C ON (C.acl_user_id = U.id AND C.handle = 'cti.ext')
     ";
@@ -497,7 +544,7 @@ class User
     if (strlen($wsql)) {
       $sql .= "WHERE ".$wsql;
     }
-    if (!intval($onlycount)) {
+    if (!intval($onlycount) && intval($end)) {
       $sql .= " LIMIT {$start}, {$end}";
     }
     $res = $this->db->query($sql, $onlycount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
@@ -530,6 +577,73 @@ class User
     }
 
     return $result;
+  }
+
+  public function fetchChatList(): array
+  {
+      global $app;
+      $container = $app->getContainer();
+
+      /** @var \App\Chat\ChatMessageRepository $chatMessageRepository */
+      $chatMessageRepository = $container->get(\App\Chat\ChatMessageRepository::class);
+      $path = $container->get('settings')['uploadPath'];
+      $path = explode('/', $path);
+      $path = $path[count($path) - 1];
+
+
+      $sql = "
+select u.id, u.fullname as name, '' as email, u.photo from acl_user as u
+LEFT join chat_messages as m
+on (u.id = m.sender_id or u.id = m.recipient_id)
+where m.sender_id = $this->id or m.recipient_id = $this->id
+group by u.id
+order by max(m.created_at) desc;";
+      $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
+      $result = [];
+      $rules = new PBXRules();
+
+      $ids = [];
+      while ($row = $res->fetch()) {
+          $ids[] = $row['id'];
+          $last_message = $chatMessageRepository->getLastMessage($this->id, $row['id']);
+
+          $return = [
+            'id' => $row['id'],
+            'name' => $row['name'],
+            'email' => $row['email'],
+            'users' => [$row['id'], $this->id],
+            'unread_count' => $chatMessageRepository->getUnreadCount($this->id, $row['id']),
+            'message' => $last_message['content'],
+            'date' => $last_message['created_at']
+          ];
+
+          if (isset($row['photo'])) $return['avatar'] = $path.'/'.$row['photo'];
+
+          $result[] = $return;
+      }
+
+      $sql = "select id, fullname as name, '' as email, photo from acl_user where id ";
+      if ($ids) $sql .= "not in (".implode(',', $ids).")";
+      $res = $this->db->query($sql, \PDO::FETCH_ASSOC);
+      while ($row = $res->fetch()) {
+        $last_message = $chatMessageRepository->getLastMessage($this->id, $row['id']);
+
+        $return = [
+          'id' => $row['id'],
+          'name' => $row['name'],
+          'email' => $row['email'],
+          'users' => [$row['id'], $this->id],
+          'unread_count' => $chatMessageRepository->getUnreadCount($this->id, $row['id']),
+          'message' => $last_message['content'],
+          'date' => $last_message['created_at']
+        ];
+
+        if (isset($row['photo'])) $return['avatar'] = $path.'/'.$row['photo'];
+
+        $result[] = $return;
+      }
+
+      return array_reverse($result);
   }
 
   public function getUserGroups($id)
@@ -607,12 +721,14 @@ class User
         return ["result" => false, "message" => "Ф.И.О. не может быть пустым"];
       }
 
-      if (!$disable_rules) {
-        if (isset($params['state']) && intval($params['state'])) {
-          $sql .= "`state` = '" . intval($params['state']) . "',";
-        } else {
-          return ["result" => false, "message" => "state can`t be empty"];
-        }
+      if (isset($params['photo']) && strlen(trim($params['photo']))) {
+          $sql .= "`photo` = '" . trim(addslashes($params['photo'])) . "',";
+      }
+
+      if (isset($params['state']) && intval($params['state'])) {
+        $sql .= "`state` = '" . intval($params['state']) . "',";
+      } else {
+        return ["result" => false, "message" => "state can`t be empty"];
       }
       
       if (!intval($params['id'])) {
@@ -637,6 +753,19 @@ class User
         $sql .= $endsql;
       }
 
+      $paramsCopy = $params;
+      unset($paramsCopy['password']);
+      unset($paramsCopy['config']);
+
+      if ($params['id']) {
+        $this->journal->log(PBXJournal::MODIFY_USER, [
+          "user" => $params['id'],
+          "changes" => $this->getUserChanges($params)
+        ]);
+      }
+
+      if ($params['state'] === '3') $this->journal->log(PBXJournal::DELETE_USER, ['user' => $params['id']]);
+
       $res = $this->db->query($sql);
       if ($res) {
         $sql = "";
@@ -646,6 +775,10 @@ class User
           $end_sql = " WHERE acl_user_id = {$id} AND handle = 'cti.ext' LIMIT 1";
         } else {
           $id = $this->db->lastInsertId();
+          $this->journal->log(PBXJournal::CREATE_USER, [
+            "user" => $id,
+            "data" => $paramsCopy
+          ]);
           $start_sql = "INSERT INTO cfg_user_setting SET ";
         }
         if (!$disable_rules) {
@@ -678,17 +811,16 @@ class User
               if (intval($group)) $groups_int[] = intval($group);
             }
             if (is_array($groups_int) && COUNT($groups_int)) {
-              // $this->deleteUserGroups($groups_int,$id);
+              $this->deleteUserGroups($id);
               $this->saveUserGroups($groups_int,$id);
             }
           }
         }
       }
-    } catch (\Throwable $th) {
-      return ["result" => false, "message" => "Произошла ошибка выполнения операции", "info" => $th];
+    } catch (\ErrorException $e) {
+      return ["result" => false, "message" => "Произошла ошибка выполнения операции", "info" => $e->getMessage()];
     }
-
-    return ["result" => true, "message" => "Операция прошла успешно"];
+    return ["result" => true, "message" => $params['id'] ? "Пользователь успешно обновлен" : "Пользователь успешно добавлен", "id" => $id];
 
   }
   
@@ -787,6 +919,9 @@ class User
       if (!intval($id)) {
         return ["result" => false, "message" => "# пользователя не может быть пустым"];
       }
+
+      $this->journal->log(PBXJournal::DELETE_USER, ['user' => $id]);
+
       if ($this->db->query("UPDATE acl_user SET state=3 WHERE id = ".intval($id))) {
 //        $this->deleteUserGroupsExceptFor([0],$id);
         return ["result" => true, "message" => "Удаление прошло успешно"];
@@ -804,12 +939,10 @@ class User
     }
   }
 
-  // public function deleteUserGroups($group_ids, $user_id) {
-  //   if (is_array($group_ids)) {
-  //     $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_group_id IN (".implode(",",$group_ids).") AND acl_user_id = {$user_id}";
-  //     $this->db->query($sql);
-  //   }
-  // }
+   public function deleteUserGroups($user_id) {
+       $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_id = {$user_id}";
+       $this->db->query($sql);
+   }
 
   public function saveUserGroups($group_ids, $user_id) {
     if (is_array($group_ids)) {
@@ -1010,5 +1143,220 @@ class User
     $sql = "DELETE FROM acl_user_group_has_users WHERE acl_user_group_id = {$group_id} AND acl_user_id NOT IN (".implode(",",$user_ids).")";
     $this->db->query($sql);
     return true;
-  } 
+  }
+
+  public function getIdByName($name) {
+    $result = null;
+    if (!empty($name)) {
+      $sql = "SELECT id FROM acl_user WHERE name = '{$name}'";
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute();
+      $result = $stmt->fetchColumn();
+    }
+
+    return $result;
+  }
+
+  public function getNameById($id) {
+    $result = null;
+    if (!empty($id)) {
+      $sql = "SELECT name FROM acl_user WHERE id = {$id}";
+      $stmt = $this->db->prepare($sql);
+      $stmt->execute();
+      $result = $stmt->fetchColumn();
+    }
+
+    return $result;
+  }
+
+  public function export() {
+    $result = [];
+
+    $groups = $this->getAllGroups(null, 0, null, 0);
+    foreach ($groups as $group) {
+      $sql = "SELECT handle, val FROM cfg_group_setting WHERE acl_user_group_id = ".$group['id'];
+      $res = $this->db->query($sql);
+      $group['config'] = [];
+      while ($row = $res->fetch()) {
+        $group['config'][$row['handle']] = $row['val'];
+      }
+
+      $names = [];
+      foreach ($group['list_users_ids'] as $users_id) {
+        $names[] = $this->getNameById($users_id);
+      }
+
+      $group['users'] = $group['list_users_str'];
+
+      unset($group['id']);
+      unset($group['list_users_ids']);
+      unset($group['list_users_str']);
+      unset($group['rules']);
+
+      $result["user_groups"][] = $group;
+    }
+
+    $sql = "SELECT id, name, fullname, password, state FROM acl_user";
+    $res = $this->db->query($sql);
+    while ($row = $res->fetch()) {
+      $config = $this->getUserConfig($row['id']);
+      foreach ($config as $key => $item) {
+        $row['config'][$item['key']] = $item['value'];
+      }
+      unset($row['id']);
+      $result["users"][] = $row;
+    }
+
+    return $result;
+  }
+
+  public function import($data, $delete = false) {
+    $result = true;
+    $exportImport = new ExportImport();
+
+    //acl_user
+    //acl_user_group
+    //acl_user_group_has_users
+    //cfg_user_setting
+    //cfg_group_setting
+
+    if ($delete) {
+      $exportImport->truncateTables([
+        "acl_user",
+        "acl_user_group",
+        "acl_user_group_has_users",
+        "cfg_user_setting",
+        "cfg_group_setting"
+      ]);
+    }
+
+    $user_groups = $data->user_groups;
+
+    $users = $data->users;
+
+    foreach ($users as $user) {
+      // юзеры
+      $user->created = date("Y-m-d H:i:s");
+      $userId = $exportImport->importAction($user, ['name', 'fullname', 'password', 'state', 'created'], "acl_user");
+
+      foreach ($user->config as $configKey => $configItem) {
+        // конфиг для юзера
+        $config = [
+          'acl_user_id' => $userId,
+          'handle' => $configKey,
+          'val' => $configItem,
+          'updated' => date("Y-m-d H:i:s")
+        ];
+        $exportImport->importAction($config, ['acl_user_id', 'handle', 'val', 'updated'], "cfg_user_setting");
+      }
+    }
+
+    $connectData = [];
+    foreach ($user_groups as $item) {
+      // группы
+      $userGroupId = $exportImport->importAction($item,['name', 'description'],'acl_user_group');
+
+      // конфиг для группы
+      foreach ($item->config as $configKey => $configItem) {
+        $config = [
+          'acl_user_group_id' => $userGroupId,
+          'handle' => $configKey,
+          'val' => $configItem,
+          'updated' => date("Y-m-d H:i:s")
+        ];
+        $exportImport->importAction($config, ['acl_user_group_id', 'handle', 'val', 'updated'], "cfg_group_setting");
+      }
+
+      // для таблицы связи
+      foreach ($item->users as $name) {
+        $connectData[] = [
+          "acl_user_group_id" => $userGroupId,
+          "acl_user_id" => $this->getIdByName($name)
+        ];
+      }
+    }
+
+    foreach ($connectData as $connect) {
+      // таблица связи юзера и группы
+      $exportImport->importAction($connect,["acl_user_group_id", "acl_user_id"], 'acl_user_group_has_users');
+    }
+
+    return $result;
+  }
+
+  public function addBitrixId($userId, $bitrixId) {
+    $sql = "SELECT * FROM acl_user_bitrix_id WHERE user_id = $userId ";
+    $res = $this->db->query($sql);
+    $row = $res->fetch();
+
+    $sql = isset($row['user_id']) ? "UPDATE" : "INSERT INTO";
+    $sql .= " acl_user_bitrix_id ";
+    $sql .= "SET bitrix_user_id = $bitrixId";
+    $sql .= isset($row['user_id']) ? " WHERE user_id = $userId" : ", user_id = $userId";
+
+    $this->db->query($sql);
+  }
+
+  public function getBitrixIdByUserId($id) {
+    $sql = "SELECT bitrix_user_id FROM acl_user_bitrix_id WHERE user_id = '$id'";
+    $res = $this->db->query($sql);
+    return $res->fetch()['bitrix_user_id'] ?? 0;
+  }
+
+  public function getBitrixIdByPhone($phone) {
+    $sql = "
+SELECT bitrix_user_id 
+FROM acl_user_bitrix_id
+LEFT JOIN acl_user ON (acl_user_bitrix_id.user_id = acl_user.id)
+WHERE acl_user.name = '$phone'";
+    $res = $this->db->query($sql);
+    return $res->fetch()['bitrix_user_id'] ?? 0;
+  }
+
+  public function truncateUsersBitrixId() {
+    $this->db->query('TRUNCATE acl_user_bitrix_id;');
+  }
+
+  private function getUserChanges($newData) {
+    $user = new User($this->db, $newData['id']);
+    $oldData = $user->fetchList(['id' => $newData['id']])[0];
+
+    $oldData['rules'] = implode(",", $oldData['rules']);
+    $oldData['user_groups_ids'] = implode(",", $oldData['user_groups_ids']);
+
+    return $this->journal->getEssenceDiffs($oldData, $newData);
+  }
+
+  public function getInfoForTable() {
+    if (!intval($this->id)) return "";
+    $client_name = [];
+
+    $clientInfo = $this->getInfo();
+    $phoneInfo = $this->getPhone($this->id);
+
+    if ($clientInfo) $client_name[] = $clientInfo['fullname'];
+    if ($phoneInfo) $client_name[] = $phoneInfo;
+
+    return implode(", ", $client_name);
+  }
+
+  public function setFCMToken(string $token) {
+    $sql = "UPDATE acl_user SET fcm_token = '$token' WHERE id = '$this->id'";
+
+    return $this->db->query($sql) ? true : false;
+  }
+
+  public function getFCMTokenByID($id) {
+    $sql = "SELECT fcm_token FROM acl_user WHERE id = '$id'";
+    $res = $this->db->query($sql);
+
+    return $res->fetch()['fcm_token'];
+  }
+
+  public function getFCMTokenByNumber($number) {
+    $sql = "SELECT fcm_token FROM acl_user WHERE name = '$number'";
+    $res = $this->db->query($sql);
+
+    return $res->fetch()['fcm_token'];
+  }
 }

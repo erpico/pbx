@@ -2,6 +2,10 @@
 
 class PBXOutgoingCampaign  {
   protected $db;
+  public $user;
+  public $utils;
+
+  //if value is 1, it's means that field is int type
   const FIELDS = [
     "user_id" => 0,
     "tm_created" => 0,
@@ -19,17 +23,47 @@ class PBXOutgoingCampaign  {
     "call_tries"=> 1,
     "action"=> 1,
     "action_value" => 0,
-    "min_call_time"=> 1,
-    "concurrent_calls_limit" => 1,
-    "dial_context" => 0
+    "dial_context" => 0,
+    "lead_filters" => 0,
+    "lead_status_enabled" => 0,
+    "lead_status" => 0,
+    "lead_status_user" => 0,
+    "lead_status_tries_end" => 0,
+    "e164" => 0,
+    "duplicates" => 0,
+    "duplicates_all" => 0,
+    "archive" => 1,
+  ];
+
+  const EXTENDED_SETTING_FIELDS = [
+    "min_call_time" => 0,
+    "concurrent_calls_limit" => 0,
+    "max_day_calls_limit" => 0,
+    "calls_multiplier" => 0,
+    "waiting_connection_time" => 0,
+    "answering_machine_beat" => 0,
+    "outgoing_filtering" => 0
+  ];
+
+  const STOP_COMPANY_SETTING_FIELDS = [
+    "choice_of_numbers_enabled",
+    "choice_of_numbers",
+    "transfer_to_operator_enabled",
+    "transfer_to_operator",
+    "voice_message_enabled",
+    "voice_message",
+    "stop_after_enabled",
+    "stop_after",
+    "actions_count_enabled",
+    "actions_count"
   ];
 
   const WEEK_DAYS = [
-    "Пн", "Вт", "Ср", "Чт", "Пт", "Сб", "Вс", "Рабочие дни", "Выходные", "Праздники"
+    "", "Вс", "Пн", "Вт", "Ср", "Чт", "Пт", "Сб"//, "Рабочие дни", "Выходные", "Праздники"
   ];
 
   const SETTING_FIELDS = [
-    "result", "pause", "pause_time", "stop", "postpone_for", "postpone_to"
+    "result", "pause", "pause_time", "stop", "postpone_for", "postpone_to", "lead_status_result", "webhook", "lead_status_user_rules"
   ];
 
   const SETTING_VALUES = [
@@ -74,12 +108,18 @@ class PBXOutgoingCampaign  {
           }
         }        
       }
-    }    
-    if (strlen($wsql)) {
-      $sql .= " WHERE deleted = 0 OR deleted is null AND ".$wsql;
     }
+    $sql .= " WHERE (deleted = 0 OR deleted is null)";
+    if (strlen($wsql)) {
+      $sql.= " AND ".$wsql;
+    }
+
+    if (isset($filter['archive']) && $filter['archive'] == 1) {
+      $sql .= ' AND `archive` = 1 ';
+    } else $sql .= ' AND `archive` = 0 ';
+
     $sql .= " order by id";
-    $res = $this->db->query($sql);
+
     $res = $this->db->query($sql, $onlyCount ? \PDO::FETCH_NUM  : \PDO::FETCH_ASSOC);
     $result = [];
 
@@ -105,6 +145,12 @@ class PBXOutgoingCampaign  {
     return $days;
   }
 
+  public function getMainSettings($companyId) {
+    $sql = "SELECT ".implode(",",array_keys(self::FIELDS)).", ".implode(",",array_keys(self::EXTENDED_SETTING_FIELDS))." FROM outgouing_company WHERE id = {$companyId}";
+    $res = $this->db->query($sql);
+    return $res->fetch();
+  }
+
   public function getSettings($id) {
     $sql = "SELECT ".implode(",",self::SETTING_FIELDS)." FROM outgoing_campaign_dial_result_setting WHERE campaign_id = {$id}
       ORDER BY `campaign_id`, `result`";
@@ -120,20 +166,123 @@ class PBXOutgoingCampaign  {
       }
       $row['value'] = self::SETTING_VALUES[$row['result']];
       $row['id'] = $row['result'];
-      $result[] = $row;
+      $result['dial_result'][] = $row;
     }
+
+    $sql = "SELECT ".implode(", ", array_keys(self::EXTENDED_SETTING_FIELDS))." FROM outgouing_company WHERE id={$id}";
+    $res = $this->db->query($sql);
+
+    while ($row = $res->fetch()) {
+      foreach ($row as $k => $v) {
+        $result['extended'][$k] = $v;
+      }
+    }
+
+    $sql = "SELECT ".implode(", ",self::STOP_COMPANY_SETTING_FIELDS)." FROM outgouing_company WHERE id={$id}";
+    $res = $this->db->query($sql);
+
+    while ($row = $res->fetch()) {
+      foreach ($row as $k => $v) {
+        $result['stop_company'][$k] = $v;
+      }
+    }
+
     return $result;
   }
 
-  public function getContactsResults($id) {
-    $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
-    state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} AND `state` IN (4,6,7)";
+  public function getJournal($id, $filters) {
+      $sql = "SELECT id, channel, datetime, url, query, response, campaign_id 
+              FROM bitrix24_requests 
+              WHERE url LIKE '%crm.lead.list%' AND campaign_id = $id";
+
+      if ($filters['start'] !== '' && $filters['end'] !== '') {
+          $sql .= " AND datetime BETWEEN '".$filters['start']."' AND '".$filters['end']."'";
+      }
+
+      $sql .= " ORDER BY id DESC;";
+
+      $res = $this->db->query($sql);
+
+      $records = [];
+      while ($row = $res->fetch()) {
+          $response = json_decode($row['response'], true);
+          $row['response'] = count($response['result']);
+          $records[] = $row;
+      }
+
+      return $records;
+  }
+
+  public function getJournalLeads($j_id) {
+    $sql = "SELECT response FROM bitrix24_requests WHERE id = '$j_id' ORDER BY id DESC;";
     $res = $this->db->query($sql);
-    $result = [];
-    while ($row = $res->fetch()) {
-      $result[] = $row;
+
+    $helper = new CMBitrix('');
+    $leads = [];
+    if ($row = $res->fetch()) {
+      $response = json_decode($row['response'], true);
+      foreach ($response['result'] as $lead) {
+        $result = $helper->getLeadById($lead['ID']);
+        $lead['PHONE'] = $result['result']['PHONE'][0]['VALUE'];
+        $leads[] = $lead;
+      }
     }
-    return $result;
+
+    return $leads;
+  }
+
+  public function getStatistics($id, $name = "")
+  {
+    $contacts = $this->getContactsResults($id);
+
+    $res = [
+      'id' => $id,
+      'name' => $name,
+      'busy' => 0,
+      'failed' => 0,
+      'complete' => 0,
+      'stopped' => 0,
+      'first_call' => '2999-12-31 23:59:59',
+      'last_call' => '2000-01-01 00:00:00',
+      'general_duration' => 0
+    ];
+
+    if ($contacts) {
+      foreach ($contacts as &$contact) {
+        $contact['calls'] = $this->getContactCalls($contact['id']);
+
+        foreach ($contact['calls'] as $call) {
+          if ($call['tm_created'] < $res['first_call']) $res['first_call'] = $call['tm_created'];
+          if ($call['tm_created'] > $res['last_call']) $res['last_call'] = $call['tm_created'];
+          $res['general_duration'] += $call['duration'];
+        }
+
+        switch ($contact['state']) {
+          case 3:
+            $res['busy']++;
+            break;
+          case 4:
+            $res['failed']++;
+            break;
+          case 6:
+            $res['complete']++;
+            break;
+          case 7:
+            $res['stopped']++;
+            break;
+        }
+      }
+    }
+
+    return $res;
+  }
+
+  public function getContactById($id) {
+    $sql = "SELECT id, updated, outgouing_company_id, `order`, phone, name, description, state, tries, last_call, dial_result, scheduled_time FROM outgouing_company_contacts WHERE id = '".intval($id)."'";
+    $res = $this->db->query($sql);
+    $row = $res->fetch();
+
+    return $row;
   }
 
   public function getContactCalls($id) {
@@ -146,8 +295,20 @@ class PBXOutgoingCampaign  {
     $result = [];
     while ($row = $res->fetch()) {
       $row['status_text'] = $this->getSipStatusText($row['hangup_code']);
+      $row['ivr'] = $this->getIvrAction($row['id']);
       $result[] = $row;
     }
+    return $result;
+  }
+
+  public function getIvrAction($id) {
+    $sql = "SELECT action FROM ivr_actions WHERE call_id = '$id' order by time";
+    $res = $this->db->query($sql);
+    $result = [];
+    while ($row = $res->fetch()) {
+      $result[] = $row['action'];
+    }
+
     return $result;
   }
 
@@ -161,17 +322,64 @@ class PBXOutgoingCampaign  {
     }
     return ["result" => false, "message" => "Ошибка получения данных"];
   }
-  
+
+//  1 - в очереди (оч)
+//  2 - вызывается (оч)
+//  5 - разговор (оч)
+//  8 - запланирован (оч)
+//  --------------------
+//  3 - занят (рез)
+//  4 - ошибка (рез)
+//  6 - завершен (рез)
+//  7 - остановлен (рез)
+
   public function getContacts($id) {
     $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
     state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) FROM outgouing_company_contacts WHERE outgouing_company_id = {$id} 
-    AND state NOT IN (3,4,6,7)";
+    AND state NOT IN (3,4,6,7) ORDER BY id";
     $res = $this->db->query($sql);
     $result = [];
     while ($row = $res->fetch()) {
       $result[] = $row;
     }
     return $result;
+  }
+
+  public function getContactsResults($id) {
+      $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
+  state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) 
+FROM outgouing_company_contacts 
+WHERE outgouing_company_id = {$id} AND `state` IN (3,4,6,7)
+ORDER BY id";
+      $res = $this->db->query($sql);
+      $result = [];
+      while ($row = $res->fetch()) {
+          $result[] = $row;
+      }
+      return $result;
+  }
+
+    public function getContactByPhone ($phone, $outgoing_company_id) {
+        $sql = "SELECT id, outgouing_company_id, `order`, phone, name, description,
+    state,tries,last_call,dial_result, UNIX_TIMESTAMP(scheduled_time) 
+    FROM outgouing_company_contacts 
+    WHERE phone = '{$phone}' 
+    AND outgouing_company_id = {$outgoing_company_id}";
+        $res = $this->db->query($sql);
+        return $res->fetch();
+    }
+
+  public function getOutgoingIdsByPhone(string $phone): array
+  {
+    $sql = "SELECT outgouing_company_id FROM outgouing_company_contacts WHERE `phone` like '%$phone%'";
+    $res = $this->db->query($sql);
+
+    $ids = [];
+    while ($row = $res->fetch()) {
+      $ids[] = $row['outgouing_company_id'];
+    }
+
+    return array_unique($ids);
   }
 
   private function getSipStatusText($code) {
@@ -292,31 +500,41 @@ class PBXOutgoingCampaign  {
   }
 
   private function savePhone($id, $campaning_id, $phone, $name, $description, $state) {
-    //try {
-      if (strlen($id) >= 8) {
+    try {
+      $contact = $this->getContactById($id);
+      if (!$contact) {
         $sql = " INSERT INTO outgouing_company_contacts SET ";
       } else {
         $sql = " UPDATE outgouing_company_contacts SET ";
-        $sql_end = " WHERE id = '".intval($id)."'";
+        $sql_end = " WHERE id = '" . intval($id) . "'";
       }
-      $sql .= "`phone` = '".trim(addslashes($phone))."',
-      `name` = '".trim(addslashes($name))."',
-      `description` = '".trim(addslashes($description))."',
+      $sql .= "`phone` = '" . trim(addslashes($phone)) . "',
+      `name` = '" . trim(addslashes($name)) . "',
+      `description` = '" . trim(addslashes($description)) . "',
       `updated` = NOW(),
-      `outgouing_company_id` = '".intval($campaning_id)."',
-      `state` = '".intval($state)."'
+      `outgouing_company_id` = '" . intval($campaning_id) . "',
+      `state` = '" . intval($state) . "'
       ";
       if (isset($sql_end)) $sql .= $sql_end;
-      
-      $res = $this->db->query($sql);
-      // echo $sql."\n";
-    //} catch (\Throwable $th) {
-      // echo $sql."\n\n";
-    //}    
-   }
 
-  public function addUpdate($values) {
-    $errors = [];    
+      $this->db->query($sql);
+    } catch (Exception $e) {
+      return $e;
+    }
+
+  }
+
+  public function findInBitrix($phone, $filteredFromBitrix): bool
+  {
+      foreach ($filteredFromBitrix as $lead) {
+          if ($lead->phone == $phone) return true;
+      }
+
+      return false;
+  }
+
+  public function addUpdate($values, $cron = 0) {
+    $errors = [];
     if (isset($values['id']) && intval($values['id'])) {
       $sql = "UPDATE outgouing_company SET ";
     } else {
@@ -328,12 +546,25 @@ class PBXOutgoingCampaign  {
     }
     foreach (self::FIELDS as $field => $isInt) {
       if (isset($values[$field]) && (intval($isInt) ? intval($values[$field]) : strlen($values[$field]) )) {
-        if (strlen($ssql)) $ssql .= ",";          
+        if (strlen($ssql)) $ssql .= ",";
         $ssql .= "`".$field."`='".($isInt ? intval($values[$field]) : trim(addslashes($values[$field])))."'";          
-      }  
+      }  else {
+          if (($field == "lead_status" ||
+              $field == "lead_status_user" ||
+              $field == "lead_status_tries_end" ||
+              $field == "e164" ||
+              $field == "duplicates" ||
+              $field == "duplicates_all"
+            ) && isset($values[$field]) && $values[$field] == "") {
+              if (strlen($ssql)) $ssql .= ",";
+              $ssql .= "`".$field."`=null";
+          }
+      }
     }
-    if (isset($values['id']) && intval($values['id'])) {
+    if (!isset($values['id']) || $values['id'] == 0) {
       $ssql .= ", `tm_created` = NOW() ";
+    } else {
+      $ssql .= ", `updated` = NOW() ";
     }
     $sql .= $ssql;
     if (isset($values['id']) && intval($values['id'])) {
@@ -345,36 +576,70 @@ class PBXOutgoingCampaign  {
       } else {
         $id = $this->db->lastInsertId();
       }
-      if (isset($values['phones'])) {
-        $phones = json_decode($values['phones']);
-        foreach ($phones as $phone) {
-          if (intval($phone->phone)) {
-            $resPhone = $this->savePhone($phone->id, $id, $phone->phone, $phone->name, $phone->description, $phone->state);
-            if (isset($resPhone)) {
-              $errors[] = $resPhone;
+      if (isset($values['phones']) && $values['phones'] !== "[]") {
+        if (gettype($values['phones']) === 'string') {
+          $phones = json_decode($values['phones'], 1);
+        } else {
+          $phones = $values['phones'];
+        }
+        
+        $of = $this->getMainSettings($values['id'])['outgoing_filtering'];
+
+        if ($of === '1') {
+            $queue = $this->getContacts($values['id']);
+            $results = $this->getContactsResults($values['id']);
+            $contacts = array_merge($queue, $results);
+
+            $filteredFromBitrix = array_filter($phones, function ($phone) {
+                return $phone['fromBitrix'];
+            });
+
+            foreach ($contacts as $contact) {
+                $res = $this->findInBitrix($contact['phone'], $filteredFromBitrix);
+                if (!$res) {
+                    if (in_array($contact['state'], ['3', '4', '6', '7'])) {
+                        $this->updateContactState($contact['id'], $values['id'], 6);
+                    } else {
+                        $this->deleteContact($contact['id']);
+                        foreach ($phones as $k => $v) {
+                            if ($v['phone'] == $contact['phone']) unset($phones[$k]);
+                        }
+                    }
+                }
             }
+        }
+
+        foreach ($phones as $phone) {
+          if ($phone['id'] && (!$phone['phone'] || $phone == "")) {
+            $this->deleteContact($phone['id']);
+            continue;
+          }
+          $resPhone = $this->savePhone($phone['id'], $id, $phone['phone'], $phone['name'], $phone['description'], $phone['state']);
+          if (isset($resPhone)) {
+            $errors[] = $resPhone;
           }
         }
+      } else {
+        if (!$cron) $this->truncateQueues($id);
       }
       
       if (isset($values['days'])) {
         $this->updateWeekDays($id, $values['days']);
       }
-      if (isset($values['settings']) && is_string($values['settings']) && $values['settings'] != "[]") {
-        $this->updateSettings($id, $values['settings']);
-      } else {
-        $this->bindDefaultSettings($id);
+      if (!isset($values['settings']) || $values['settings'] == "[]") {
+          $this->bindDefaultSettings($id);
       }
       return [ "result" => true, "message" => "Операция прошла успешно", "errors"=>$errors];
     }
     return [ "result" => false, "message" => "Ошибка выполнения операции", "errors" => $errors];    
   }
 
-  public function updateSettings($id, $settings) {
-    if (is_string($settings) && strlen($settings)) {
-      $js = json_decode($settings);
+  public function updateSettings($id, $actions_after_call, $stop_campaign, $other) {
+
+      $actions_after_call = json_decode($actions_after_call);
+
       $this->deleteAllSettings($id);
-      foreach ($js as $result) {
+      foreach ($actions_after_call as $result) {
         $ssql = "";
         foreach (self::SETTING_FIELDS as $field) {
           if (isset($result->$field)) {
@@ -384,16 +649,140 @@ class PBXOutgoingCampaign  {
         }
         if (strlen($ssql)) {
           $ssql .= ", `campaign_id` = {$id}";
-          $this->db->query(" INSERT INTO outgoing_campaign_dial_result_setting SET ".$ssql);
+          $sql = " INSERT INTO outgoing_campaign_dial_result_setting SET ".$ssql;
+          $this->db->query($sql);
         }
       }
+
+      $other = json_decode($other);
+      if (!empty($other)) {
+        $sql = "UPDATE outgouing_company SET";
+
+        foreach ($other as $k => $v) {
+          if ($k == 'min_call_time' && $v == 0) $v = 1;
+          if ($k == 'concurrent_calls_limit' && $v == 0) $v = 1;
+          if ($k == 'calls_multiplier' && $v < 1) $v = 1;
+          $sql .= "`$k` = '$v', ";
+        }
+
+        $sql = rtrim($sql, ", ");
+        $sql .= " WHERE id = $id";
+
+        $this->db->query($sql);
+      }
+
+      $stop_campaign = json_decode($stop_campaign);
+      if (!empty($stop_campaign)) {
+        $sql = "UPDATE outgouing_company SET";
+
+        foreach ($stop_campaign as $k => $v) {
+          if ($k === 'choice_of_numbers' && $v === '') {
+              $sql .= "`$k` = NULL, ";
+              continue;
+          }
+          $sql .= "`$k` = '$v', ";
+        }
+
+        $sql = rtrim($sql, ", ");
+        $sql .= " WHERE id = $id";
+
+        $this->db->query($sql);
+      }
+
       return true;
-    }
-    return false;
+    // }
+    // return false;
+  }
+
+  public function copy(int $id, ?int $queues = 0): int
+  {
+      $sql = "SELECT * FROM outgouing_company WHERE id = $id";
+      $res = $this->db->query($sql);
+      $row = $res->fetch();
+
+      $sql = "INSERT INTO outgouing_company SET ";
+      foreach ($row as $k => $v) {
+          if ($k === 'id' || $v === null) continue;
+          if ( in_array($k, ['updated', 'tm_created']) ) {
+              $sql .= "`$k` = NOW(), ";
+              continue;
+          }
+          $sql .= "`$k` = '$v', ";
+      }
+      $sql = rtrim($sql, ", ");
+      $res = $this->db->query($sql);
+      $newCampaignId = $this->db->lastInsertId();
+
+      if ($res) {
+          $sql = "SELECT * FROM outgoing_campaign_dial_result_setting WHERE campaign_id = $id";
+          $res = $this->db->query($sql);
+          while ($row = $res->fetch()) {
+              $sql = "INSERT INTO outgoing_campaign_dial_result_setting SET ";
+              foreach ($row as $k => $v) {
+                  if ($k === 'campaign_id') {
+                      $sql .= "`$k` = '$newCampaignId', ";
+                      continue;
+                  }
+                  if ($v === null) continue;
+                  $sql .= "`$k` = '$v', ";
+              }
+              $sql = rtrim($sql, ", ");
+              $this->db->query($sql);
+          }
+
+          $sql = "SELECT * FROM outgouing_company_weekdays WHERE outgouing_company_id = $id";
+          $res = $this->db->query($sql);
+          while ($row = $res->fetch()) {
+              $sql = "INSERT INTO outgouing_company_weekdays SET ";
+              foreach ($row as $k => $v) {
+                  if ($k === 'outgouing_company_id') {
+                      $sql .= "`$k` = '$newCampaignId', ";
+                      continue;
+                  }
+                  if ($v === null) continue;
+                  $sql .= "`$k` = '$v', ";
+              }
+              $sql = rtrim($sql, ", ");
+              $this->db->query($sql);
+          }
+
+          if ($queues) {
+              $sql = "SELECT * FROM outgouing_company_contacts 
+                      WHERE outgouing_company_id = $id 
+                      AND state NOT IN (3,4,6,7) 
+                      ORDER BY id";
+              $res = $this->db->query($sql);
+              while ($row = $res->fetch()) {
+                  $sql = "INSERT INTO outgouing_company_contacts SET ";
+                  foreach ($row as $k => $v) {
+                      if ($k === 'outgouing_company_id') {
+                          $sql .= "`$k` = '$newCampaignId', ";
+                          continue;
+                      }
+                      if ($v === null || $k === 'id') continue;
+                      $sql .= "`$k` = '$v', ";
+                  }
+                  $sql = rtrim($sql, ", ");
+                  $this->db->query($sql);
+              }
+          }
+      }
+
+      return $newCampaignId;
+  }
+
+  public function remove($id) {
+    $result = $this->db->query("UPDATE outgouing_company SET deleted = 1 WHERE id = {$id}");
+    return $result ? 1 : 0;
+  }
+
+  public function truncateQueues($id) {
+      $result = $this->db->query("DELETE FROM outgouing_company_contacts WHERE state NOT IN (3,4,6,7) AND `outgouing_company_id` = $id");
+      return $result ? 1 : 0;
   }
 
   private function bindDefaultSettings($id) {
-    $settings = $this->getSettings(0);
+    $settings = $this->getSettings(1);
     foreach ($settings as $setting) {
       $ssql = "";
       foreach (self::SETTING_FIELDS as $field) {
@@ -424,7 +813,7 @@ class PBXOutgoingCampaign  {
         if (intval($value)) {
           ++$key;
           $sql = "INSERT INTO outgouing_company_weekdays SET
-          `outgouing_company_id` = '{$id}', `weekday_id` = '{$key}'";
+          `outgouing_company_id` = '{$id}', `weekday_id` = '{$value}'";
           $this->db->query($sql);
         }      
       }
@@ -437,5 +826,32 @@ class PBXOutgoingCampaign  {
     return true;    
   }
 
-  
+  public function deleteContact(int $id)
+  {
+    $sql = "DELETE FROM outgouing_company_contacts WHERE id = '{$id}'";
+    $this->db->query($sql);
+  }
+
+  public function updateContactState(int $contactId, int $ocId, int $state): void
+  {
+      $sql = "UPDATE outgouing_company_contacts set `state` = '$state' WHERE id = '$contactId' AND outgouing_company_id = '$ocId'";
+      $this->db->query($sql);
+  }
+
+  public function toggleArchive(int $id) {
+    try {
+      $sql = "SELECT archive FROM outgouing_company WHERE id =" . $id;
+      $res = $this->db->query($sql);
+      $row = $res->fetch();
+
+      $sql = "UPDATE outgouing_company SET `archive` = ";
+      $sql .= $row['archive'] ? "0" : "1, `state` = 4 ";
+      $sql .= " WHERE id = " . $id;
+      $this->db->query($sql);
+
+      return ['res' => true, 'action' => $row['archive'] ? 'unarchived' : 'archived'];
+    } catch (Exception | Error $e) {
+      return $e->getMessage();
+    }
+  }
 }
