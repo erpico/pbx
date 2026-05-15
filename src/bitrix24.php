@@ -338,7 +338,7 @@ $app->get('/bitrix24/{entity}/search', function (Request $request, Response $res
     $channel = $request->getParam('channel', '');
 
     $entity = $args['entity'];
-    if (in_array(['lead', 'deal', 'contact'], $entity)) return $response->withJson(['res' => false, 'message' => 'Wrong entity type.']);
+    if (!in_array($entity, ['lead', 'deal', 'contact'])) return $response->withJson(['res' => false, 'message' => 'Wrong entity type.']);
 
     $helper = new EBitrix($channel);
     $settings = new PBXSettings();

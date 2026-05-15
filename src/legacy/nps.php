@@ -595,7 +595,7 @@ class Nps {
                         nps_answers.answer_type                                   
                 FROM nps_answers
                 left join nps on nps_answers.id = nps.id
-                WHERE nps_id = '$rowNps[nps_id]' ";                    
+                WHERE nps_id = '{$rowNps['nps_id']}' ";
         $answerRows = $this->db->query($sql);
         $dataRow = [];
 
@@ -767,7 +767,7 @@ class Nps {
 		  try
 			{	
 			  //$date = $_GET['state'] != 0 ? date("Y-m-d H:m:s") : '';
-				$this->db->query("UPDATE nps SET `state` = $_GET[state], `called` = Now() WHERE id = $_GET[npsId]");
+				$this->db->query("UPDATE nps SET `state` = ".intval($_GET['state']).", `called` = Now() WHERE id = ".intval($_GET['npsId']));
 				$result = [ "result" => true, "msg" => "Статус звонка успешно изменен", "data" => []];
 			} 
 			catch (\Throwable $th)

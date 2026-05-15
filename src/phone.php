@@ -148,7 +148,7 @@ class PBXPhone
 
   private function isUniqueColumn($column, $code, $id)
   {
-    if (in_array($column, SELF::FIELDS)) {
+    if (array_key_exists($column, SELF::FIELDS)) {
       $data = $this->fetchList([$column => $code], 0, 3, 0, 0);
       if (is_array($data)) {
         if (COUNT($data) > 1) {
@@ -476,7 +476,7 @@ class PBXPhone
 
   private function isUniqueGroupColumn($column, $code, $id)
   {
-    if (in_array($column, SELF::GROUPS_FIELDS)) {
+    if (array_key_exists($column, SELF::GROUPS_FIELDS)) {
       $data = $this->fetchGroupsList([$column => $code], 0, 3, 0, 0);
       if (is_array($data)) {
         if (COUNT($data) > 1) {

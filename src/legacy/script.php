@@ -320,7 +320,7 @@ class Script {
         $row['used'] = false;
         if ($rowAnswer){
           if (array_key_exists('answer',$rowAnswer)){
-            if ($rowAnswer['answer'] == $row[id]){
+            if ($rowAnswer['answer'] == $row['id']){
               $row['used'] = true;
             }
           }
