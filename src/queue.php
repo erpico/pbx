@@ -132,7 +132,7 @@ class PBXQueue {
   }
 
   private function isUniqueColumn($column, $name, $id) {
-    if (in_array($column, SELF::FIELDS)) {
+    if (array_key_exists($column, SELF::FIELDS)) {
       $data = $this->fetchList([$column => $name], 0, 3, 0, 0, 0);
       if (is_array($data)) {
         if (COUNT($data) > 1) {

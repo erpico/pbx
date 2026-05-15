@@ -876,7 +876,7 @@ order by max(m.created_at) desc;";
     $result = false;
     $config = $this->getUserConfigByHandle($userId, $handle);
     if ($config) {
-      $sql = "DELETE FROM cfg_user_setting WHERE id = {$config[id]}";
+      $sql = "DELETE FROM cfg_user_setting WHERE id = {$config['id']}";
       $res = $this->db->query($sql);
       $result = $res ? true : false;
     }
@@ -890,7 +890,7 @@ order by max(m.created_at) desc;";
     $sql = 'INSERT INTO cfg_user_setting';
     if ($config) {
       $sql = 'UPDATE cfg_user_setting';
-      $endSql ="WHERE id = {$config[id]}";
+      $endSql ="WHERE id = {$config['id']}";
     } else {
       //var_dump($handle); die();
     }

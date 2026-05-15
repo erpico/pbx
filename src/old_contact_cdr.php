@@ -107,10 +107,10 @@ class PBXOldContactCdr {
   if (strpos($cdr_report[$j]['channel'], "Local/s@mail_dummy") !== FALSE) {
   // get from
   $mailid = substr($cdr_report[$j]['src'], 6);		
-  $sql = "SELECT `from` FROM mail_messages WHERE id = '$mailid'";
-  $res = mysql_query($sql);
+  $sql = "SELECT `from` FROM mail_messages WHERE id = '".intval($mailid)."'";
+  $res = $this->db->query($sql);
   if ($res) {
-    $row = mysql_fetch_row($res);
+    $row = $res->fetch(PDO::FETCH_NUM);
     if ($row) {
       $cdr_report[$j]['src'] = $row[0];
     }

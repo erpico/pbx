@@ -84,7 +84,7 @@ class PBXChannel {
   }
   
   private function isUniqueColumn($column, $value, $id = 0) {    
-    if (in_array($column, self::FIELDS)) {
+    if (array_key_exists($column, self::FIELDS)) {
       $data = $this->fetchList([$column => $value], 0, 3, 0, 0);      
       if (is_array($data)) {
         if (COUNT($data) > 1) {
