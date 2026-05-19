@@ -128,7 +128,7 @@ class Nps {
       $filialSql .= " GROUP BY filial,city";
     }
     $filialSqlRes = $this->db->query($filialSql);
-    if (!$filialSqlRes) die(mysql_error());
+    if (!$filialSqlRes) die('Query failed');
     $filResult = [];
     $filBuf = [];
     $listIdF = [];
