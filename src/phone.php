@@ -791,12 +791,12 @@ class PBXPhone
 
   public function appendRealtime(&$arr)
   {
-    if ($this->ami) {
-      try {
-        $this->ami->open();
-      } catch (Exception $e) {
-        return;
-      }
+    if (!$this->ami) return;
+    // PAMI 2.0.2 uses the reversed-arg implode() form removed in PHP 8 when
+    // parsing event names, which raises TypeError. Catch \Throwable so the
+    // phone list still returns even when realtime SIP info can't be fetched.
+    try {
+      $this->ami->open();
       $response = $this->ami->send(new SIPPeersAction());
       $pmap = [];
       $peers = $response->getEvents();
@@ -805,16 +805,18 @@ class PBXPhone
         $pmap[$p->getObjectName()] = $p;
       }
       $this->ami->close();
+    } catch (\Throwable $e) {
+      return;
+    }
 
-      for ($i = 0; $i < count($arr); $i++) {
-        $phone = $arr[$i]['phone'];
-        if (isset($pmap[$phone])) {
-          $arr[$i]['s_ip'] = $pmap[$phone]->getIPAddress();
-          if ($arr[$i]['s_ip'] == '-none-') $arr[$i]['s_ip'] = "";
-          $arr[$i]['s_port'] = $pmap[$phone]->getIPPort();
-          if ($arr[$i]['s_port'] == '0') $arr[$i]['s_port'] = "";
-          $arr[$i]['s_status'] = $pmap[$phone]->getStatus();
-        }
+    for ($i = 0; $i < count($arr); $i++) {
+      $phone = $arr[$i]['phone'];
+      if (isset($pmap[$phone])) {
+        $arr[$i]['s_ip'] = $pmap[$phone]->getIPAddress();
+        if ($arr[$i]['s_ip'] == '-none-') $arr[$i]['s_ip'] = "";
+        $arr[$i]['s_port'] = $pmap[$phone]->getIPPort();
+        if ($arr[$i]['s_port'] == '0') $arr[$i]['s_port'] = "";
+        $arr[$i]['s_status'] = $pmap[$phone]->getStatus();
       }
     }
   }
