@@ -59,7 +59,14 @@
     },
     "scripts": {
         "start": "php -S localhost:8080 -t public",
-        "test": "phpunit"
+        "test": "phpunit",
+        "patch-pami": "@php bin/patch-pami.php",
+        "post-install-cmd": [
+            "@patch-pami"
+        ],
+        "post-update-cmd": [
+            "@patch-pami"
+        ]
     }
 
 }
